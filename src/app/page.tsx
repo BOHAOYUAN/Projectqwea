@@ -100,14 +100,22 @@ export default function HomePage() {
       setTimeout(() => {
         if (platform === 'Google') {
           window.open(
-            'https://www.google.com/maps/search/Sunny+Tea+House+SanJose/reviews',
+            'https://www.google.com/maps/search/?api=1&query=Sunny+Tea+House+San+Jose+CA',
             '_blank'
           );
         } else {
-          window.open(
-            'https://www.xiaohongshu.com/search?q=Sunny%20Tea%20House',
-            '_blank'
-          );
+          // Xiaohongshu official search result page
+          const xhsWebUrl = 'https://www.xiaohongshu.com/search_result?keyword=Sunny%20Tea%20House';
+          const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+          if (isMobile) {
+            const timer = setTimeout(() => {
+              window.open(xhsWebUrl, '_blank');
+            }, 1200);
+            window.location.href = 'xhsdiscover://search/result?keyword=Sunny%20Tea%20House';
+            window.addEventListener('pagehide', () => clearTimeout(timer), { once: true });
+          } else {
+            window.open(xhsWebUrl, '_blank');
+          }
         }
       }, 700);
     } catch {
