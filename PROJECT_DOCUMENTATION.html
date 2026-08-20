@@ -251,9 +251,9 @@
           <td>引入 <strong>呼吸感排版规则（段与段必须空行）</strong>，并注入湾区本地背景词汇（San Jose, boba chewiness, sweet level）。</td>
         </tr>
         <tr>
-          <td><strong>V3.0 工业生产版</strong></td>
-          <td>模块化 System Prompt + Few-Shot 样本锚定 + 结构化约束</td>
-          <td><strong>达到完美效果</strong>：Google Review 地道松弛（50-70 Words）；小红书爆款标题+短段落+精准 Tag（120-180 字）。</td>
+          <td><strong>V3.0 最终定稿</strong></td>
+          <td>基于 <code>System Prompt</code>（系统角色）与 <code>User Prompt</code>（用户指令）解耦，并引入 2 组 <strong>Few-Shot 精品样本</strong>（正例）来锚定语气。</td>
+          <td>同时附加严格的 <strong>长度与排版负约束</strong>，最终生成符合预期的优质内容（Google 50-70 Words，小红书 120-180 字）。</td>
           <td>已集成至生产环境，支持 10 秒内动态热调整。</td>
         </tr>
       </tbody>
@@ -305,7 +305,7 @@
       <li>组装为结构化企业微信 Markdown 卡片，实时推送到门店运营群。</li>
     </ol>
     <div class="card">
-      <p><strong>💡 兼顾演示便捷度与真实商用可行性：</strong>在 Demo 演示环境下，系统默认全自动静默触发数据组装与前端状态感知，无需评审专家手动申请并输入企业微信 Key；同时后端完整保留了真实 Webhook 调用能力，只需在服务端环境变量配置 <code>WECOM_WEBHOOK_URL</code> 即可实现无缝实推。</p>
+      <p><strong>💡 Webhook 演示与实推兼容设计：</strong>为适应 Demo 环境，系统采用<strong>静默触发机制</strong>，无需用户手动填写 Webhook Key（直接在代码层 Mock 了数据组装与状态感知）。核心逻辑已封装为独立模块，若在生产环境使用，只需在服务端注入 <code>WECOM_WEBHOOK_URL</code> 环境变量，即可一键切换为真实 HTTP 推送。</p>
     </div>
     <pre><code>{
   "msgtype": "markdown",
@@ -377,8 +377,9 @@
     <h2>7. 🎪 15–20 分钟线上复盘与现场 Prompt 调整预案</h2>
     <p>为应对二面复盘中的现场修改 Prompt 练习，已在 <code>src/lib/prompts.ts</code> 实现<strong>完全参数化与模块化解耦</strong>：</p>
     <ul>
-      <li><strong>场景 A（改为委婉差评/建议）</strong>：在 System Prompt 注入 <code>"Tone: Constructive & polite customer feedback"</code> 即可 10 秒切换；</li>
-      <li><strong>场景 B（增加指定单品或特殊活动）</strong>：微调抽屉支持直接注入自定义饮品参数，Prompt 自动无缝衔接。</li>
+      <li><strong>场景 A（改为委婉差评/建议）</strong>：在 System Prompt 加入 <code>"Tone: Constructive & polite customer feedback"</code> 即可 10 秒切换；</li>
+      <li><strong>场景 B（增加指定单品或特殊活动）</strong>：在代码中，参数已通过 React 状态（<code>useState</code>）进行解耦，复盘时只需修改 <code>System Prompt</code> 中的语气描述，或通过 UI 下拉框注入 <code>customDrink</code> 参数，Prompt 组装函数（<code>buildUserPrompt</code>）会自动更新注入，实现 10 秒内快速响应调整需求。</li>
+      <li><strong>加分技术答辩细节（流式解析容错）</strong>：在流式解析（SSE）时，专门设计了针对大模型分块与 JSON 分片边界错误的容错处理，防止因网络抖动或大模型输出截断导致前端解析崩溃。</li>
     </ul>
   </div>
 
