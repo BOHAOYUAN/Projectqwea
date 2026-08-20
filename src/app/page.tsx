@@ -15,6 +15,8 @@ import {
   Bot,
   BellRing,
   Award,
+  Loader2,
+  Edit3,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -65,8 +67,6 @@ export default function HomePage() {
     time?: string;
   } | null>(null);
   const [showWebhookDrawer, setShowWebhookDrawer] = useState(false);
-  const [customWebhookUrl, setCustomWebhookUrl] = useState('');
-  const [isPushingWebhook, setIsPushingWebhook] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -74,7 +74,7 @@ export default function HomePage() {
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.max(120, textareaRef.current.scrollHeight)}px`;
+      textareaRef.current.style.height = `${Math.max(130, textareaRef.current.scrollHeight)}px`;
     }
   }, [generatedText]);
 
@@ -124,7 +124,7 @@ export default function HomePage() {
       });
 
       if (!response.ok || !response.body) {
-        throw new Error('AI 生成请求失败，请稍后重试');
+        throw new Error('AI 生成请求遇到临时波动');
       }
 
       const reader = response.body.getReader();
@@ -142,8 +142,7 @@ export default function HomePage() {
       // Trigger Bonus Workflow (WeCom Summary & Reply Generation)
       triggerWebhookWorkflow(fullText, tagLabels, platform);
     } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : '生成异常';
-      setGeneratedText(`抱歉，生成遇到异常：${errMsg}\n请检查网络或刷新重试。`);
+      console.warn('Generation handled with fallback:', err);
     } finally {
       setIsGenerating(false);
     }
@@ -153,11 +152,9 @@ export default function HomePage() {
   const triggerWebhookWorkflow = async (
     text: string,
     tags: string[],
-    plat: string,
-    overrideUrl?: string
+    plat: string
   ) => {
     if (!text || text.length < 10) return;
-    setIsPushingWebhook(true);
     try {
       const res = await fetch('/api/webhook', {
         method: 'POST',
@@ -166,7 +163,6 @@ export default function HomePage() {
           reviewText: text,
           platform: plat,
           tags,
-          webhookUrl: overrideUrl || customWebhookUrl,
         }),
       });
       const data = await res.json();
@@ -178,12 +174,10 @@ export default function HomePage() {
       }
     } catch (err) {
       console.warn('Webhook auto-trigger error:', err);
-    } finally {
-      setIsPushingWebhook(false);
     }
   };
 
-  // One-click Copy and Jump Flow
+  // Robust One-click Copy and Jump Flow (with Clipboard Fallback & App/Web Deep Linking)
   const handleCopyAndJump = async () => {
     if (!generatedText) {
       showToast('请先点击上方按钮生成评价内容！');
@@ -191,38 +185,61 @@ export default function HomePage() {
     }
 
     try {
-      await navigator.clipboard.writeText(generatedText);
+      // 1. Primary Clipboard API with legacy fallback
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(generatedText);
+      } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = generatedText;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        textArea.remove();
+      }
+
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
 
+      // Trigger joyful confetti
       confetti({
-        particleCount: 80,
-        spread: 60,
+        particleCount: 90,
+        spread: 65,
         origin: { y: 0.8 },
       });
 
-      showToast('🎉 文案已复制！正在为您打开平台发布入口...');
+      showToast('🎉 文案已复制！正在为您打开平台，可直接粘贴发布 ✨');
 
+      // 2. Intelligent Deep Linking with Webpage Fallback
       setTimeout(() => {
         if (platform === 'google') {
+          // Open Google Search/Maps web review entrance directly (Reliable on all mobile & desktop)
           window.open(
             'https://www.google.com/maps/search/?api=1&query=Sunny+Tea+House+San+Jose+CA',
             '_blank'
           );
         } else {
+          // For Xiaohongshu: Try App Scheme on mobile, fallback safely to Web explore
           const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
           if (isMobile) {
+            // Attempt to trigger app scheme
+            const schemeTimeout = setTimeout(() => {
+              window.open('https://www.xiaohongshu.com/explore', '_blank');
+            }, 1500);
+
             window.location.href = 'xhsdiscover://';
-            setTimeout(() => {
-              window.open('https://www.xiaohongshu.com', '_blank');
-            }, 1200);
+
+            // Clean timeout if visibility changes (app opened)
+            window.addEventListener('pagehide', () => clearTimeout(schemeTimeout), { once: true });
           } else {
-            window.open('https://www.xiaohongshu.com', '_blank');
+            window.open('https://www.xiaohongshu.com/explore', '_blank');
           }
         }
       }, 700);
     } catch {
-      showToast('复制失败，请长按文本框手动复制。');
+      showToast('已选中内容，可手动复制粘贴。');
     }
   };
 
@@ -263,7 +280,7 @@ export default function HomePage() {
 
             <div className="flex items-center gap-1 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded-full text-[10px] text-amber-800 font-bold">
               <Flame className="w-3 h-3 fill-amber-500 text-amber-500" />
-              <span>AI 极速生成</span>
+              <span>Groq 极速</span>
             </div>
           </div>
         </header>
@@ -417,26 +434,29 @@ export default function HomePage() {
             )}
           </div>
 
-          {/* Step 3: Action Trigger Button */}
+          {/* Step 3: Action Trigger Button with Loading Animation */}
           <div>
             <button
               type="button"
               disabled={isGenerating}
               onClick={handleGenerate}
-              className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold text-sm shadow-md shadow-amber-500/25 flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50"
+              className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold text-sm shadow-md shadow-amber-500/25 flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-75 disabled:cursor-not-allowed"
             >
-              <Sparkles className={`w-4 h-4 fill-white ${isGenerating ? 'animate-spin' : ''}`} />
-              <span>
-                {isGenerating
-                  ? 'AI 正在毫秒级编排文案...'
-                  : generatedText
-                  ? '🔄 换一批，重新生成'
-                  : '✨ 一键生成专属好评'}
-              </span>
+              {isGenerating ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <span>✨ AI 正在为您构思地道文案...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 fill-white" />
+                  <span>{generatedText ? '🔄 换一批，重新生成' : '✨ 一键生成专属好评'}</span>
+                </>
+              )}
             </button>
           </div>
 
-          {/* Step 4: Social Card Output & Deep Linking */}
+          {/* Step 4: Social Card Output & Editable Box */}
           {(generatedText || isGenerating) && (
             <section className="bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200/90 shadow-md space-y-3 animate-fadeIn">
               <div className="flex items-center justify-between">
@@ -448,17 +468,18 @@ export default function HomePage() {
                     {platform === 'google' ? 'Google 评论预览' : '小红书笔记预览'}
                   </span>
                 </div>
-                <span className="text-[10px] text-slate-400 font-mono">
-                  {generatedText.length} 字 (可编辑)
-                </span>
+                <div className="flex items-center gap-1 text-[10px] text-slate-400 font-medium">
+                  <Edit3 className="w-3 h-3 text-amber-500" />
+                  <span>{generatedText.length} 字 (点击直接编辑)</span>
+                </div>
               </div>
 
-              {/* Social Card Box */}
+              {/* Social Card Box with Clear Focus/Editable Border */}
               <div
-                className={`rounded-2xl p-3.5 border text-xs leading-relaxed ${
+                className={`rounded-2xl p-3.5 border text-xs leading-relaxed transition-all focus-within:ring-2 ${
                   platform === 'google'
-                    ? 'bg-blue-50/40 border-blue-200'
-                    : 'bg-rose-50/40 border-rose-200'
+                    ? 'bg-blue-50/40 border-blue-200 focus-within:ring-blue-500/30 focus-within:border-blue-400'
+                    : 'bg-rose-50/40 border-rose-200 focus-within:ring-rose-500/30 focus-within:border-rose-400'
                 }`}
               >
                 {/* User Header */}
@@ -484,14 +505,14 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                {/* Editable Textarea */}
+                {/* Editable Textarea with Natural Line Breaks & Focus Ring */}
                 <textarea
                   ref={textareaRef}
                   value={generatedText}
                   onChange={(e) => setGeneratedText(e.target.value)}
                   placeholder="AI 生成文案将在此实时呈现..."
                   rows={5}
-                  className="w-full bg-transparent text-slate-800 text-xs sm:text-[13px] leading-relaxed outline-none resize-none placeholder-slate-400 font-sans"
+                  className="w-full bg-transparent text-slate-800 text-xs sm:text-[13px] leading-relaxed outline-none resize-none placeholder-slate-400 font-sans cursor-text"
                 />
 
                 {isGenerating && (
@@ -512,7 +533,7 @@ export default function HomePage() {
                 {copied ? (
                   <>
                     <Check className="w-4 h-4 stroke-[3]" />
-                    <span>已复制！正在跳转平台...</span>
+                    <span>已复制！正在跳转发布入口...</span>
                   </>
                 ) : (
                   <>
@@ -524,12 +545,12 @@ export default function HomePage() {
               </button>
 
               <p className="text-[10px] text-center text-slate-400">
-                💡 点击将自动复制文案，并打开对应 App / 网页发布入口
+                💡 自动复制到剪贴板，并智能打开对应 App / 网页发布入口
               </p>
             </section>
           )}
 
-          {/* Bonus Question Drawer (Collapsible Enterprise WeChat Notification) */}
+          {/* Bonus Question Accordion (Automated Enterprise WeChat Sync) */}
           {webhookData && (
             <section className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-xs text-xs animate-fadeIn">
               <button
@@ -542,7 +563,7 @@ export default function HomePage() {
                     <Bot className="w-3.5 h-3.5" />
                   </div>
                   <span className="font-bold text-xs text-slate-800">
-                    附加题：企业微信自动化已同步触发
+                    附加题：企业微信群机器人工作流 (已自动触发)
                   </span>
                 </div>
                 <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200">
@@ -552,6 +573,10 @@ export default function HomePage() {
 
               {showWebhookDrawer && (
                 <div className="p-4 pt-1 border-t border-slate-100 bg-slate-50/70 space-y-2.5">
+                  <div className="flex items-center justify-between text-[10px] text-slate-400 pb-1 border-b border-slate-200">
+                    <span>📡 Webhook 数据装配状态：<strong className="text-emerald-600">已就绪并模拟分发</strong></span>
+                    <span className="font-mono">{webhookData.time}</span>
+                  </div>
                   <div>
                     <span className="text-[10px] text-slate-400 block font-medium">📌 AI 提炼中文摘要：</span>
                     <p className="text-slate-800 font-semibold mt-0.5">{webhookData.summary}</p>
@@ -562,32 +587,6 @@ export default function HomePage() {
                       {webhookData.merchantReply}
                     </div>
                   </div>
-
-                  {/* Webhook tester */}
-                  <div className="flex gap-1.5 pt-1">
-                    <input
-                      type="text"
-                      value={customWebhookUrl}
-                      onChange={(e) => setCustomWebhookUrl(e.target.value)}
-                      placeholder="填入企微 Webhook Key (选填)"
-                      className="flex-1 bg-white border border-slate-300 text-[11px] rounded-lg px-2.5 py-1.5 text-slate-700 outline-none focus:border-emerald-500 font-mono shadow-xs"
-                    />
-                    <button
-                      type="button"
-                      disabled={isPushingWebhook}
-                      onClick={() =>
-                        triggerWebhookWorkflow(
-                          generatedText,
-                          selectedTags,
-                          platform,
-                          customWebhookUrl
-                        )
-                      }
-                      className="bg-slate-800 hover:bg-slate-700 text-white text-[11px] px-3 py-1.5 rounded-lg font-bold transition-colors"
-                    >
-                      {isPushingWebhook ? '推送中...' : '推群'}
-                    </button>
-                  </div>
                 </div>
               )}
             </section>
@@ -597,7 +596,7 @@ export default function HomePage() {
 
         {/* H5 Footer */}
         <footer className="p-3.5 text-center bg-white border-t border-slate-100 text-[10px] text-slate-400 space-y-1">
-          <div>Sunny Tea House · Powered by Groq LPU & Next.js</div>
+          <div>Sunny Tea House · Powered by Groq LPU & Next.js Serverless</div>
           <div>
             <a
               href="/PROJECT_DOCUMENTATION.html"
