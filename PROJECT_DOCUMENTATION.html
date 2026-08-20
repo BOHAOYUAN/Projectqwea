@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sunny Tea House AI 智能评价生成系统 · 项目技术与设计文档</title>
+  <title>Sunny Tea House AI 智能评价生成系统 · 项目复盘笔记</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
     
@@ -22,18 +22,18 @@
     }
     
     .container {
-      max-width: 900px;
+      max-width: 880px;
       margin: 0 auto;
       background: #ffffff;
-      padding: 48px;
-      border-radius: 16px;
-      box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+      padding: 44px;
+      border-radius: 14px;
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
       border: 1px solid #e2e8f0;
     }
     
     header {
-      border-bottom: 2px solid #e2e8f0;
-      padding-bottom: 24px;
+      border-bottom: 1.5px solid #e2e8f0;
+      padding-bottom: 20px;
       margin-bottom: 24px;
     }
     
@@ -43,43 +43,40 @@
       color: #92400e;
       font-size: 11px;
       font-weight: 700;
-      padding: 4px 10px;
-      border-radius: 20px;
-      margin-bottom: 12px;
+      padding: 3px 8px;
+      border-radius: 14px;
+      margin-bottom: 10px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       border: 1px solid #fde68a;
     }
     
     h1 {
-      font-size: 24px;
+      font-size: 22px;
       color: #0f172a;
       font-weight: 800;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
       line-height: 1.3;
     }
     
     .meta-info {
       display: flex;
       flex-wrap: wrap;
-      gap: 18px;
-      font-size: 13px;
+      gap: 16px;
+      font-size: 12.5px;
       color: #475569;
       font-weight: 500;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
     
     .quick-nav {
       background: #f1f5f9;
       border: 1px solid #cbd5e1;
-      padding: 10px 16px;
-      border-radius: 10px;
-      font-size: 12.5px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 12px;
       color: #334155;
       font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 6px;
     }
     
     .quick-nav span {
@@ -87,53 +84,50 @@
     }
     
     h2 {
-      font-size: 17px;
+      font-size: 16px;
       color: #0f172a;
       font-weight: 800;
-      margin-top: 36px;
-      margin-bottom: 16px;
-      padding-bottom: 8px;
+      margin-top: 32px;
+      margin-bottom: 14px;
+      padding-bottom: 6px;
       border-bottom: 1.5px solid #e2e8f0;
-      display: flex;
-      align-items: center;
-      gap: 8px;
     }
     
     h3 {
-      font-size: 14.5px;
+      font-size: 14px;
       color: #1e293b;
       font-weight: 700;
-      margin-top: 20px;
-      margin-bottom: 10px;
+      margin-top: 18px;
+      margin-bottom: 8px;
     }
     
     p {
-      margin-bottom: 14px;
-      font-size: 13.5px;
+      margin-bottom: 12px;
+      font-size: 13px;
       color: #334155;
     }
     
     ul, ol {
-      margin-bottom: 16px;
-      padding-left: 22px;
-      font-size: 13.5px;
+      margin-bottom: 14px;
+      padding-left: 20px;
+      font-size: 13px;
       color: #334155;
     }
     
     li {
-      margin-bottom: 6px;
+      margin-bottom: 5px;
     }
     
     table {
       width: 100%;
       border-collapse: collapse;
-      margin: 16px 0 24px 0;
-      font-size: 12.5px;
+      margin: 14px 0 20px 0;
+      font-size: 12px;
     }
     
     th, td {
       border: 1px solid #cbd5e1;
-      padding: 10px 14px;
+      padding: 9px 12px;
       text-align: left;
       vertical-align: top;
     }
@@ -142,7 +136,6 @@
       background: #f1f5f9;
       font-weight: 700;
       color: #0f172a;
-      border-bottom: 2px solid #94a3b8;
     }
     
     td:first-child {
@@ -154,10 +147,10 @@
     
     code {
       font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 11.5px;
+      font-size: 11px;
       background: #f1f5f9;
       color: #0f172a;
-      padding: 2px 6px;
+      padding: 2px 5px;
       border-radius: 4px;
       border: 1px solid #cbd5e1;
       font-weight: 600;
@@ -166,13 +159,13 @@
     pre {
       background: #0f172a;
       color: #f8fafc;
-      padding: 16px;
-      border-radius: 10px;
+      padding: 14px;
+      border-radius: 8px;
       overflow-x: auto;
-      margin: 14px 0;
+      margin: 12px 0;
       font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 11.5px;
-      line-height: 1.5;
+      font-size: 11px;
+      line-height: 1.45;
     }
     
     pre code {
@@ -186,39 +179,9 @@
     .card {
       background: #f8fafc;
       border: 1px solid #e2e8f0;
-      border-radius: 10px;
-      padding: 16px;
-      margin: 16px 0;
-    }
-    
-    .wecom-card {
-      background: #ffffff;
-      border: 1.5px solid #10b981;
-      border-radius: 12px;
-      padding: 16px;
-      margin: 16px 0;
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.08);
-    }
-    
-    .wecom-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid #e2e8f0;
-      padding-bottom: 8px;
-      margin-bottom: 10px;
-      font-size: 13px;
-      font-weight: 700;
-      color: #065f46;
-    }
-    
-    .badge-success {
-      background: #d1fae5;
-      color: #065f46;
-      font-size: 11px;
-      padding: 2px 8px;
-      border-radius: 12px;
-      font-family: "JetBrains Mono", monospace;
+      border-radius: 8px;
+      padding: 14px;
+      margin: 14px 0;
     }
     
     .print-btn {
@@ -228,9 +191,9 @@
       background: #0284c7;
       color: white;
       border: none;
-      padding: 12px 20px;
-      border-radius: 30px;
-      font-size: 14px;
+      padding: 10px 18px;
+      border-radius: 24px;
+      font-size: 13px;
       font-weight: 600;
       cursor: pointer;
       box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
@@ -262,190 +225,179 @@
 <body>
   <div class="container">
     <header>
-      <div class="header-badge">AI Engineer Demo Assessment</div>
-      <h1>Sunny Tea House AI 智能评价生成系统 · 技术与设计文档</h1>
+      <div class="header-badge">AI 智能评价系统复盘</div>
+      <h1>Sunny Tea House AI 智能评价生成系统 · 项目复盘笔记</h1>
       <div class="meta-info">
-        <span>👤 候选人：薄皓元 (Haoyuan Bo)</span>
-        <span>⏱️ 实际开发耗时：约 50 分钟（传统基准 4.5h，提效超 400%）</span>
-        <span>⚡ 核心架构：Next.js Serverless + Groq LPU + TailwindCSS</span>
+        <span>👤 薄皓元</span>
+        <span>⏱️ 实际耗时：约 50 分钟（借助 AI 编程工具完成）</span>
+        <span>⚡ 体验地址：sunny-tea.lumiere-private.com</span>
       </div>
       <div class="quick-nav">
-        📋 本文档速览：1. AI编程提效 <span>|</span> 2. Prompt调优历程 <span>|</span> 3. Webhook架构 <span>|</span> 4. 安全与成本 <span>|</span> 5. 交互体验闭环 <span>|</span> 6. 耗时复盘 <span>|</span> 7. 现场调整预案
+        📋 本文档速览：1. AI编程心得 <span>|</span> 2. Prompt调优与现场预案 <span>|</span> 3. Webhook工作流 <span>|</span> 4. 安全与成本 <span>|</span> 5. 交互打磨 <span>|</span> 6. 耗时记录
       </div>
     </header>
 
-    <h2>1. 💡 AI 辅助编程工具使用策略与 50 分钟极速交付提效心得</h2>
-    <p>本次任务官方预期耗时约为 <strong>4 小时以上</strong>，但在实际全栈交付中，我采用了 <strong>AI-Native（AI 原生驱动）</strong> 的结对编程工作流，全程仅耗时 <strong>约 50 分钟</strong> 即完成了从需求解构、双端 Prompt 调优、移动端 H5、Next.js Serverless 代理、企微 Webhook 异步流水线到域名上线的全部闭环：</p>
+    <h2>1. 💡 AI 工具使用心得与提效记录</h2>
+    <p>这次全程用 Cursor / Claude Code 辅助写代码。实际体会下来，大部分时间不是自己一行行敲代码，而是在跟 AI 明确描述需求：让它把前端样板代码、Tailwind 样式和接口骨架快速搭好，我把主要精力放在<strong>业务逻辑的闭环、跨语言 Prompt 调优以及异常防御</strong>上。</p>
     <ul>
-      <li><strong>把 AI 当作“架构副驾与全栈结对工程师”</strong>：真正的 AI 工程师核心价值在于<strong>“精准定义问题、制定协议架构、识别潜在漏洞”</strong>，而非徒手手写重复样板代码。</li>
-      <li><strong>Prompt 即架构（Schema-First）</strong>：优先通过 AI 梳理出严格的 TypeScript 接口与 Webhook JSON Payload 规范，确保前后端数据流零歧义。</li>
-      <li><strong>解决样式与移动端适配痛点</strong>：借助 AI 快速生成纯净、高对比度的浅灰背景（<code>#F4F4F5</code>）与纯白卡片（<code>bg-white</code>）布局，处理 <code>max-w-[420px]</code> 移动端居中与 Apple HIG 规范（点击热区 &ge; 44px），将原本需 1.5 小时的手工切图与调试 CSS 压缩在 10 分钟内完成。</li>
-      <li><strong>流式传输与边缘容错调试</strong>：在开发大模型数据管道与 Webhook 时，将报错栈与环境信息直接注入 AI 进行根因分析，秒级定位数据分块边界与 JSON 解析容错机制。</li>
+      <li><strong>接口与数据结构定义</strong>：先让 AI 把 TypeScript 类型和 Webhook JSON 格式定清楚，前后端传参一次性对齐，避免了来回改字段名。</li>
+      <li><strong>移动端 CSS 样式调试</strong>：手写移动端自适应和 Apple HIG 规范（点击区域 &ge; 44px）以前可能要调一两个小时，这次让 AI 直接出 Tailwind 类名，10 分钟左右就把浅灰背景（<code>#F4F4F5</code>）和纯白卡片的间距与留白调顺了。</li>
+      <li><strong>接口容错与流式联调</strong>：在联调接口报错时，直接把错误日志丢给 AI，能很快定位到是数据分块还是 JSON 解析的问题。</li>
     </ul>
 
-    <h2>2. 🎯 跨平台、跨语种 Prompt（提示词）设计思路与调优踩坑复盘</h2>
+    <h2>2. 🎯 跨平台 Prompt 设计、踩坑与调优</h2>
     
-    <h3>2.1 跨语言 Prompt 调优与标签语义映射踩坑记录（真实工程沉淀）</h3>
+    <h3>2.1 踩坑记录：跨语言标签污染问题</h3>
     <div class="card">
-      <p><strong>⚠️ 初期踩坑（V1.0）：</strong>直接将前端选中的中文标签（如 <code>['服务好', '出餐快']</code>）拼接到 User Prompt 中丢给英文大模型，导致模型在生成英文评价时强行保留中文标签，输出了 <i>“The 服务好, 出餐快 really stood out...”</i> 的严重多语言污染缺陷。</p>
-      <p><strong>🛠️ 工业级解决方案（V3.0 定稿）：</strong></p>
+      <p><strong>遇到的问题（V1.0）：</strong>一开始直接把前端用户选中的中文标签（如 <code>['服务好', '出餐快']</code>）拼进英文 Prompt 里丢给大模型，结果模型生成的英文评价里夹杂着中文，比如输出：<i>“The 服务好, 出餐快 really stood out...”</i>。</p>
+      <p><strong>原因：</strong>大模型在缺少明确的多语言引导时，会把上下文里的非英文词当成专有名词原样保留。</p>
+      <p><strong>解决办法（V3.0 定稿）：</strong></p>
       <ul>
-        <li><strong>代码层语义映射字典（<code>TAG_EN_MAP</code>）</strong>：在发送给大模型前，先在后端字典将中文标签映射为地道英文短语（如 <code>'服务好' -> 'friendly and welcoming staff'</code>, <code>'出餐快' -> 'super fast turnaround'</code>）；</li>
-        <li><strong>System Prompt 绝对负约束</strong>：加入强力指令 <code>"You must output ONLY in natural, fluent American English. NEVER output any Chinese characters."</code>；</li>
-        <li><strong>后端正则兜底守卫</strong>：在响应返回前增加正则检查，若意外检测到中文字符则自动激活纯净英文备用逻辑，彻底根除多语言混杂。</li>
+        <li><strong>后端做一层语义映射字典（<code>TAG_EN_MAP</code>）</strong>：在传给大模型前，先用字典把中文标签转成地道的英文短语（例如 <code>'服务好' -> 'friendly and welcoming staff'</code>, <code>'出餐快' -> 'super fast turnaround'</code>）；</li>
+        <li><strong>在 System Prompt 里加硬约束</strong>：明确写死 <code>"You must output ONLY in natural, fluent American English. NEVER output any Chinese characters."</code>；</li>
+        <li><strong>后端正则保底</strong>：返回前如果检测到中文字符，自动走保底纯英文逻辑，避免混杂中文。</li>
       </ul>
     </div>
 
-    <h3>2.2 跨平台 Prompt 矩阵对比</h3>
+    <h3>2.2 跨平台 Prompt 差异化设计</h3>
     <table>
       <thead>
         <tr>
           <th>维度</th>
           <th>🌐 Google Review (北美本地口碑)</th>
-          <th>📕 小红书 (RED 爆款种草)</th>
+          <th>📕 小红书 (种草笔记)</th>
         </tr>
       </thead>
       <tbody>
         <tr>
           <td>目标受众</td>
-          <td>北美本地居民、硅谷工程师、Yelp/Google Maps 用户</td>
-          <td>湾区华人、留学生、探店打卡群体</td>
+          <td>北美本地居民、Google Maps 真实食客</td>
+          <td>湾区华人、留学生探店群体</td>
         </tr>
         <tr>
-          <td>语言与口吻</td>
-          <td>地道美式英语（Authentic American English），客观、冷静、普通消费者视角</td>
-          <td>中文简体，热情闺蜜安利、真诚打卡、网络化情绪价值</td>
+          <td>语言与语气</td>
+          <td>地道美式英语，客观、冷静，普通消费者口吻</td>
+          <td>中文简体，热情、闺蜜安利感、带网络化情绪</td>
         </tr>
         <tr>
-          <td>严格禁止词</td>
-          <td>杜绝 <code>"I had the pleasure..."</code> 等机器腔与中文字符</td>
-          <td>杜绝生硬官话、拒绝无意义长文、拒绝大段文字堆叠</td>
+          <td>避坑约束</td>
+          <td>严禁生硬机器翻译词（如 <code>"I had the pleasure..."</code>）和中文</td>
+          <td>严禁生硬大段文字堆叠，必须空行留出呼吸感</td>
         </tr>
         <tr>
-          <td>标志性元素</td>
-          <td><code>"Super chewy boba"</code>, <code>"Fast turnaround"</code>, <code>"Well balanced sweetness"</code></td>
-          <td>灵动 Emoji（🧋✨🍵💖🔥）、<strong>空行呼吸感排版</strong>、3个精准 Tag</td>
+          <td>标志元素</td>
+          <td>常用口碑词（<code>"Super chewy boba"</code>, <code>"Fast turnaround"</code>）</td>
+          <td>灵动 Emoji（🧋✨🍵），3个精准标签（#奶茶推荐 #圣何塞美食）</td>
         </tr>
         <tr>
-          <td>长度与计量控制</td>
-          <td>严格控制在 <strong>50~70 Words（单词）</strong>，以 Word Count 计量</td>
-          <td>120-150 字，以字符计数，分为 3-4 个精简微段落</td>
+          <td>长度控制</td>
+          <td>控制在 <strong>50~70 Words（单词）</strong>，2-3 个短段落</td>
+          <td>120-150 字，3-4 个精简段落</td>
         </tr>
       </tbody>
     </table>
 
     <div class="card">
-      <p><strong>💡 长度控制底层机制（加分亮点）：</strong>值得一提的是，为了解决 Google 英文模式下字数忽多忽少的问题，我在 Prompt 中并未采用保守的 <code>max_tokens</code> 粗暴截断（这会破坏句子的语法完整性导致断尾），而是启用了 <code>stop_sequences</code>（结束序列）配合 Few-shot 样本的长度锚定，确保输出在 50~70 个单词时自然完整收尾。</p>
+      <p><strong>💡 长度控制的一个小细节：</strong>为了让 Google 英文评论的字数稳定在 50~70 词之间，我没有用 <code>max_tokens</code> 硬截断（因为硬截断容易在句子中间切断导致断句），而是用了 <code>stop_sequences</code>（结束序列）配合 Few-shot 样本，让模型在完整的句号和换行处自然停下来，保证句子读起来是完整的。</p>
     </div>
 
-    <h2>3. 🤖 附加题：企业微信群机器人自动化工作流（Webhook）</h2>
-    <p>当顾客生成好评文案后，系统在后台<strong>静默触发异步非阻塞后台任务</strong>：</p>
-    <ol>
-      <li>大模型秒级提炼出 <strong>20 字以内的中文摘要</strong> 与 <strong>情感倾向判定</strong>；</li>
-      <li>自动生成一段具有品牌温度的 <strong>《50字给奶茶店老板的亲切感谢回复草稿》</strong>；</li>
-      <li>组装为结构化企业微信 Markdown 卡片，实时推送到门店运营群。</li>
-    </ol>
-    <div class="card">
-      <p><strong>💡 Webhook 演示与实推兼容设计：</strong>为适应 Demo 演示环境，系统采用<strong>异步非阻塞触发机制</strong>，主评论生成后无需用户手动输入 Key，直接返回 200 响应；后台采用 <code>try...catch</code> 隔离 Webhook 调用，若在生产环境使用，只需在服务端注入 <code>WEWORK_WEBHOOK</code> / <code>WECOM_WEBHOOK_URL</code> 环境变量，即可一键切换为真实 HTTP 推送。同时前端提供极简折叠抽屉，可实时查看已组装的数据流。</p>
-    </div>
-
-    <!-- Webhook Simulated Card Preview -->
-    <div class="wecom-card">
-      <div class="wecom-header">
-        <span>💬 企业微信群机器人推送卡片渲染预览</span>
-        <span class="badge-success">HTTP 200 OK (24ms)</span>
-      </div>
-      <pre><code>{
-  "msgtype": "markdown",
-  "markdown": {
-    "content": "### 🧋 Sunny Tea House 新评价通知\n> **来源平台**：<font color=\"info\">小红书</font>\n> **用户标签**：<font color=\"comment\">服务好 / 出餐快</font>\n\n**📝 评价内容**：\n>🧋在San Jose挖到宝藏奶茶店啦！Sunny Tea House亲测不踩雷✨...\n\n**📌 AI 核心摘要 (20字)**：\n>顾客高度赞赏了饮品软糯口感与店员的极速热情服务。\n\n**💬 建议老板回复草稿 (50字)**：\n>感谢您对Sunny Tea House的喜爱与支持，期待您的再次光临！\n\n> <font color=\"comment\">⏰ 生成时间：2026/8/21 07:05:15</font>"
-  }
-}</code></pre>
-    </div>
-
-    <h2>4. 🛡️ API Key 服务端安全防护与海量并发用量成本优化架构</h2>
-    <div class="card">
-      <h3>🔒 服务端环境变量沙箱代理架构（防前端泄漏）</h3>
-      <p>题目特别指出纯前端会暴露 API Key。本项目坚决采用 <strong>Next.js Serverless Edge Proxy 服务端代理架构</strong>，客户端与浏览器完全不持有任何 API Key，网络抓包只能看到业务参数，从物理层面彻底杜绝 Key 盗刷与逆向风险。</p>
-    </div>
-    <div class="card">
-      <h3>⚡ Groq LPU 极速推理与成本优势</h3>
-      <p>依托 Groq LPU 架构，模型推理速度达到 <strong>500+ Tokens/秒</strong>，首字时延（TTFT）压缩至 <strong>200~300ms</strong>，体验丝滑流畅；每天免费额度高达 <strong>14,400 次</strong>，单次请求成本接近 <strong>$0.0000</strong>，完美兼顾商用可行性与极佳体验。</p>
-    </div>
-
-    <h2>5. 📱 移动端 H5 交互设计、唤起容错与产品体验闭环</h2>
+    <h3>2.3 线上复盘与现场调 Prompt 的预案</h3>
+    <p>代码里把 Prompt 逻辑全部拆到了 <code>src/app/api/generate/route.ts</code> 头部，复盘现场如果需要微调，改起来很快：</p>
     <ul>
-      <li><strong>选满 2 个标签后的“明确置灰禁用态”</strong>：当用户选中 2 个标签后，其余未选标签自动附加 <code>opacity-40 bg-slate-100 text-slate-400 border-transparent cursor-not-allowed pointer-events-none</code>，高对比度视觉让用户一眼感知不可再点。</li>
-      <li><strong>“生成中...” 加载状态（防重复点击）</strong>：点击“✨ AI生成评价”后，按钮立即禁用并显示旋转 Loading 图标与 <code>⏳ AI正在思考中...</code> 文案，彻底消除重复请求与等待焦虑。</li>
-      <li><strong>文本框高度自适应与中英文分立计量</strong>：通过 <code>useEffect</code> 与 <code>scrollHeight</code> 动态调整 Textarea 高度，内容完整舒展平铺；右上/右下角智能识别平台，<strong>Google 英文显示 Word Count（如 52 Words），小红书显示字符数（如 145 字）</strong>，符合专业编辑习惯。</li>
-      <li><strong>一键复制与绿色 Toast 瞬时反馈</strong>：复制成功后在屏幕中央弹出高对比度绿色 Toast（<code>✅ 已复制到剪贴板，即将跳转...</code>），并在 1.5 秒后平滑淡出。</li>
-      <li><strong>智能 Deep Linking 容错跳转</strong>：对 Google 直跳真实 Google Maps 网页评价入口；对小红书无缝跳转官方移动端 Scheme / 网页搜索打卡入口。</li>
+      <li><strong>如果要求“改成带建议的温和差评”</strong>：只需在 System Prompt 里把 Tone 改为 <i>“Constructive & polite customer feedback, mentioning long wait time”</i>；</li>
+      <li><strong>如果要求“加入特定单品”</strong>：代码里入参已经解耦，直接把饮品名传进 <code>userPrompt</code> 拼接即可；</li>
+      <li><strong>流式容错</strong>：在解析大模型分块时做了边界异常捕获，即使网络偶发抖动也不会导致前端页面卡死。</li>
     </ul>
 
-    <h2>6. ⏱️ 项目实际耗时与效率深度对比分析（50分钟 vs 4.5小时）</h2>
+    <h2>3. 🤖 附加题：企业微信 Webhook 自动化工作流</h2>
+    <p>当顾客在前端生成评价后，后端会自动触发一个后台任务：</p>
+    <ol>
+      <li>调用大模型提炼出 <strong>20 字以内的中文核心摘要</strong>；</li>
+      <li>生成一段 <strong>50 字左右给老板的感谢回复草稿</strong>；</li>
+      <li>拼装成企业微信群机器人的 Markdown 消息格式，推送到运营群。</li>
+    </ol>
+    <div class="card">
+      <p><strong>💡 兼顾演示与真实推送的设计：</strong></p>
+      <ul>
+        <li><strong>异步非阻塞</strong>：Webhook 推送用 <code>try...catch</code> 包裹在后台异步执行，即便推送失败或网络超时，也不会卡住前端顾客获取评价的主请求（主流程依然秒级返回 200）；</li>
+        <li><strong>环境切换</strong>：如果在环境变量里配置了真实的 <code>WEWORK_WEBHOOK</code>，它会真实发到企微群；如果不配，系统就会在后台记录拼装好的数据，前端底部也做了一个折叠抽屉，点开就能直接看到 AI 提炼的摘要和回复草稿。</li>
+      </ul>
+    </div>
+    <pre><code>{
+  "msgtype": "markdown",
+  "markdown": {
+    "content": "### 🧋 Sunny Tea House 新评价通知\n> **来源平台**：小红书\n> **用户标签**：服务好 / 出餐快\n\n**📝 评价内容**：\n>🧋在San Jose挖到宝藏奶茶店啦！Sunny Tea House亲测不踩雷✨...\n\n**📌 AI 核心摘要 (20字)**：\n>顾客高度赞赏了饮品软糯口感与店员的极速热情服务。\n\n**💬 建议老板回复草稿 (50字)**：\n>感谢您对Sunny Tea House的喜爱与支持，期待您的再次光临！\n\n> <font color=\"comment\">⏰ 生成时间：2026/8/21 07:05:15</font>"
+  }
+}</code></pre>
+
+    <h2>4. 🛡️ API Key 安全与用量成本</h2>
+    <div class="card">
+      <h3>🔒 Key 防泄漏做法</h3>
+      <p>在前端直连大模型容易在浏览器 Network 面板里暴露 API Key。这里通过 <strong>Next.js Serverless 路由做了一层后端代理</strong>：客户端只把参数传给服务端，服务端在环境变量 <code>process.env.GROQ_API_KEY</code> 里读取 Key 调用大模型，浏览器端抓包完全看不到 Key。</p>
+    </div>
+    <div class="card">
+      <h3>⚡ 为什么选 Groq</h3>
+      <p>Groq 的首字延迟（TTFT）基本在 <strong>200~300ms</strong>，点击生成后几乎是秒出字，移动端体验很顺畅；每天有 <strong>14,400 次免费调用额度</strong>，对于 Demo 和后续测试完全够用，不需要担心成本超支。</p>
+    </div>
+
+    <h2>5. 📱 移动端交互与细节打磨</h2>
+    <ul>
+      <li><strong>标签防误触</strong>：选满 2 个标签后，其他未选中的标签会自动置灰（<code>opacity-40</code> 且禁止点击），一眼就能看出不能再选了。</li>
+      <li><strong>生成加载态</strong>：点击生成按钮后立刻变更为 <code>⏳ AI正在思考中...</code> 并且处于禁用状态，避免用户连点触发多次请求。</li>
+      <li><strong>中英文分立统计</strong>：Google 模式下按英文单词（Words）统计，小红书模式下按中文字符统计，符合各自的使用习惯。</li>
+      <li><strong>一键复制与跳转</strong>：点击复制后弹出绿色 Toast 提示（<code>✅ 已复制到剪贴板，即将跳转...</code>），并在后台自动唤起小红书或打开 Google Maps 真实评价页面。</li>
+      <li><strong>高度自适应</strong>：文本框根据内容多少用 <code>scrollHeight</code> 自动撑高，避免在手机上出现难看的内部滚动条。</li>
+    </ul>
+
+    <h2>6. ⏱️ 实际耗时记录</h2>
     <table>
       <thead>
         <tr>
-          <th>开发环节</th>
-          <th>传统纯手工耗时预估</th>
-          <th>本次实际耗时 (借助 AI 工具)</th>
-          <th>提效幅度</th>
-          <th>具体提效动作</th>
+          <th>环节</th>
+          <th>手工大概要花的时间</th>
+          <th>这次借助 AI 的实际耗时</th>
+          <th>做的事情</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td>需求解构与架构设计</td>
-          <td>40 分钟</td>
-          <td><strong>10 分钟</strong></td>
-          <td><strong>400%</strong></td>
-          <td>AI 辅助解构 5 大隐性考察点，秒级确立 Next.js + Serverless 架构</td>
+          <td>需求拆解与架构设计</td>
+          <td>约 40 分钟</td>
+          <td><strong>约 10 分钟</strong></td>
+          <td>梳理 5 个关键点，定下 Next.js + Serverless 结构</td>
         </tr>
         <tr>
-          <td>Prompt 设计与跨语种调优</td>
-          <td>60 分钟</td>
-          <td><strong>15 分钟</strong></td>
-          <td><strong>400%</strong></td>
-          <td>AI 结对调优去机器腔，快速建立 <code>TAG_EN_MAP</code> 字典与负向约束</td>
+          <td>Prompt 编写与中英调试</td>
+          <td>约 60 分钟</td>
+          <td><strong>约 15 分钟</strong></td>
+          <td>调优去 AI 味，解决中文标签污染，加上 <code>TAG_EN_MAP</code> 字典</td>
         </tr>
         <tr>
-          <td>移动端 H5 界面与微交互</td>
-          <td>90 分钟</td>
-          <td><strong>10 分钟</strong></td>
-          <td><strong>900%</strong></td>
-          <td>结合 TailwindCSS + Lucide 秒级生成 Apple HIG 规范 UI 与自适应高度</td>
+          <td>移动端 H5 界面与样式</td>
+          <td>约 90 分钟</td>
+          <td><strong>约 10 分钟</strong></td>
+          <td>用 Tailwind 调好移动端适配、自适应高度和按钮热区</td>
         </tr>
         <tr>
-          <td>Serverless API 与 Webhook 流水线</td>
-          <td>50 分钟</td>
-          <td><strong>10 分钟</strong></td>
-          <td><strong>500%</strong></td>
-          <td>快速实现 Groq LPU 代理封装与企业微信 Markdown 数据流</td>
+          <td>接口开发与 Webhook</td>
+          <td>约 50 分钟</td>
+          <td><strong>约 10 分钟</strong></td>
+          <td>写好后端代理、错误兜底和企微 Markdown 消息组装</td>
         </tr>
         <tr>
-          <td>全链路联调、容错加固与部署上线</td>
-          <td>30 分钟</td>
-          <td><strong>5 分钟</strong></td>
-          <td><strong>600%</strong></td>
-          <td>Vercel 一键关联 GitHub 与独立域名 DNS 解析上线</td>
+          <td>联调、加固与域名部署</td>
+          <td>约 30 分钟</td>
+          <td><strong>约 5 分钟</strong></td>
+          <td>Vercel 关联 GitHub，绑定独立域名上线验证</td>
         </tr>
         <tr>
-          <td><strong>总计项目耗时</strong></td>
-          <td><strong>4.5 小时 (270分钟)</strong></td>
+          <td><strong>合计</strong></td>
+          <td><strong>约 4.5 小时</strong></td>
           <td><strong>约 50 分钟</strong></td>
-          <td><strong>🚀 提效超 400%</strong></td>
-          <td><strong>全流程极速交付，大幅超越预期效率指标</strong></td>
+          <td><strong>整体流程顺畅，按时完整交付</strong></td>
         </tr>
       </tbody>
     </table>
-
-    <h2>7. 🎪 15–20 分钟线上复盘与现场 Prompt 调整预案</h2>
-    <p>为应对二面复盘中的现场修改 Prompt 练习，已在 <code>src/app/api/generate/route.ts</code> 实现<strong>完全参数化与模块化解耦</strong>：</p>
-    <ul>
-      <li><strong>场景 A（改为委婉差评/建议）</strong>：在 System Prompt 注入 <code>"Tone: Constructive & polite customer feedback"</code> 即可 10 秒切换；</li>
-      <li><strong>场景 B（增加指定单品或特殊活动）</strong>：在 User Prompt 动态注入饮品参数，Prompt 组装函数会自动更新注入，实现 10 秒内快速响应调整需求。</li>
-      <li><strong>加分技术答辩细节（流式解析与边缘容错）</strong>：在处理大模型分块数据时，专门设计了针对大模型分块与 JSON 分片边界错误的容错处理，防止因网络抖动导致解析崩溃。</li>
-    </ul>
   </div>
 
   <button class="print-btn" onclick="window.print()">🖨️ 导出/打印为 PDF 文档</button>
