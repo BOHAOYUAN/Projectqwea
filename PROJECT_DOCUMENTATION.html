@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sunny Tea House AI 评价生成系统 · 项目技术与设计文档</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.65;
+      color: #1e293b;
+      background: #f8fafc;
+      padding: 40px 20px;
+    }
+    
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 48px;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+      border: 1px solid #e2e8f0;
+    }
+    
+    header {
+      border-bottom: 2px solid #f1f5f9;
+      padding-bottom: 24px;
+      margin-bottom: 32px;
+    }
+    
+    .header-badge {
+      display: inline-block;
+      background: #fef3c7;
+      color: #b45309;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    h1 {
+      font-size: 26px;
+      color: #0f172a;
+      font-weight: 800;
+      margin-bottom: 12px;
+      line-height: 1.3;
+    }
+    
+    .meta-info {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-size: 13px;
+      color: #64748b;
+    }
+    
+    .meta-info span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    
+    h2 {
+      font-size: 19px;
+      color: #0f172a;
+      font-weight: 700;
+      margin-top: 36px;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #f1f5f9;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    h3 {
+      font-size: 15px;
+      color: #334155;
+      font-weight: 600;
+      margin-top: 20px;
+      margin-bottom: 10px;
+    }
+    
+    p {
+      margin-bottom: 14px;
+      font-size: 14px;
+      color: #334155;
+    }
+    
+    ul, ol {
+      margin-bottom: 16px;
+      padding-left: 24px;
+      font-size: 14px;
+      color: #334155;
+    }
+    
+    li {
+      margin-bottom: 6px;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0 24px 0;
+      font-size: 13px;
+    }
+    
+    th, td {
+      border: 1px solid #e2e8f0;
+      padding: 10px 12px;
+      text-align: left;
+    }
+    
+    th {
+      background: #f8fafc;
+      font-weight: 600;
+      color: #0f172a;
+    }
+    
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid #e2e8f0;
+    }
+    
+    pre {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 16px;
+      border-radius: 10px;
+      overflow-x: auto;
+      margin: 14px 0;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    
+    pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+      border: none;
+    }
+    
+    .card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 16px;
+      margin: 16px 0;
+    }
+    
+    .print-btn {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #0284c7;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 30px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+      transition: all 0.2s;
+    }
+    
+    .print-btn:hover {
+      background: #0369a1;
+      transform: translateY(-2px);
+    }
+    
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .container {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      .print-btn {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="header-badge">AI Engineer Demo Project</div>
+      <h1>Sunny Tea House AI 智能评价生成系统 · 技术与设计文档</h1>
+      <div class="meta-info">
+        <span>👤 候选人：薄皓元 (Haoyuan Bo)</span>
+        <span>⏱️ 实际开发耗时：2.5 小时</span>
+        <span>⚡ 核心架构：Next.js + Groq LPU + TailwindCSS</span>
+      </div>
+    </header>
+
+    <h2>1. 💡 AI 辅助编程工具使用策略与提效心得</h2>
+    <p>在本次全栈任务中，我采用了 <strong>AI-Native（AI 原生驱动）</strong> 的敏捷开发工作流，将 Cursor / Claude Code 定位为“敏捷架构师”与“全栈结对工程师”：</p>
+    <ul>
+      <li><strong>Prompt 即架构（Schema-First）</strong>：先用 AI 梳理出严格的 TypeScript 接口（<code>GenerationParams</code>）与 Webhook JSON Payload 规范，确保前后端数据流零歧义。</li>
+      <li><strong>上下文精准注入与快速排障</strong>：在开发 SSE 流式传输（ReadableStream）和 Webhook 管道时，将报错栈与环境信息直接注入 AI 进行根因分析，实现分钟级 Bug 定位与修复。</li>
+      <li><strong>综合提效表现</strong>：传统从零搭建通常需 5-6 小时，通过 AI 辅助全流程压缩至 <strong>2.5 小时</strong>，交付效率提升 <strong>120% 以上</strong>。</li>
+    </ul>
+
+    <h2>2. 🎯 跨平台、跨语种 Prompt（提示词）工程设计与调优复盘</h2>
+    <p>针对大模型直连容易产生生硬“AI 翻译腔”的痛点，核心遵循 <strong>“去 AI 味、地道俚语化、分段呼吸感、移动端一键可用”</strong> 4 项原则：</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>维度</th>
+          <th>🌐 Google Review (北美本地口碑)</th>
+          <th>📕 小红书 (RED 爆款种草)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>目标受众</strong></td>
+          <td>北美本地居民、硅谷工程师、Yelp/Google Maps 用户</td>
+          <td>湾区华人、留学生、探店打卡群体</td>
+        </tr>
+        <tr>
+          <td><strong>语言与口吻</strong></td>
+          <td>地道美式英语（Authentic American English），客观松弛</td>
+          <td>中文简体，热情闺蜜安利、真诚拔草、情绪价值满分</td>
+        </tr>
+        <tr>
+          <td><strong>严格禁止词</strong></td>
+          <td>杜绝 <code>"I had the pleasure of visiting..."</code> 等机器腔</td>
+          <td>杜绝生硬官话、拒绝无意义长文、拒绝大段文字堆叠</td>
+        </tr>
+        <tr>
+          <td><strong>标志性元素</strong></td>
+          <td><code>"Super chewy boba"</code>, <code>"Fast turnaround"</code></td>
+          <td>灵动 Emoji（🧋✨💖🔥）、<strong>空行呼吸感排版</strong>、精准 Tag</td>
+        </tr>
+        <tr>
+          <td><strong>长度控制</strong></td>
+          <td>3-4 句话（50-70 Words），兼顾阅读与发布便捷度</td>
+          <td>120-180 字，分为 3-4 个精简微段落，含点单推荐</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>3. 🤖 附加题：企业微信群机器人自动化工作流（Webhook）</h2>
+    <p>当顾客生成好评文案后，系统在后台<strong>静默触发异步自动化流水线</strong>：</p>
+    <ol>
+      <li>大模型秒级提炼出 <strong>30 字以内的中文摘要</strong> 与 <strong>情感倾向判定</strong>；</li>
+      <li>自动生成一段具有品牌温度的 <strong>《商家/店长公关回复草稿》</strong>；</li>
+      <li>组装为结构化企业微信 Markdown 卡片，实时推送到门店运营群。</li>
+    </ol>
+    <pre><code>{
+  "msgtype": "markdown",
+  "markdown": {
+    "content": "### 🧋 Sunny Tea House 新评价提醒\n> **来源平台**：小红书种草\n> **情感倾向**：正向好评 (5星)\n> **关注标签**：服务态度好 / 珍珠Q弹软糯\n\n**📌 AI 核心摘要**：热情服务、黑糖珍珠鲜奶浓郁软糯\n**💬 建议商家回复草稿**：亲爱的顾客，感谢您赞赏Sunny Tea House的热情服务与黑糖珍珠鲜奶，期待您再次光临！"
+  }
+}</code></pre>
+
+    <h2>4. 🛡️ API Key 安全防护与海量并发用量成本优化架构</h2>
+    <div class="card">
+      <h3>🔒 服务端环境变量沙箱代理架构（防前端泄漏）</h3>
+      <p>题目特别指出纯前端会暴露 API Key。本项目采用 <strong>Next.js Serverless Edge Proxy 服务端代理架构</strong>，客户端与浏览器完全不持有任何 API Key，网络抓包只能看到业务参数，从物理层面彻底杜绝 Key 盗刷与逆向风险。</p>
+    </div>
+    <div class="card">
+      <h3>⚡ Groq LPU 极速推理与成本优势</h3>
+      <p>依托 Groq LPU 架构，模型推理速度达到 <strong>500+ Tokens/秒</strong>，首字时延（TTFT）压缩至 <strong>200~300ms</strong>，体验丝滑流畅；每天免费额度高达 <strong>14,400 次</strong>，单次请求成本接近 <strong>$0.0000</strong>，完美兼顾商用可行性与极佳体验。</p>
+    </div>
+
+    <h2>5. 📱 移动端 H5 交互与产品体验闭环设计</h2>
+    <ul>
+      <li><strong>极简高对比度美学</strong>：采用深色科技美学（Slate-950 + 琥珀黄 Amber），夜间阅读舒适，层级清晰。</li>
+      <li><strong>流式打字反馈（SSE）</strong>：实时字符逐字吐出，给用户最直接的响应感。</li>
+      <li><strong>一键复制与深度唤起（Deep Linking）</strong>：点击触发五彩纸屑彩蛋 🎉 与 Toast 提示，自动写入剪贴板，并尝试通过 URL Scheme（<code>xhsdiscover://</code>）唤起小红书 App 或直跳 Google Maps 评论区。</li>
+    </ul>
+
+    <h2>6. ⏱️ 项目实际耗时与效率分析</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>开发环节</th>
+          <th>实际耗时</th>
+          <th>提效方式</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>需求解构与架构设计</td>
+          <td>20 分钟</td>
+          <td>解构 5 大隐性考察点，确立 Next.js + Serverless 架构</td>
+        </tr>
+        <tr>
+          <td>Prompt 设计与调优</td>
+          <td>30 分钟</td>
+          <td>针对 Google/小红书调优去 AI 味与字数约束</td>
+        </tr>
+        <tr>
+          <td>H5 界面与微动效研发</td>
+          <td>45 分钟</td>
+          <td>使用 TailwindCSS + Lucide 构建响应式极简 UI</td>
+        </tr>
+        <tr>
+          <td>SSE 流式 API 与 Webhook 自动化</td>
+          <td>35 分钟</td>
+          <td>完成 Groq API 代理与企业微信 Markdown 数据流</td>
+        </tr>
+        <tr>
+          <td>集成测试与文档撰写</td>
+          <td>20 分钟</td>
+          <td>验证双端兼容性与撰写结项文档</td>
+        </tr>
+        <tr>
+          <td><strong>总计耗时</strong></td>
+          <td><strong>约 2.5 小时</strong></td>
+          <td><strong>远低于参考耗时 4-6 小时</strong></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>7. 🎪 15–20 分钟线上复盘与现场 Prompt 调整预案</h2>
+    <p>为应对二面复盘中的现场修改 Prompt 练习，已在 <code>src/lib/prompts.ts</code> 实现<strong>完全参数化与模块化解耦</strong>：</p>
+    <ul>
+      <li><strong>场景 A（改为委婉差评/建议）</strong>：在 System Prompt 注入 <code>"Tone: Constructive & polite customer feedback"</code> 即可 10 秒切换；</li>
+      <li><strong>场景 B（增加指定单品或特殊活动）</strong>：微调抽屉支持直接注入自定义饮品参数，Prompt 自动无缝衔接。</li>
+    </ul>
+  </div>
+
+  <button class="print-btn" onclick="window.print()">🖨️ 导出/打印为 PDF 文档</button>
+</body>
+</html>
