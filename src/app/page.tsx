@@ -128,9 +128,9 @@ export default function HomePage() {
       
       {/* Green Toast Notification (1.5s Auto Dismiss) */}
       {showCopyToast && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-emerald-600 text-white text-xs sm:text-sm font-bold px-5 py-2.5 rounded-full shadow-xl flex items-center gap-2 transition-all animate-bounce">
+        <div className="fixed top-8 left-1/2 -translate-x-1/2 z-50 bg-emerald-600 text-white text-xs sm:text-sm font-bold px-5 py-2.5 rounded-full shadow-2xl flex items-center gap-2 transition-all animate-bounce">
           <Check className="w-4 h-4 stroke-[3]" />
-          <span>✅ 已复制到剪贴板！正在跳转发布...</span>
+          <span>✅ 已复制到剪贴板，即将跳转...</span>
         </div>
       )}
 
@@ -271,7 +271,9 @@ export default function HomePage() {
             />
             {generatedReview && (
               <span className="absolute bottom-2.5 right-3 text-[10px] text-slate-400 font-mono select-none">
-                {generatedReview.length} 字
+                {platform === 'Google'
+                  ? `${generatedReview.trim() ? generatedReview.trim().split(/\s+/).filter(Boolean).length : 0} Words`
+                  : `${generatedReview.length} 字`}
               </span>
             )}
           </div>
