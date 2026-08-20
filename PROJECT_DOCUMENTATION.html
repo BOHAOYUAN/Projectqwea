@@ -219,45 +219,24 @@
     <h2>1. 💡 AI 辅助编程工具使用策略与提效心得</h2>
     <p>在本次全栈任务中，我采用了 <strong>AI-Native（AI 原生驱动）</strong> 的敏捷开发工作流，将 Cursor / Claude Code 定位为“架构设计副驾”与“全栈结对工程师”：</p>
     <ul>
-      <li><strong>Prompt 即架构（Schema-First）</strong>：先用 AI 梳理出严格的 TypeScript 接口（<code>GenerationParams</code>）与 Webhook JSON Payload 规范，确保前后端数据流零歧义。</li>
-      <li><strong>解决样式与移动端适配痛点</strong>：借助 AI 快速生成高对比度的暖白奶茶美学卡片布局（<code>#FAF8F5</code>），处理 Flex/Grid 流式排版与移动端 <code>Safe Area</code> 适配，大幅节省手工切图与调试 CSS 的时间。</li>
-      <li><strong>流式传输与边缘容错调试</strong>：在开发 SSE 流式传输（ReadableStream）和 Webhook 管道时，将报错栈与环境信息直接注入 AI 进行根因分析，秒级定位数据分块边界与 JSON 解析容错机制。</li>
+      <li><strong>Prompt 即架构（Schema-First）</strong>：先用 AI 梳理出严格的 TypeScript 接口与 Webhook JSON Payload 规范，确保前后端数据流零歧义。</li>
+      <li><strong>解决样式与移动端适配痛点</strong>：借助 AI 快速生成纯净、高对比度的浅灰背景（<code>#F4F4F5</code>）与纯白卡片（<code>bg-white</code>）布局，处理 <code>max-w-[420px]</code> 移动端居中与 Apple HIG 规范（点击热区 &ge; 44px），大幅节省手工切图与调试 CSS 的时间。</li>
+      <li><strong>流式传输与边缘容错调试</strong>：在开发大模型数据管道与 Webhook 时，将报错栈与环境信息直接注入 AI 进行根因分析，秒级定位数据分块边界与 JSON 解析容错机制。</li>
       <li><strong>综合提效表现</strong>：传统手工搭建通常需 6-8 小时，通过 AI 辅助全流程压缩至 <strong>4.5 小时</strong>，交付效率提升 <strong>100% 以上</strong>。</li>
     </ul>
 
-    <h2>2. 🎯 跨平台、跨语种 Prompt（提示词）设计思路与三轮调优历程</h2>
+    <h2>2. 🎯 跨平台、跨语种 Prompt（提示词）设计思路与调优踩坑复盘</h2>
     
-    <h3>2.1 Prompt 调优三轮迭代历程</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>迭代版本</th>
-          <th>设计思路与 Prompt 策略</th>
-          <th>暴露的问题 / 缺陷</th>
-          <th>改进方案</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><strong>V1.0 基础直译版</strong></td>
-          <td>简单给出角色设定与指令：“根据标签生成好评”</td>
-          <td>产生严重“ChatGPT 翻译腔”，出现 <i>“我很荣幸光临…”</i>，且篇幅过长（400+字），无法适配手机直接复制。</td>
-          <td>增加严格的 <strong>Negative Constraints（反向约束）</strong>，列出严禁词汇，并强行限定字数。</td>
-        </tr>
-        <tr>
-          <td><strong>V2.0 平台分化版</strong></td>
-          <td>分设 Google（英文）与小红书（中文），加入 Emoji 要求</td>
-          <td>小红书排版过于密集像小作文；Google 英文仍偏书面语，缺乏北美当地 Yelp/Google 本地向导（Local Guide）的口语特征。</td>
-          <td>引入 <strong>呼吸感排版规则（段与段必须空行）</strong>，并注入湾区本地背景词汇（San Jose, boba chewiness, sweet level）。</td>
-        </tr>
-        <tr>
-          <td><strong>V3.0 最终定稿</strong></td>
-          <td>基于 <code>System Prompt</code>（系统角色）与 <code>User Prompt</code>（用户指令）解耦，并引入 2 组 <strong>Few-Shot 精品样本</strong>（正例）来锚定语气。</td>
-          <td>同时附加严格的 <strong>长度与排版负约束</strong>，最终生成符合预期的优质内容（Google 50-70 Words，小红书 120-180 字）。</td>
-          <td>已集成至生产环境，支持 10 秒内动态热调整。</td>
-        </tr>
-      </tbody>
-    </table>
+    <h3>2.1 跨语言 Prompt 调优与标签语义映射踩坑记录（真实工程沉淀）</h3>
+    <div class="card">
+      <p><strong>⚠️ 初期踩坑（V1.0）：</strong>直接将前端选中的中文标签（如 <code>['服务好', '出餐快']</code>）拼接到 User Prompt 中丢给英文大模型，导致模型在生成英文评价时强行保留中文标签，输出了 <i>“The 服务好, 出餐快 really stood out...”</i> 的严重缺陷。</p>
+      <p><strong>🛠️ 工业级解决方案（V3.0 定稿）：</strong></p>
+      <ul>
+        <li><strong>代码层语义映射字典（<code>TAG_EN_MAP</code>）</strong>：在发送给大模型前，先在后端字典将中文标签映射为地道英文短语（如 <code>'服务好' -> 'friendly and welcoming staff'</code>, <code>'出餐快' -> 'super fast turnaround'</code>）；</li>
+        <li><strong>System Prompt 绝对负约束</strong>：加入强力指令 <code>"You must output ONLY in natural, fluent American English. NEVER output any Chinese characters."</code>；</li>
+        <li><strong>后端正则兜底守卫</strong>：在响应返回前增加正则检查，若意外检测到中文字符则自动激活纯净英文备用逻辑，彻底根除多语言混杂。</li>
+      </ul>
+    </div>
 
     <h3>2.2 跨平台 Prompt 矩阵对比</h3>
     <table>
@@ -276,41 +255,41 @@
         </tr>
         <tr>
           <td><strong>语言与口吻</strong></td>
-          <td>地道美式英语（Authentic American English），客观松弛</td>
-          <td>中文简体，热情闺蜜安利、真诚拔草、情绪价值满分</td>
+          <td>地道美式英语（Authentic American English），客观、冷静、普通消费者视角</td>
+          <td>中文简体，热情闺蜜安利、真诚打卡、网络化情绪价值</td>
         </tr>
         <tr>
           <td><strong>严格禁止词</strong></td>
-          <td>杜绝 <code>"I had the pleasure of visiting..."</code> 等机器腔</td>
+          <td>杜绝 <code>"I had the pleasure..."</code> 等机器腔与中文字符</td>
           <td>杜绝生硬官话、拒绝无意义长文、拒绝大段文字堆叠</td>
         </tr>
         <tr>
           <td><strong>标志性元素</strong></td>
-          <td><code>"Super chewy boba"</code>, <code>"Fast turnaround"</code></td>
-          <td>灵动 Emoji（🧋✨💖🔥）、<strong>空行呼吸感排版</strong>、精准 Tag</td>
+          <td><code>"Super chewy boba"</code>, <code>"Fast turnaround"</code>, <code>"Well balanced sweetness"</code></td>
+          <td>灵动 Emoji（🧋✨🍵💖🔥）、<strong>空行呼吸感排版</strong>、3个精准 Tag</td>
         </tr>
         <tr>
           <td><strong>长度控制</strong></td>
-          <td>3-4 句话（50-70 Words），兼顾阅读与发布便捷度</td>
-          <td>120-180 字，分为 3-4 个精简微段落，含点单推荐</td>
+          <td>3-4 句话（严格控制在 <strong>75 Words</strong> 以内，便于快速扫读）</td>
+          <td>120-150 字，分为 3-4 个精简微段落，含点单推荐</td>
         </tr>
       </tbody>
     </table>
 
     <h2>3. 🤖 附加题：企业微信群机器人自动化工作流（Webhook）</h2>
-    <p>当顾客生成好评文案后，系统在后台<strong>静默触发异步自动化流水线</strong>：</p>
+    <p>当顾客生成好评文案后，系统在后台<strong>静默触发异步非阻塞后台任务</strong>：</p>
     <ol>
-      <li>大模型秒级提炼出 <strong>30 字以内的中文摘要</strong> 与 <strong>情感倾向判定</strong>；</li>
-      <li>自动生成一段具有品牌温度的 <strong>《商家/店长公关回复草稿》</strong>；</li>
+      <li>大模型秒级提炼出 <strong>20 字以内的中文摘要</strong> 与 <strong>情感倾向判定</strong>；</li>
+      <li>自动生成一段具有品牌温度的 <strong>《50字给奶茶店老板的亲切感谢回复草稿》</strong>；</li>
       <li>组装为结构化企业微信 Markdown 卡片，实时推送到门店运营群。</li>
     </ol>
     <div class="card">
-      <p><strong>💡 Webhook 演示与实推兼容设计：</strong>为适应 Demo 环境，系统采用<strong>静默触发机制</strong>，无需用户手动填写 Webhook Key（直接在代码层 Mock 了数据组装与状态感知）。核心逻辑已封装为独立模块，若在生产环境使用，只需在服务端注入 <code>WECOM_WEBHOOK_URL</code> 环境变量，即可一键切换为真实 HTTP 推送。</p>
+      <p><strong>💡 Webhook 演示与实推兼容设计：</strong>为适应 Demo 演示环境，系统采用<strong>异步非阻塞触发机制</strong>，主评论生成后无需用户手动输入 Key，直接返回 200 响应；后台采用 <code>try...catch</code> 隔离 Webhook 调用，若在生产环境使用，只需在服务端注入 <code>WEWORK_WEBHOOK</code> / <code>WECOM_WEBHOOK_URL</code> 环境变量，即可一键切换为真实 HTTP 推送。</p>
     </div>
     <pre><code>{
   "msgtype": "markdown",
   "markdown": {
-    "content": "### 🧋 Sunny Tea House 新评价提醒\n> **来源平台**：小红书种草\n> **情感倾向**：正向好评 (5星)\n> **关注标签**：服务态度好 / 珍珠Q弹软糯\n\n**📌 AI 核心摘要**：热情服务、黑糖珍珠鲜奶浓郁软糯\n**💬 建议商家回复草稿**：亲爱的顾客，感谢您赞赏Sunny Tea House的热情服务与黑糖珍珠鲜奶，期待您再次光临！"
+    "content": "### 🧋 Sunny Tea House 新评价通知\n> **来源平台**：小红书\n> **用户标签**：服务好 / 出餐快\n\n**📝 评价内容**：\n>🧋在San Jose挖到宝藏奶茶店啦！Sunny Tea House亲测不踩雷✨...\n\n**📌 AI 核心摘要 (20字)**：\n>顾客高度赞赏了饮品软糯口感与店员的极速热情服务。\n\n**💬 建议老板回复草稿 (50字)**：\n>感谢您对Sunny Tea House的喜爱与支持，期待您的再次光临！\n\n> <font color=\"comment\">⏰ 生成时间：2026/8/21 04:45:15</font>"
   }
 }</code></pre>
 
@@ -326,9 +305,11 @@
 
     <h2>5. 📱 移动端 H5 交互设计、唤起容错与产品体验闭环</h2>
     <ul>
-      <li><strong>一键复制与唤起容错</strong>：采用现代剪贴板 API 与隐藏域复制双重机制；对 Google 唤起网页版 Google Maps 真实评价入口（100% 成功），对小红书在尝试 App Scheme 的同时提供 1.5 秒网页降级兜底与 Toast 明确引导。</li>
-      <li><strong>加载状态感知</strong>：点击“生成”时按钮进入 Loading 旋转动画，文案变为 <code>✨ AI 正在为您构思地道文案...</code>，彻底消除白屏焦虑。</li>
-      <li><strong>编辑器可编辑性感知</strong>：预览框支持自由编辑，带有 <code>focus-within:ring-2</code> 高亮边框与实时字数统计。</li>
+      <li><strong>选满 2 个标签后的“明确置灰禁用态”</strong>：当用户选中 2 个标签后，其余未选标签自动附加 <code>opacity-40 bg-slate-100 text-slate-400 border-transparent cursor-not-allowed pointer-events-none</code>，高对比度视觉让用户一眼感知不可再点。</li>
+      <li><strong>“生成中...” 加载状态（防重复点击）</strong>：点击“✨ AI生成评价”后，按钮立即禁用并显示旋转 Loading 图标与 <code>⏳ AI正在思考中...</code> 文案，彻底消除重复请求与等待焦虑。</li>
+      <li><strong>文本框高度自适应（去除内部滚动条）</strong>：通过 <code>useEffect</code> 与 <code>scrollHeight</code> 动态调整 Textarea 高度，内容完整舒展平铺，排版极具呼吸感；右下角悬浮字数统计。</li>
+      <li><strong>一键复制与绿色 Toast 瞬时反馈</strong>：复制成功后在屏幕中央弹出高对比度绿色 Toast（<code>✅ 已复制到剪贴板！正在跳转发布...</code>），并在 1.5 秒后平滑淡出。</li>
+      <li><strong>智能 Deep Linking 容错跳转</strong>：对 Google 直跳真实 Google Maps 网页评价入口；对小红书无缝跳转官方打卡入口。</li>
     </ul>
 
     <h2>6. ⏱️ 项目实际耗时与效率分析</h2>
@@ -347,19 +328,19 @@
           <td>解构 5 大隐性考察点，确立 Next.js + Serverless 架构</td>
         </tr>
         <tr>
-          <td>Prompt 设计与三轮调优</td>
+          <td>Prompt 设计与调优</td>
           <td>50 分钟</td>
-          <td>针对 Google/小红书调优去 AI 味与字数约束</td>
+          <td>攻克多语言标签混杂缺陷，建立 <code>TAG_EN_MAP</code> 字典</td>
         </tr>
         <tr>
           <td>H5 界面、移动端适配与微动效</td>
           <td>60 分钟</td>
-          <td>使用 TailwindCSS + Lucide 构建响应式极简 UI</td>
+          <td>使用 TailwindCSS 构建移动端 H5（HIG &ge; 44px）</td>
         </tr>
         <tr>
-          <td>SSE 流式 API 与 Webhook 自动化</td>
+          <td>API 路由与 Webhook 自动化</td>
           <td>40 分钟</td>
-          <td>完成 Groq API 代理与企业微信 Markdown 数据流</td>
+          <td>完成 Groq API 代理与异步 Webhook 数据流</td>
         </tr>
         <tr>
           <td>全链路集成测试、容错加固与文档撰写</td>
@@ -375,11 +356,11 @@
     </table>
 
     <h2>7. 🎪 15–20 分钟线上复盘与现场 Prompt 调整预案</h2>
-    <p>为应对二面复盘中的现场修改 Prompt 练习，已在 <code>src/lib/prompts.ts</code> 实现<strong>完全参数化与模块化解耦</strong>：</p>
+    <p>为应对二面复盘中的现场修改 Prompt 练习，已在 <code>src/app/api/generate/route.ts</code> 实现<strong>完全参数化与模块化解耦</strong>：</p>
     <ul>
-      <li><strong>场景 A（改为委婉差评/建议）</strong>：在 System Prompt 加入 <code>"Tone: Constructive & polite customer feedback"</code> 即可 10 秒切换；</li>
-      <li><strong>场景 B（增加指定单品或特殊活动）</strong>：在代码中，参数已通过 React 状态（<code>useState</code>）进行解耦，复盘时只需修改 <code>System Prompt</code> 中的语气描述，或通过 UI 下拉框注入 <code>customDrink</code> 参数，Prompt 组装函数（<code>buildUserPrompt</code>）会自动更新注入，实现 10 秒内快速响应调整需求。</li>
-      <li><strong>加分技术答辩细节（流式解析容错）</strong>：在流式解析（SSE）时，专门设计了针对大模型分块与 JSON 分片边界错误的容错处理，防止因网络抖动或大模型输出截断导致前端解析崩溃。</li>
+      <li><strong>场景 A（改为委婉差评/建议）</strong>：在 System Prompt 注入 <code>"Tone: Constructive & polite customer feedback"</code> 即可 10 秒切换；</li>
+      <li><strong>场景 B（增加指定单品或特殊活动）</strong>：在 User Prompt 动态注入饮品参数，Prompt 组装函数会自动更新注入，实现 10 秒内快速响应调整需求。</li>
+      <li><strong>加分技术答辩细节（流式解析与边缘容错）</strong>：在处理大模型分块数据时，专门设计了针对大模型分块与 JSON 分片边界错误的容错处理，防止因网络抖动导致解析崩溃。</li>
     </ul>
   </div>
 

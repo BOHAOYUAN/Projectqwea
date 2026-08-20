@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Loader2, Check } from 'lucide-react';
 
 const TAG_OPTIONS = ['服务好', '出餐快', '环境干净', '饮品颜值高', '口味独特'];
 
@@ -11,15 +12,19 @@ export default function HomePage() {
   const [generatedReview, setGeneratedReview] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
-  const [toastMessage, setToastMessage] = useState<string>('');
+  const [showCopyToast, setShowCopyToast] = useState<boolean>(false);
 
-  // Toast Helper
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(''), 3000);
-  };
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // 2. Tag Selection Handler (Max 2, others disabled)
+  // Auto-resize textarea to remove internal scrollbars and provide breathing room
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.max(120, textareaRef.current.scrollHeight)}px`;
+    }
+  }, [generatedReview]);
+
+  // 2. Tag Selection Handler (Max 2, unselected disabled)
   const handleTagClick = (tag: string) => {
     setErrorMessage('');
     if (selectedTags.includes(tag)) {
@@ -31,7 +36,7 @@ export default function HomePage() {
     }
   };
 
-  // 3. AI Generation Handler
+  // 3. AI Generation Handler with Loading State
   const handleGenerate = async () => {
     if (selectedTags.length === 0) {
       setErrorMessage('请至少选择 1 个消费感受标签');
@@ -87,7 +92,9 @@ export default function HomePage() {
         document.body.removeChild(tempText);
       }
 
-      showToast('已复制到剪贴板');
+      // Green Toast notification (1.5s auto dismiss)
+      setShowCopyToast(true);
+      setTimeout(() => setShowCopyToast(false), 1500);
 
       // Attempt redirect to platform
       setTimeout(() => {
@@ -102,7 +109,7 @@ export default function HomePage() {
             '_blank'
           );
         }
-      }, 600);
+      }, 700);
     } catch {
       setErrorMessage('复制失败，请手动长按文本框全选复制');
     }
@@ -111,10 +118,11 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-[#F4F4F5] flex flex-col justify-start sm:justify-center items-center p-4 sm:py-8 font-sans antialiased text-slate-800">
       
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white text-xs sm:text-sm font-semibold px-5 py-2.5 rounded-full shadow-lg transition-all animate-bounce">
-          {toastMessage}
+      {/* Green Toast Notification (1.5s Auto Dismiss) */}
+      {showCopyToast && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-emerald-600 text-white text-xs sm:text-sm font-bold px-5 py-2.5 rounded-full shadow-xl flex items-center gap-2 transition-all animate-bounce">
+          <Check className="w-4 h-4 stroke-[3]" />
+          <span>✅ 已复制到剪贴板！正在跳转发布...</span>
         </div>
       )}
 
@@ -143,7 +151,7 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Step 1: 感受选择 (Max 2, others disabled) */}
+        {/* Step 1: 感受选择 (Max 2, others disabled with opacity-40 and not-allowed) */}
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <label className="text-xs font-bold text-slate-800 tracking-wide">
@@ -169,7 +177,7 @@ export default function HomePage() {
                     isSelected
                       ? 'bg-amber-500 text-white shadow-sm ring-2 ring-amber-500/20'
                       : isDisabled
-                      ? 'bg-slate-100 text-slate-300 border border-slate-100 cursor-not-allowed opacity-50'
+                      ? 'opacity-40 bg-slate-100 text-slate-400 border border-transparent cursor-not-allowed pointer-events-none'
                       : 'bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100 active:scale-95'
                   }`}
                 >
@@ -219,48 +227,53 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Step 3: AI 生成按钮 (Loading state) */}
+        {/* Step 3: AI 生成按钮 (Loading spinner & disabled state) */}
         <div>
           <button
             type="button"
             disabled={isLoading}
             onClick={handleGenerate}
-            className="w-full min-h-[48px] py-3.5 px-4 rounded-2xl bg-amber-500 hover:bg-amber-600 active:bg-amber-700 disabled:opacity-50 text-white font-extrabold text-sm shadow-sm transition-all flex items-center justify-center gap-2"
+            className="w-full min-h-[48px] py-3.5 px-4 rounded-2xl bg-amber-500 hover:bg-amber-600 active:bg-amber-700 disabled:opacity-75 disabled:cursor-not-allowed text-white font-extrabold text-sm shadow-sm transition-all flex items-center justify-center gap-2"
           >
             {isLoading ? (
-              <span>生成中...</span>
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>⏳ AI正在思考中...</span>
+              </>
             ) : (
               <span>✨ AI生成评价</span>
             )}
           </button>
         </div>
 
-        {/* Step 4: 文本编辑框 & 一键复制流转 */}
+        {/* Step 4: 文本编辑框 (Auto-expanding, no scrollbars) & 一键复制流转 */}
         <section className="space-y-3 pt-2">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-bold text-slate-800 tracking-wide block">
-              3. 评价内容预览 <span className="text-slate-400 font-normal">(可二次编辑)</span>
-            </label>
+          <label className="text-xs font-bold text-slate-800 tracking-wide block">
+            3. 评价内容预览 <span className="text-slate-400 font-normal">(可二次编辑)</span>
+          </label>
+
+          <div className="relative">
+            <textarea
+              ref={textareaRef}
+              value={generatedReview}
+              onChange={(e) => setGeneratedReview(e.target.value)}
+              placeholder="点击上方按钮后，AI 生成的评价将呈现于此，您可随时修改..."
+              rows={4}
+              className="w-full p-4 pb-7 rounded-2xl bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm leading-relaxed outline-none focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-500/20 transition-all resize-none overflow-hidden placeholder-slate-400 font-sans"
+            />
             {generatedReview && (
-              <span className="text-[10px] text-slate-400 font-mono">
+              <span className="absolute bottom-2.5 right-3 text-[10px] text-slate-400 font-mono select-none">
                 {generatedReview.length} 字
               </span>
             )}
           </div>
 
-          <textarea
-            value={generatedReview}
-            onChange={(e) => setGeneratedReview(e.target.value)}
-            placeholder="点击上方按钮后，AI 生成的评价将呈现于此，您可随时修改..."
-            rows={5}
-            className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm leading-relaxed outline-none focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-500/20 transition-all resize-none placeholder-slate-400 font-sans"
-          />
-
           {/* 一键复制并跳转按钮 */}
           <button
             type="button"
+            disabled={isLoading || !generatedReview.trim()}
             onClick={handleCopyAndRedirect}
-            className="w-full min-h-[44px] py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-black text-white text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-2"
+            className="w-full min-h-[44px] py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-black disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-2"
           >
             <span>📋 一键复制并前往 {platform} 发布</span>
           </button>
