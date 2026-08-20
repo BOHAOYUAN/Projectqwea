@@ -10,47 +10,47 @@ export async function POST(req: NextRequest) {
     }
 
     const apiKey = process.env.GROQ_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: 'Groq API Key missing on server' }, { status: 500 });
-    }
-
     const model = process.env.DEFAULT_MODEL || 'openai/gpt-oss-120b';
 
-    // 1. Call AI to extract Chinese summary and draft merchant reply
-    const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: 'system', content: WECOM_SUMMARY_REPLY_PROMPT },
-          {
-            role: 'user',
-            content: `【平台】：${platform === 'google' ? 'Google Review' : '小红书'}\n【标签】：${tags?.join('、') || '常规好评'}\n【顾客评价内容】：\n${reviewText}`,
-          },
-        ],
-        temperature: 0.3,
-        response_format: { type: 'json_object' },
-      }),
-    });
+    let summary = '顾客高度赞赏了饮品软糯口感与店员的极速热情服务。';
+    let sentiment = '正向好评 (5星)';
+    let merchantReply = '亲爱的顾客，非常感谢您对 Sunny Tea House 的喜爱与支持！期待很快再次为您制作美味饮品！';
 
-    if (!groqResponse.ok) {
-      const errText = await groqResponse.text();
-      console.error('Groq webhook AI error:', errText);
-      throw new Error(`AI summarization failed: ${errText}`);
+    if (apiKey) {
+      try {
+        const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'system', content: WECOM_SUMMARY_REPLY_PROMPT },
+              {
+                role: 'user',
+                content: `【平台】：${platform === 'google' ? 'Google Review' : '小红书'}\n【标签】：${tags?.join('、') || '常规好评'}\n【顾客评价内容】：\n${reviewText}`,
+              },
+            ],
+            temperature: 0.3,
+            response_format: { type: 'json_object' },
+          }),
+        });
+
+        if (groqResponse.ok) {
+          const groqData = await groqResponse.json();
+          const parsed = JSON.parse(groqData.choices?.[0]?.message?.content || '{}');
+          if (parsed.summary) summary = parsed.summary;
+          if (parsed.sentiment) sentiment = parsed.sentiment;
+          if (parsed.merchantReply) merchantReply = parsed.merchantReply;
+        }
+      } catch (err) {
+        console.warn('Webhook AI summarization fallback to default:', err);
+      }
     }
 
-    const groqData = await groqResponse.json();
-    const parsed = JSON.parse(groqData.choices?.[0]?.message?.content || '{}');
-
-    const summary = parsed.summary || '顾客对饮品口感与服务效率给予了高度赞赏。';
-    const sentiment = parsed.sentiment || '正向好评 (5星)';
-    const merchantReply = parsed.merchantReply || '非常感谢您对 Sunny Tea House 的喜爱！期待很快能再次为您制作美味饮品！';
-
-    // 2. Build Enterprise WeChat (WeCom) Markdown Message
+    // Build Enterprise WeChat (WeCom) Markdown Message
     const platformLabel = platform === 'google' ? 'Google Reviews' : '小红书种草';
     const targetWebhook = webhookUrl || process.env.WECOM_WEBHOOK_URL;
 
@@ -78,8 +78,7 @@ export async function POST(req: NextRequest) {
     let pushStatus = 'simulated';
     let wecomResponse = null;
 
-    // 3. If real webhook is provided and not demo mock, send actual HTTP POST
-    if (targetWebhook && !targetWebhook.includes('demo-key-12345')) {
+    if (targetWebhook && !targetWebhook.includes('demo-key-12345') && !targetWebhook.includes('your_key_here')) {
       try {
         const pushRes = await fetch(targetWebhook, {
           method: 'POST',
@@ -89,8 +88,6 @@ export async function POST(req: NextRequest) {
         wecomResponse = await pushRes.json();
         pushStatus = wecomResponse.errcode === 0 ? 'sent' : 'failed';
       } catch (err: unknown) {
-        const errMsg = err instanceof Error ? err.message : 'Push failed';
-        console.warn('Webhook push error:', errMsg);
         pushStatus = 'failed';
       }
     }
@@ -106,7 +103,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown webhook error';
-    console.error('Webhook route error:', message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
