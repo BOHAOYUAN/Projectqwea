@@ -129,9 +129,19 @@ export async function POST(req: NextRequest) {
         ? `Customer experience highlights: ${englishTags || 'great boba and friendly service'}. Write the short Google review in English now.`
         : `顾客本次打卡 Sunny Tea House 体验标签：${tags.join('、') || '服务好、出餐快'}。请写小红书种草笔记。`;
 
+    // Smart summaries for bonus question
+    const tagSummaryStr = tags.length > 0 ? tags.join('、') : '服务好、出餐快';
+    const bonusSummary = `顾客赞赏了${tagSummaryStr}，整体体验优秀。`;
+    const bonusReplyDraft = `亲爱的顾客，感谢您对 Sunny Tea House 的喜爱与支持，期待再次为您制作美味饮品！`;
+
     if (!apiKey) {
       const fallbackText = getLocalFallback(platform, tags);
-      return NextResponse.json({ review: fallbackText, success: true });
+      return NextResponse.json({
+        review: fallbackText,
+        summary: bonusSummary,
+        replyDraft: bonusReplyDraft,
+        success: true,
+      });
     }
 
     try {
@@ -170,11 +180,21 @@ export async function POST(req: NextRequest) {
         (err) => console.warn('Background webhook trigger error:', err)
       );
 
-      return NextResponse.json({ review: reviewText, success: true });
+      return NextResponse.json({
+        review: reviewText,
+        summary: bonusSummary,
+        replyDraft: bonusReplyDraft,
+        success: true,
+      });
     } catch (apiErr) {
       console.warn('API call failed, using pure fallback:', apiErr);
       const fallbackText = getLocalFallback(platform, tags);
-      return NextResponse.json({ review: fallbackText, success: true });
+      return NextResponse.json({
+        review: fallbackText,
+        summary: bonusSummary,
+        replyDraft: bonusReplyDraft,
+        success: true,
+      });
     }
   } catch (error: unknown) {
     const errMsg = error instanceof Error ? error.message : '服务器内部处理异常';

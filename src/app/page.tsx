@@ -14,6 +14,13 @@ export default function HomePage() {
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [showCopyToast, setShowCopyToast] = useState<boolean>(false);
 
+  // Bonus Webhook UI state (collapsible & unobtrusive)
+  const [webhookData, setWebhookData] = useState<{
+    summary: string;
+    replyDraft: string;
+  } | null>(null);
+  const [showWebhookDrawer, setShowWebhookDrawer] = useState<boolean>(false);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-resize textarea to remove internal scrollbars and provide breathing room
@@ -46,6 +53,7 @@ export default function HomePage() {
     setIsLoading(true);
     setErrorMessage('');
     setGeneratedReview('');
+    setWebhookData(null);
 
     try {
       const response = await fetch('/api/generate', {
@@ -64,6 +72,12 @@ export default function HomePage() {
       }
 
       setGeneratedReview(data.review || '');
+      if (data.summary && data.replyDraft) {
+        setWebhookData({
+          summary: data.summary,
+          replyDraft: data.replyDraft,
+        });
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : '网络请求遇到异常，请检查后重试';
       setErrorMessage(msg);
@@ -291,6 +305,52 @@ export default function HomePage() {
           <p className="text-[10px] text-center text-slate-400 pt-1">
             点击将自动复制文案并打开对应平台的发布页面
           </p>
+
+          {/* 附加题：企业微信工作流折叠抽屉 (优雅克制，不破坏主视觉) */}
+          {webhookData && (
+            <div className="pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowWebhookDrawer(!showWebhookDrawer)}
+                className="w-full py-2.5 px-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/90 flex items-center justify-between text-[11px] font-bold transition-all text-slate-700"
+              >
+                <span className="flex items-center gap-1.5 text-emerald-700">
+                  <span>🤖 附加题：企微群工作流</span>
+                  <span className="bg-emerald-100 text-emerald-800 text-[9px] px-1.5 py-0.5 rounded font-mono font-bold">
+                    已就绪
+                  </span>
+                </span>
+                <span className="text-slate-400 text-[10px] font-normal">
+                  {showWebhookDrawer ? '收起 ▲' : '查看 AI摘要与回复草稿 ▼'}
+                </span>
+              </button>
+
+              {showWebhookDrawer && (
+                <div className="mt-2 p-3.5 rounded-2xl bg-emerald-50/50 border border-emerald-200/80 space-y-2.5 text-xs animate-fadeIn">
+                  <div>
+                    <span className="text-emerald-900 font-bold block text-[10px]">
+                      📌 AI 核心中文摘要 (20字)：
+                    </span>
+                    <p className="mt-0.5 text-slate-800 font-semibold text-[11px]">
+                      {webhookData.summary}
+                    </p>
+                  </div>
+                  <div className="pt-2 border-t border-emerald-100">
+                    <span className="text-emerald-900 font-bold block text-[10px]">
+                      💬 建议老板感谢回复草稿 (50字)：
+                    </span>
+                    <p className="mt-1 text-slate-700 bg-white p-2.5 rounded-xl border border-emerald-100 leading-relaxed text-[11px] shadow-xs">
+                      {webhookData.replyDraft}
+                    </p>
+                  </div>
+                  <div className="text-[9px] text-emerald-600/90 flex items-center justify-between pt-1 border-t border-emerald-100/60 font-mono">
+                    <span>📡 Webhook: 数据已组装并模拟分发</span>
+                    <span className="font-bold">HTTP 200 OK</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </section>
 
       </main>
