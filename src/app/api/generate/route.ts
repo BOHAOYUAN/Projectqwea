@@ -15,7 +15,7 @@ CRITICAL RULES:
 1. You must output ONLY in natural, fluent American English.
 2. NEVER output any Chinese characters under any circumstances. If the context contains Chinese, translate the concept into natural English.
 3. Tone: Authentic, relaxed, objective, like a Google Local Guide (not robotic marketing buzzwords).
-4. Length: Keep it strictly under 75 words (3 to 4 concise sentences).
+4. Length & Structure: Keep it strictly under 75 words. Format the review into 2 to 3 short paragraphs with a blank line between each for effortless mobile reading.
 5. Output ONLY the raw plain text review without quotation marks, markdown headings, or commentary.`;
 
 const XHS_SYSTEM_PROMPT = `你是一位常驻美国加州湾区（圣何塞 San Jose）的小红书资深探店博主。
@@ -32,7 +32,7 @@ function getLocalFallback(platform: string, tags: string[]): string {
     const enTags = tags
       .map((t) => TAG_EN_MAP[t] || 'great drinks and fast service')
       .join(', ');
-    return `Sunny Tea House in San Jose is hands down one of my favorite boba spots in the South Bay! The ${enTags} really made my visit memorable. The boba texture was super chewy and fresh, and the sweetness level was spot on without being overwhelming. Definitely my new go-to place whenever I'm in San Jose!`;
+    return `Sunny Tea House in San Jose is hands down one of my favorite boba spots in the South Bay!\n\nThe ${enTags} really made my visit memorable. The boba texture was super chewy and fresh, and the sweetness level was spot on.\n\nDefinitely my new go-to place whenever I'm in San Jose!`;
   } else {
     return `🧋在San Jose挖到宝藏奶茶店啦！Sunny Tea House亲测不踩雷✨\n\n店员真的超级热情，${tags.join('、') || '服务好、出餐快'}！\n\n奶茶口感醇厚，珍珠Q弹软糯，甜度刚刚好～\n\n拍照打卡巨出片，湾区的宝子们快冲！\n\n#奶茶推荐 #圣何塞美食 #湾区探店`;
   }
