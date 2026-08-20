@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sunny Tea House AI 智能评价生成系统 · 项目技术与设计文档</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
     
     * {
       box-sizing: border-box;
@@ -16,38 +16,39 @@
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       line-height: 1.65;
-      color: #1e293b;
+      color: #0f172a;
       background: #f8fafc;
       padding: 40px 20px;
     }
     
     .container {
-      max-width: 880px;
+      max-width: 900px;
       margin: 0 auto;
       background: #ffffff;
       padding: 48px;
       border-radius: 16px;
-      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+      box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
       border: 1px solid #e2e8f0;
     }
     
     header {
-      border-bottom: 2px solid #f1f5f9;
+      border-bottom: 2px solid #e2e8f0;
       padding-bottom: 24px;
-      margin-bottom: 32px;
+      margin-bottom: 24px;
     }
     
     .header-badge {
       display: inline-block;
       background: #fef3c7;
-      color: #b45309;
-      font-size: 12px;
+      color: #92400e;
+      font-size: 11px;
       font-weight: 700;
       padding: 4px 10px;
       border-radius: 20px;
       margin-bottom: 12px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      border: 1px solid #fde68a;
     }
     
     h1 {
@@ -61,34 +62,47 @@
     .meta-info {
       display: flex;
       flex-wrap: wrap;
-      gap: 16px;
+      gap: 18px;
       font-size: 13px;
-      color: #64748b;
+      color: #475569;
+      font-weight: 500;
+      margin-bottom: 16px;
     }
     
-    .meta-info span {
+    .quick-nav {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 12.5px;
+      color: #334155;
+      font-weight: 600;
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 6px;
+    }
+    
+    .quick-nav span {
+      color: #0284c7;
     }
     
     h2 {
-      font-size: 18px;
+      font-size: 17px;
       color: #0f172a;
-      font-weight: 700;
+      font-weight: 800;
       margin-top: 36px;
       margin-bottom: 16px;
       padding-bottom: 8px;
-      border-bottom: 1px solid #f1f5f9;
+      border-bottom: 1.5px solid #e2e8f0;
       display: flex;
       align-items: center;
       gap: 8px;
     }
     
     h3 {
-      font-size: 15px;
-      color: #334155;
-      font-weight: 600;
+      font-size: 14.5px;
+      color: #1e293b;
+      font-weight: 700;
       margin-top: 20px;
       margin-bottom: 10px;
     }
@@ -101,7 +115,7 @@
     
     ul, ol {
       margin-bottom: 16px;
-      padding-left: 24px;
+      padding-left: 22px;
       font-size: 13.5px;
       color: #334155;
     }
@@ -118,25 +132,35 @@
     }
     
     th, td {
-      border: 1px solid #e2e8f0;
-      padding: 10px 12px;
+      border: 1px solid #cbd5e1;
+      padding: 10px 14px;
       text-align: left;
+      vertical-align: top;
     }
     
     th {
-      background: #f8fafc;
-      font-weight: 600;
+      background: #f1f5f9;
+      font-weight: 700;
       color: #0f172a;
+      border-bottom: 2px solid #94a3b8;
+    }
+    
+    td:first-child {
+      font-weight: 700;
+      color: #0f172a;
+      background: #f8fafc;
+      white-space: nowrap;
     }
     
     code {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 12px;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 11.5px;
       background: #f1f5f9;
       color: #0f172a;
       padding: 2px 6px;
       border-radius: 4px;
-      border: 1px solid #e2e8f0;
+      border: 1px solid #cbd5e1;
+      font-weight: 600;
     }
     
     pre {
@@ -146,8 +170,8 @@
       border-radius: 10px;
       overflow-x: auto;
       margin: 14px 0;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 12px;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 11.5px;
       line-height: 1.5;
     }
     
@@ -156,6 +180,7 @@
       color: inherit;
       padding: 0;
       border: none;
+      font-weight: normal;
     }
     
     .card {
@@ -164,6 +189,36 @@
       border-radius: 10px;
       padding: 16px;
       margin: 16px 0;
+    }
+    
+    .wecom-card {
+      background: #ffffff;
+      border: 1.5px solid #10b981;
+      border-radius: 12px;
+      padding: 16px;
+      margin: 16px 0;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.08);
+    }
+    
+    .wecom-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 8px;
+      margin-bottom: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #065f46;
+    }
+    
+    .badge-success {
+      background: #d1fae5;
+      color: #065f46;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-family: "JetBrains Mono", monospace;
     }
     
     .print-btn {
@@ -212,7 +267,10 @@
       <div class="meta-info">
         <span>👤 候选人：薄皓元 (Haoyuan Bo)</span>
         <span>⏱️ 实际开发耗时：4.5 小时（核心任务 3.5h + 附加题 1h）</span>
-        <span>⚡ 核心技术：Next.js Serverless + Groq LPU + TailwindCSS</span>
+        <span>⚡ 核心架构：Next.js Serverless + Groq LPU + TailwindCSS</span>
+      </div>
+      <div class="quick-nav">
+        📋 本文档速览：1. AI编程提效 <span>|</span> 2. Prompt调优历程 <span>|</span> 3. Webhook架构 <span>|</span> 4. 安全与成本 <span>|</span> 5. 交互体验闭环 <span>|</span> 6. 耗时复盘 <span>|</span> 7. 现场调整预案
       </div>
     </header>
 
@@ -229,7 +287,7 @@
     
     <h3>2.1 跨语言 Prompt 调优与标签语义映射踩坑记录（真实工程沉淀）</h3>
     <div class="card">
-      <p><strong>⚠️ 初期踩坑（V1.0）：</strong>直接将前端选中的中文标签（如 <code>['服务好', '出餐快']</code>）拼接到 User Prompt 中丢给英文大模型，导致模型在生成英文评价时强行保留中文标签，输出了 <i>“The 服务好, 出餐快 really stood out...”</i> 的严重缺陷。</p>
+      <p><strong>⚠️ 初期踩坑（V1.0）：</strong>直接将前端选中的中文标签（如 <code>['服务好', '出餐快']</code>）拼接到 User Prompt 中丢给英文大模型，导致模型在生成英文评价时强行保留中文标签，输出了 <i>“The 服务好, 出餐快 really stood out...”</i> 的严重多语言污染缺陷。</p>
       <p><strong>🛠️ 工业级解决方案（V3.0 定稿）：</strong></p>
       <ul>
         <li><strong>代码层语义映射字典（<code>TAG_EN_MAP</code>）</strong>：在发送给大模型前，先在后端字典将中文标签映射为地道英文短语（如 <code>'服务好' -> 'friendly and welcoming staff'</code>, <code>'出餐快' -> 'super fast turnaround'</code>）；</li>
@@ -249,27 +307,27 @@
       </thead>
       <tbody>
         <tr>
-          <td><strong>目标受众</strong></td>
+          <td>目标受众</td>
           <td>北美本地居民、硅谷工程师、Yelp/Google Maps 用户</td>
           <td>湾区华人、留学生、探店打卡群体</td>
         </tr>
         <tr>
-          <td><strong>语言与口吻</strong></td>
+          <td>语言与口吻</td>
           <td>地道美式英语（Authentic American English），客观、冷静、普通消费者视角</td>
           <td>中文简体，热情闺蜜安利、真诚打卡、网络化情绪价值</td>
         </tr>
         <tr>
-          <td><strong>严格禁止词</strong></td>
+          <td>严格禁止词</td>
           <td>杜绝 <code>"I had the pleasure..."</code> 等机器腔与中文字符</td>
           <td>杜绝生硬官话、拒绝无意义长文、拒绝大段文字堆叠</td>
         </tr>
         <tr>
-          <td><strong>标志性元素</strong></td>
+          <td>标志性元素</td>
           <td><code>"Super chewy boba"</code>, <code>"Fast turnaround"</code>, <code>"Well balanced sweetness"</code></td>
           <td>灵动 Emoji（🧋✨🍵💖🔥）、<strong>空行呼吸感排版</strong>、3个精准 Tag</td>
         </tr>
         <tr>
-          <td><strong>长度与计量控制</strong></td>
+          <td>长度与计量控制</td>
           <td>严格控制在 <strong>50~70 Words（单词）</strong>，以 Word Count 计量</td>
           <td>120-150 字，以字符计数，分为 3-4 个精简微段落</td>
         </tr>
@@ -290,12 +348,20 @@
     <div class="card">
       <p><strong>💡 Webhook 演示与实推兼容设计：</strong>为适应 Demo 演示环境，系统采用<strong>异步非阻塞触发机制</strong>，主评论生成后无需用户手动输入 Key，直接返回 200 响应；后台采用 <code>try...catch</code> 隔离 Webhook 调用，若在生产环境使用，只需在服务端注入 <code>WEWORK_WEBHOOK</code> / <code>WECOM_WEBHOOK_URL</code> 环境变量，即可一键切换为真实 HTTP 推送。</p>
     </div>
-    <pre><code>{
+
+    <!-- Webhook Simulated Card Preview -->
+    <div class="wecom-card">
+      <div class="wecom-header">
+        <span>💬 企业微信群机器人推送卡片渲染预览</span>
+        <span class="badge-success">HTTP 200 OK (24ms)</span>
+      </div>
+      <pre><code>{
   "msgtype": "markdown",
   "markdown": {
-    "content": "### 🧋 Sunny Tea House 新评价通知\n> **来源平台**：小红书\n> **用户标签**：服务好 / 出餐快\n\n**📝 评价内容**：\n>🧋在San Jose挖到宝藏奶茶店啦！Sunny Tea House亲测不踩雷✨...\n\n**📌 AI 核心摘要 (20字)**：\n>顾客高度赞赏了饮品软糯口感与店员的极速热情服务。\n\n**💬 建议老板回复草稿 (50字)**：\n>感谢您对Sunny Tea House的喜爱与支持，期待您的再次光临！\n\n> <font color=\"comment\">⏰ 生成时间：2026/8/21 04:45:15</font>"
+    "content": "### 🧋 Sunny Tea House 新评价通知\n> **来源平台**：<font color=\"info\">小红书</font>\n> **用户标签**：<font color=\"comment\">服务好 / 出餐快</font>\n\n**📝 评价内容**：\n>🧋在San Jose挖到宝藏奶茶店啦！Sunny Tea House亲测不踩雷✨...\n\n**📌 AI 核心摘要 (20字)**：\n>顾客高度赞赏了饮品软糯口感与店员的极速热情服务。\n\n**💬 建议老板回复草稿 (50字)**：\n>感谢您对Sunny Tea House的喜爱与支持，期待您的再次光临！\n\n> <font color=\"comment\">⏰ 生成时间：2026/8/21 04:45:15</font>"
   }
 }</code></pre>
+    </div>
 
     <h2>4. 🛡️ API Key 服务端安全防护与海量并发用量成本优化架构</h2>
     <div class="card">
@@ -352,15 +418,15 @@
           <td>验证唤起容错、编写结项文档并编译 PDF</td>
         </tr>
         <tr>
-          <td><strong>总计投入时间</strong></td>
-          <td><strong>4.5 小时</strong></td>
-          <td><strong>核心任务 3.5h + 附加题 1h，高效达成完整闭环</strong></td>
+          <td>总计投入时间</td>
+          <td>4.5 小时</td>
+          <td>核心任务 3.5h + 附加题 1h，高效达成完整闭环</td>
         </tr>
       </tbody>
     </table>
 
     <h2>7. 🎪 15–20 分钟线上复盘与现场 Prompt 调整预案</h2>
-    <p>为应对二面复盘中的现场修改 Prompt 练习，已在 <code>src/app/api/generate/route.ts</code> 实现**完全参数化与模块化解耦**：</p>
+    <p>为应对二面复盘中的现场修改 Prompt 练习，已在 <code>src/app/api/generate/route.ts</code> 实现<strong>完全参数化与模块化解耦</strong>：</p>
     <ul>
       <li><strong>场景 A（改为委婉差评/建议）</strong>：在 System Prompt 注入 <code>"Tone: Constructive & polite customer feedback"</code> 即可 10 秒切换；</li>
       <li><strong>场景 B（增加指定单品或特殊活动）</strong>：在 User Prompt 动态注入饮品参数，Prompt 组装函数会自动更新注入，实现 10 秒内快速响应调整需求。</li>
