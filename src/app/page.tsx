@@ -7,11 +7,13 @@ import {
   Copy,
   Check,
   Plus,
-  Globe,
-  Loader2,
   Edit3,
   ExternalLink,
   Bot,
+  X,
+  MoreHorizontal,
+  Globe,
+  Loader2,
 } from 'lucide-react';
 
 // 1. 预置关键词标签（中英双语）
@@ -22,74 +24,67 @@ interface TagItem {
 }
 
 const PRESET_TAGS: TagItem[] = [
-  { id: 'handmade', zh: '手工现熬', en: 'Handmade & fresh' },
-  { id: 'chewy', zh: '珍珠筋道', en: 'Super chewy boba' },
-  { id: 'sweetness', zh: '甜度适中', en: 'Balanced sweetness' },
-  { id: 'quality', zh: '真材实料', en: 'High quality ingredients' },
-  { id: 'portion', zh: '分量足', en: 'Generous portions' },
-  { id: 'speed', zh: '出餐超快', en: 'Fast service' },
-  { id: 'vibe', zh: '环境出片', en: 'Cozy & aesthetic vibe' },
+  { id: 'handmade', zh: '手工拉面', en: 'Handmade noodles' },
+  { id: 'chewy', zh: '筋道', en: 'Super bouncy & chewy' },
+  { id: 'affordable', zh: '实惠', en: 'Great value' },
+  { id: 'portion', zh: '分量足', en: 'Huge portions' },
   { id: 'clean', zh: '干净卫生', en: 'Clean & hygienic' },
+  { id: 'vibe', zh: '氛围好', en: 'Cozy atmosphere' },
+  { id: 'broth', zh: '清汤浓郁', en: 'Rich clear broth' },
+  { id: 'spicy', zh: '油泼辣子香', en: 'Aromatic chili oil' },
 ];
 
 // 2. 界面双语文字字典
 const I18N = {
   zh: {
-    headerTitle: 'Sunny Tea House 🧋',
-    badge: 'San Jose',
-    headerSub: '顾客打卡评价助手 · 轻松生成并一键发布',
-    langToggle: 'English',
-    sectionTags: '1. 猜你想要（点击多选）',
-    customTagBtn: '+ 自定义关键词',
-    customPlaceholder: '输入其他想提到的特点（如：奶香浓郁、停车方便）',
+    transBtn: '全文翻译 >',
+    optSuccessGoogle: 'Google 评价已为您优化完成：',
+    optSuccessXhs: '小红书种草文案已为您优化完成：',
+    sectionTags: '猜你想要（点击多选）',
+    customTagBtn: '+ 自定义',
+    customPlaceholder: '输入其他特点（如：肉片厚实）',
     customAdd: '添加',
-    sectionPlatform: '2. 选择发布目标平台',
+    sectionPlatform: '选择发布平台',
     googleTitle: 'Google',
-    googleSub: '北美本地客观英文',
     xhsTitle: '小红书',
-    xhsSub: '爆款种草 · Emoji 排版',
     btnGenerate: '✨ AI 生成评价',
-    btnGenerating: '⏳ AI 正在构思地道文案...',
-    sectionPreview: '3. 评价内容预览',
-    editableHint: '(可直接点击编辑修改)',
-    btnRegenerate: '🔄 换一批',
-    btnCopy: '📋 一键复制并前往',
-    btnCopySuffix: '发布',
-    copyHint: '点击将自动复制文案并打开对应平台的发布页面',
+    btnGenerating: '⏳ 正在构思地道文案...',
+    btnEdit: '编辑',
+    btnRegenerate: '换一批',
+    disclaimer: 'AI content is for reference only. Please verify before publishing.',
+    disclaimerZh: 'AI 内容仅供参考，发布前请仔细核实。',
+    btnCopy: 'Copy and publish',
+    btnCopyZh: '复制并发布',
     toastSuccess: '✅ 已复制，请去粘贴发布',
-    bonusTitle: '🤖 附加题：企微群工作流',
+    bonusTitle: '🤖 附加题：企微工作流',
     bonusReady: '已就绪',
     bonusShow: '查看 AI摘要与回复草稿 ▼',
     bonusHide: '收起 ▲',
     bonusSummary: '📌 AI 核心中文摘要 (20字)：',
     bonusReply: '💬 建议老板感谢回复草稿 (50字)：',
     bonusStatus: '📡 Webhook: 数据已组装并模拟分发',
-    disclaimer: '⚠️ AI 内容仅供参考，发布前请仔细核实',
     wordUnitEn: 'Words',
     wordUnitZh: '字',
   },
   en: {
-    headerTitle: 'Sunny Tea House 🧋',
-    badge: 'San Jose',
-    headerSub: 'Customer Review Assistant · Generate & Post in 1-Click',
-    langToggle: '中文',
-    sectionTags: '1. Guess what you want to say (Multi-select)',
-    customTagBtn: '+ Custom Tag',
-    customPlaceholder: 'Add other highlights (e.g. easy parking, rich milk tea)',
+    transBtn: 'Translate >',
+    optSuccessGoogle: 'Google Review review has been optimized for you:',
+    optSuccessXhs: 'Xiaohongshu post has been optimized for you:',
+    sectionTags: 'Guess what you want to say (Multi-select)',
+    customTagBtn: '+ Custom',
+    customPlaceholder: 'Add other highlights (e.g. thick beef slices)',
     customAdd: 'Add',
-    sectionPlatform: '2. Choose Target Platform',
+    sectionPlatform: 'Select Platform',
     googleTitle: 'Google',
-    googleSub: 'Authentic Local English',
     xhsTitle: 'Xiaohongshu',
-    xhsSub: 'Trending Post · Emoji Layout',
     btnGenerate: '✨ Generate Review',
-    btnGenerating: '⏳ Crafting authentic review...',
-    sectionPreview: '3. Review Preview',
-    editableHint: '(Click directly to edit)',
-    btnRegenerate: '🔄 Regenerate',
-    btnCopy: '📋 Copy & Go to',
-    btnCopySuffix: 'Post',
-    copyHint: 'Click to copy text and open the target platform page',
+    btnGenerating: '⏳ Crafting review...',
+    btnEdit: 'Edit',
+    btnRegenerate: 'Regenerate',
+    disclaimer: 'AI content is for reference only. Please verify before publishing.',
+    disclaimerZh: 'AI content is for reference only. Please verify before publishing.',
+    btnCopy: 'Copy and publish',
+    btnCopyZh: 'Copy and publish',
     toastSuccess: '✅ Copied to clipboard! Ready to paste & publish',
     bonusTitle: '🤖 Bonus: WeCom Workflow',
     bonusReady: 'Ready',
@@ -98,7 +93,6 @@ const I18N = {
     bonusSummary: '📌 AI Chinese Summary (20 words):',
     bonusReply: '💬 Merchant Thank-You Reply Draft (50 words):',
     bonusStatus: '📡 Webhook: Payload assembled & simulated',
-    disclaimer: '⚠️ AI-generated content is for reference only. Please review before posting.',
     wordUnitEn: 'Words',
     wordUnitZh: 'Characters',
   },
@@ -110,25 +104,31 @@ export default function HomePage() {
   const t = I18N[lang];
 
   // 选中的标签列表
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>(['handmade', 'chewy', 'speed']);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>(['handmade', 'chewy', 'broth']);
   const [customTags, setCustomTags] = useState<string[]>([]);
   const [customInput, setCustomInput] = useState<string>('');
   const [showCustomInput, setShowCustomInput] = useState<boolean>(false);
 
   // 平台选择 (Google vs 小红书)
-  const [platform, setPlatform] = useState<'Google' | '小红书'>('小红书');
+  const [platform, setPlatform] = useState<'Google' | '小红书'>('Google');
 
   // 生成状态
-  const [generatedReview, setGeneratedReview] = useState<string>('');
+  const [generatedReview, setGeneratedReview] = useState<string>(
+    'That Lanzhou beef noodle soup was something else. The clear broth had such a deep taste, and those noodles were so bouncy (my friend recommended it for my solo lunch). Not as spicy as I thought but still really good.'
+  );
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [showCopyToast, setShowCopyToast] = useState<boolean>(false);
+  const [isEditing, setIsEditing] = useState<boolean>(false);
 
   // 附加题 Webhook 数据
   const [webhookData, setWebhookData] = useState<{
     summary: string;
     replyDraft: string;
-  } | null>(null);
+  } | null>({
+    summary: '顾客高度评价了手工拉面的筋道口感与浓郁汤底。',
+    replyDraft: '亲爱的顾客，非常感谢您的喜爱与支持，期待很快再次为您制作美味拉面！',
+  });
   const [showWebhookDrawer, setShowWebhookDrawer] = useState<boolean>(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -137,7 +137,7 @@ export default function HomePage() {
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.max(120, textareaRef.current.scrollHeight)}px`;
+      textareaRef.current.style.height = `${Math.max(130, textareaRef.current.scrollHeight)}px`;
     }
   }, [generatedReview]);
 
@@ -218,7 +218,7 @@ export default function HomePage() {
   // 核心：一键复制并智能跳转
   const handleCopyAndRedirect = async () => {
     if (!generatedReview.trim()) {
-      setErrorMessage(lang === 'zh' ? '请先点击上方按钮生成评价内容' : 'Please generate review first');
+      setErrorMessage(lang === 'zh' ? '请先生成评价内容' : 'Please generate review first');
       return;
     }
 
@@ -239,7 +239,7 @@ export default function HomePage() {
       setShowCopyToast(true);
       setTimeout(() => setShowCopyToast(false), 1500);
 
-      // 智能 Deep Linking 跳转
+      // 智能跳转
       setTimeout(() => {
         if (platform === 'Google') {
           window.open(
@@ -247,7 +247,6 @@ export default function HomePage() {
             '_blank'
           );
         } else {
-          // 小红书有效搜索/打卡结果页
           const xhsWebUrl = 'https://www.xiaohongshu.com/search_result?keyword=Sunny%20Tea%20House';
           const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
           if (isMobile) {
@@ -266,14 +265,16 @@ export default function HomePage() {
     }
   };
 
-  // 单词/字符统计
-  const countDisplay =
-    platform === 'Google'
-      ? `${generatedReview.trim() ? generatedReview.trim().split(/\s+/).filter(Boolean).length : 0} ${t.wordUnitEn}`
-      : `${generatedReview.length} ${t.wordUnitZh}`;
+  // 点击 Edit 按钮聚焦文本框
+  const handleFocusEdit = () => {
+    setIsEditing(true);
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-[#F4F4F5] flex flex-col justify-start sm:justify-center items-center p-4 sm:py-8 font-sans antialiased text-slate-800 selection:bg-red-500 selection:text-white">
+    <div className="min-h-screen bg-[#F7F7F7] flex flex-col justify-start sm:justify-center items-center font-sans antialiased text-slate-800 selection:bg-red-500 selection:text-white">
       
       {/* 绿色 Toast 提示 (居中弹窗) */}
       {showCopyToast && (
@@ -283,313 +284,236 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* 移动端 H5 容器 (max-width: 420px 居中纯白卡片) */}
-      <main className="w-full max-w-[420px] bg-white rounded-3xl shadow-sm border border-slate-200/80 p-5 sm:p-6 space-y-5">
+      {/* 移动端 H5 容器 (100% 还原截图美学风格) */}
+      <main className="w-full max-w-[420px] bg-white min-h-screen sm:min-h-0 sm:rounded-3xl shadow-sm border-x sm:border border-slate-200/80 p-4 sm:p-5 flex flex-col justify-between space-y-4">
         
-        {/* Header 顶部与中英双语切换 */}
-        <header className="space-y-1 text-left pb-3 border-b border-slate-100">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">
-                {t.headerTitle}
-              </h1>
-              <span className="text-[10px] font-bold bg-amber-50 text-amber-800 px-2 py-0.5 rounded-full border border-amber-200">
-                {t.badge}
-              </span>
-            </div>
+        <div className="space-y-4">
+          
+          {/* 1. 顶部 Header 状态栏：✕ | 🔤 全文翻译 > | ··· */}
+          <header className="flex items-center justify-between pt-1 pb-2">
+            <button
+              type="button"
+              onClick={() => alert('返回上一页')}
+              className="w-8 h-8 flex items-center justify-center text-slate-700 active:scale-95"
+            >
+              <X className="w-5 h-5" />
+            </button>
 
-            {/* 中英双语切换按钮 */}
+            {/* 顶栏居中“全文翻译 >”胶囊 */}
             <button
               type="button"
               onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')}
-              className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95 min-h-[36px]"
+              className="flex items-center gap-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 px-3.5 py-1.5 rounded-full text-xs font-semibold shadow-2xs transition-all active:scale-95"
             >
-              <Globe className="w-3.5 h-3.5 text-slate-500" />
-              <span>{t.langToggle}</span>
+              <span className="text-sm">🔤</span>
+              <span>{t.transBtn}</span>
             </button>
-          </div>
-          <p className="text-xs text-slate-500">
-            {t.headerSub}
-          </p>
-        </header>
 
-        {/* 错误提示条 */}
-        {errorMessage && (
-          <div className="bg-red-50 border border-red-200 text-red-700 text-xs rounded-2xl p-3.5 font-medium leading-relaxed animate-fadeIn">
-            ⚠️ {errorMessage}
-          </div>
-        )}
-
-        {/* 1. 猜你想要：关键词胶囊多选区 */}
-        <section className="space-y-2.5">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-bold text-slate-800 tracking-wide">
-              {t.sectionTags}
-            </label>
-            <span className="text-[11px] font-mono font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md">
-              已选 {selectedTagIds.length + customTags.length} 项
-            </span>
-          </div>
-
-          {/* 胶囊标签集合 */}
-          <div className="flex flex-wrap gap-2">
-            {PRESET_TAGS.map((tag) => {
-              const isSelected = selectedTagIds.includes(tag.id);
-              return (
-                <button
-                  key={tag.id}
-                  type="button"
-                  onClick={() => handleTagToggle(tag.id)}
-                  className={`min-h-[40px] px-3.5 py-2 rounded-full text-xs font-semibold transition-all select-none flex items-center gap-1 active:scale-95 ${
-                    isSelected
-                      ? 'bg-amber-500 text-white shadow-xs ring-2 ring-amber-500/20'
-                      : 'bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100'
-                  }`}
-                >
-                  <span>{lang === 'zh' ? tag.zh : tag.en}</span>
-                  {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                </button>
-              );
-            })}
-
-            {/* 自定义添加的关键词标签 */}
-            {customTags.map((tag) => (
-              <span
-                key={tag}
-                className="min-h-[40px] px-3.5 py-2 rounded-full text-xs font-semibold bg-amber-50 text-amber-900 border border-amber-300 flex items-center gap-1.5 select-none"
-              >
-                <span>{tag}</span>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveCustomTag(tag)}
-                  className="w-3.5 h-3.5 rounded-full bg-amber-200 text-amber-900 flex items-center justify-center text-[10px] hover:bg-amber-300"
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-
-            {/* “+ 自定义” 按钮 */}
             <button
               type="button"
-              onClick={() => setShowCustomInput(!showCustomInput)}
-              className="min-h-[40px] px-3.5 py-2 rounded-full text-xs font-semibold bg-slate-50 text-slate-500 border border-dashed border-slate-300 hover:bg-slate-100 flex items-center gap-1 transition-all"
+              className="w-8 h-8 flex items-center justify-center text-slate-700 active:scale-95"
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span>{t.customTagBtn}</span>
+              <MoreHorizontal className="w-5 h-5" />
             </button>
+          </header>
+
+          {/* 2. 绿色完成状态标题：✔ Google Review review has been optimized for you: */}
+          <div className="flex items-start gap-2 pt-1">
+            <span className="text-emerald-500 font-bold text-sm mt-0.5">✔</span>
+            <p className="text-emerald-600 font-bold text-xs sm:text-[13px] leading-snug">
+              {platform === 'Google' ? t.optSuccessGoogle : t.optSuccessXhs}
+            </p>
           </div>
 
-          {/* 展开的自定义输入框 */}
-          {showCustomInput && (
-            <div className="flex gap-2 pt-1 animate-fadeIn">
-              <input
-                type="text"
-                value={customInput}
-                onChange={(e) => setCustomInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddCustomTag()}
-                placeholder={t.customPlaceholder}
-                className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-500 focus:bg-white transition-all font-sans"
-              />
+          {/* 3. 核心卡片容器：内嵌可编辑文本与 [✎ Edit] [🔄 Regenerate] 胶囊按钮 */}
+          <div className="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-xs space-y-3.5 focus-within:border-slate-400 transition-all">
+            
+            {/* 可编辑文本域 */}
+            <textarea
+              ref={textareaRef}
+              value={generatedReview}
+              onChange={(e) => setGeneratedReview(e.target.value)}
+              placeholder="评价内容将在此呈现，可直接点击修改..."
+              rows={5}
+              className="w-full bg-transparent text-slate-800 text-[13.5px] sm:text-[14px] leading-relaxed outline-none resize-none overflow-hidden font-sans placeholder-slate-400"
+            />
+
+            {/* 卡片内部底部的两个并排操作按钮：[✎ Edit] [🔄 Regenerate] */}
+            <div className="flex items-center justify-center gap-3 pt-1 border-t border-slate-100">
               <button
                 type="button"
-                onClick={handleAddCustomTag}
-                className="bg-slate-900 text-white text-xs font-bold px-4 py-2 rounded-xl active:scale-95"
+                onClick={handleFocusEdit}
+                className="flex-1 max-w-[130px] min-h-[38px] py-2 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-700 text-xs font-semibold shadow-2xs transition-all flex items-center justify-center gap-1.5 active:scale-95"
               >
-                {t.customAdd}
-              </button>
-            </div>
-          )}
-        </section>
-
-        {/* 2. 目标平台选择 */}
-        <section className="space-y-2.5">
-          <label className="text-xs font-bold text-slate-800 tracking-wide block">
-            {t.sectionPlatform}
-          </label>
-
-          <div className="grid grid-cols-2 gap-2.5">
-            <button
-              type="button"
-              onClick={() => {
-                setPlatform('Google');
-                setErrorMessage('');
-              }}
-              className={`min-h-[44px] p-3 rounded-2xl text-xs font-bold transition-all border text-left flex flex-col gap-0.5 ${
-                platform === 'Google'
-                  ? 'bg-blue-50 border-blue-500 text-blue-950 shadow-xs ring-2 ring-blue-500/20'
-                  : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span>🌐 {t.googleTitle}</span>
-                {platform === 'Google' && <Check className="w-3.5 h-3.5 text-blue-600 stroke-[3]" />}
-              </div>
-              <span className="text-[10px] text-slate-500 font-normal">{t.googleSub}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setPlatform('小红书');
-                setErrorMessage('');
-              }}
-              className={`min-h-[44px] p-3 rounded-2xl text-xs font-bold transition-all border text-left flex flex-col gap-0.5 ${
-                platform === '小红书'
-                  ? 'bg-rose-50 border-rose-500 text-rose-950 shadow-xs ring-2 ring-rose-500/20'
-                  : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span>📕 {t.xhsTitle}</span>
-                {platform === '小红书' && <Check className="w-3.5 h-3.5 text-rose-600 stroke-[3]" />}
-              </div>
-              <span className="text-[10px] text-slate-500 font-normal">{t.xhsSub}</span>
-            </button>
-          </div>
-        </section>
-
-        {/* 3. 首次生成主按钮 (未生成时显示大按钮) */}
-        {!generatedReview && (
-          <div>
-            <button
-              type="button"
-              disabled={isLoading}
-              onClick={handleGenerate}
-              className="w-full min-h-[48px] py-3.5 px-4 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 active:scale-[0.98] disabled:opacity-75 disabled:cursor-not-allowed text-white font-extrabold text-sm shadow-md shadow-amber-500/20 transition-all flex items-center justify-center gap-2"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>{t.btnGenerating}</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 fill-white" />
-                  <span>{t.btnGenerate}</span>
-                </>
-              )}
-            </button>
-          </div>
-        )}
-
-        {/* 4. 评价生成预览区：支持直接点击编辑 + 换一批重新生成 */}
-        {generatedReview && (
-          <section className="space-y-3 pt-1 animate-fadeIn">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-800 flex items-center gap-1">
                 <Edit3 className="w-3.5 h-3.5 text-slate-500" />
-                <span>{t.sectionPreview}</span>
-                <span className="text-slate-400 font-normal text-[10px]">{t.editableHint}</span>
-              </label>
+                <span>{t.btnEdit}</span>
+              </button>
 
-              {/* 换一批，重新生成按钮 */}
               <button
                 type="button"
                 disabled={isLoading}
                 onClick={handleGenerate}
-                className="text-[11px] font-bold text-slate-600 hover:text-slate-900 flex items-center gap-1 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg transition-all active:scale-95 disabled:opacity-50 min-h-[30px]"
+                className="flex-1 max-w-[130px] min-h-[38px] py-2 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-700 text-xs font-semibold shadow-2xs transition-all flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50"
               >
-                <RefreshCw className={`w-3 h-3 ${isLoading ? 'animate-spin text-amber-600' : ''}`} />
-                <span>{isLoading ? '生成中...' : t.btnRegenerate}</span>
+                <RefreshCw className={`w-3.5 h-3.5 text-slate-500 ${isLoading ? 'animate-spin text-red-500' : ''}`} />
+                <span>{isLoading ? '...' : t.btnRegenerate}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 4. 猜你想要：关键词胶囊选择区（可随时增减选词） */}
+          <section className="bg-slate-50/80 rounded-2xl p-3.5 border border-slate-200/80 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-800">
+                {t.sectionTags}
+              </label>
+              <div className="flex items-center gap-1 bg-white border border-slate-200 px-2 py-0.5 rounded-lg text-[10px] font-bold">
+                <span
+                  onClick={() => setPlatform('Google')}
+                  className={`cursor-pointer px-1 rounded ${platform === 'Google' ? 'text-blue-600 bg-blue-50' : 'text-slate-400'}`}
+                >
+                  Google
+                </span>
+                <span className="text-slate-300">|</span>
+                <span
+                  onClick={() => setPlatform('小红书')}
+                  className={`cursor-pointer px-1 rounded ${platform === '小红书' ? 'text-rose-600 bg-rose-50' : 'text-slate-400'}`}
+                >
+                  小红书
+                </span>
+              </div>
+            </div>
+
+            {/* 胶囊标签网格 */}
+            <div className="flex flex-wrap gap-1.5">
+              {PRESET_TAGS.map((tag) => {
+                const isSelected = selectedTagIds.includes(tag.id);
+                return (
+                  <button
+                    key={tag.id}
+                    type="button"
+                    onClick={() => handleTagToggle(tag.id)}
+                    className={`min-h-[34px] px-3 py-1.5 rounded-full text-xs font-medium transition-all select-none flex items-center gap-1 active:scale-95 ${
+                      isSelected
+                        ? 'bg-red-50 text-red-600 border border-red-400 shadow-2xs font-semibold'
+                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    <span>{lang === 'zh' ? tag.zh : tag.en}</span>
+                    {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                  </button>
+                );
+              })}
+
+              {customTags.map((tag) => (
+                <span
+                  key={tag}
+                  className="min-h-[34px] px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-900 border border-amber-300 flex items-center gap-1"
+                >
+                  <span>{tag}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveCustomTag(tag)}
+                    className="w-3.5 h-3.5 rounded-full bg-amber-200 text-amber-900 flex items-center justify-center text-[10px]"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+
+              <button
+                type="button"
+                onClick={() => setShowCustomInput(!showCustomInput)}
+                className="min-h-[34px] px-3 py-1.5 rounded-full text-xs font-medium bg-white text-slate-500 border border-dashed border-slate-300 hover:bg-slate-100 flex items-center gap-1"
+              >
+                <Plus className="w-3 h-3" />
+                <span>{t.customTagBtn}</span>
               </button>
             </div>
 
-            {/* 可编辑多行文本框 */}
-            <div className="relative">
-              <textarea
-                ref={textareaRef}
-                value={generatedReview}
-                onChange={(e) => setGeneratedReview(e.target.value)}
-                rows={4}
-                className="w-full p-4 pb-7 rounded-2xl bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-[13px] leading-relaxed outline-none focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-500/20 transition-all resize-none overflow-hidden font-sans"
-              />
-              {/* 底部右侧悬浮字数统计 */}
-              <span className="absolute bottom-2.5 right-3 text-[10px] text-slate-400 font-mono select-none">
-                {countDisplay}
-              </span>
-            </div>
-
-            {/* 醒目的高对比度主操作按钮：一键复制并前往发布 */}
-            <button
-              type="button"
-              disabled={isLoading || !generatedReview.trim()}
-              onClick={handleCopyAndRedirect}
-              className={`w-full min-h-[48px] py-3.5 px-4 rounded-2xl text-white font-extrabold text-sm shadow-md transition-all flex items-center justify-center gap-2 active:scale-[0.98] ${
-                platform === 'Google'
-                  ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-500/20'
-                  : 'bg-rose-500 hover:bg-rose-600 shadow-rose-500/20'
-              }`}
-            >
-              <Copy className="w-4 h-4" />
-              <span>
-                {t.btnCopy} {platform === 'Google' ? 'Google' : '小红书'} {t.btnCopySuffix}
-              </span>
-              <ExternalLink className="w-3.5 h-3.5 opacity-80" />
-            </button>
-
-            <p className="text-[10px] text-center text-slate-400">
-              {t.copyHint}
-            </p>
-
-            {/* 附加题：企微群工作流折叠抽屉 (优雅克制) */}
-            {webhookData && (
-              <div className="pt-2 border-t border-slate-100">
+            {/* 展开自定义输入条 */}
+            {showCustomInput && (
+              <div className="flex gap-2 pt-1 animate-fadeIn">
+                <input
+                  type="text"
+                  value={customInput}
+                  onChange={(e) => setCustomInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddCustomTag()}
+                  placeholder={t.customPlaceholder}
+                  className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs outline-none focus:border-red-500 font-sans"
+                />
                 <button
                   type="button"
-                  onClick={() => setShowWebhookDrawer(!showWebhookDrawer)}
-                  className="w-full py-2.5 px-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/90 flex items-center justify-between text-[11px] font-bold transition-all text-slate-700"
+                  onClick={handleAddCustomTag}
+                  className="bg-slate-900 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl active:scale-95"
                 >
-                  <span className="flex items-center gap-1.5 text-emerald-700">
-                    <Bot className="w-3.5 h-3.5" />
-                    <span>{t.bonusTitle}</span>
-                    <span className="bg-emerald-100 text-emerald-800 text-[9px] px-1.5 py-0.5 rounded font-mono font-bold">
-                      {t.bonusReady}
-                    </span>
-                  </span>
-                  <span className="text-slate-400 text-[10px] font-normal">
-                    {showWebhookDrawer ? t.bonusHide : t.bonusShow}
-                  </span>
+                  {t.customAdd}
                 </button>
-
-                {showWebhookDrawer && (
-                  <div className="mt-2 p-3.5 rounded-2xl bg-emerald-50/50 border border-emerald-200/80 space-y-2.5 text-xs animate-fadeIn">
-                    <div>
-                      <span className="text-emerald-900 font-bold block text-[10px]">
-                        {t.bonusSummary}
-                      </span>
-                      <p className="mt-0.5 text-slate-800 font-semibold text-[11px]">
-                        {webhookData.summary}
-                      </p>
-                    </div>
-                    <div className="pt-2 border-t border-emerald-100">
-                      <span className="text-emerald-900 font-bold block text-[10px]">
-                        {t.bonusReply}
-                      </span>
-                      <p className="mt-1 text-slate-700 bg-white p-2.5 rounded-xl border border-emerald-100 leading-relaxed text-[11px] shadow-xs">
-                        {webhookData.replyDraft}
-                      </p>
-                    </div>
-                    <div className="text-[9px] text-emerald-600/90 flex items-center justify-between pt-1 border-t border-emerald-100/60 font-mono">
-                      <span>{t.bonusStatus}</span>
-                      <span className="font-bold">HTTP 200 OK</span>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </section>
-        )}
 
-        {/* 底部免责声明 */}
-        <footer className="pt-2 text-center border-t border-slate-100">
-          <p className="text-[10px] text-slate-400 leading-tight">
+          {/* 5. 免责声明文本 */}
+          <p className="text-[11px] text-slate-400 text-center leading-relaxed">
             {t.disclaimer}
           </p>
-        </footer>
+
+          {/* 6. 醒目的红色主操作按钮：[📋 Copy and publish] */}
+          <button
+            type="button"
+            onClick={handleCopyAndRedirect}
+            className="w-full min-h-[48px] py-3.5 px-4 rounded-2xl bg-[#FF3B30] hover:bg-[#E02020] active:bg-[#CC1E1E] text-white font-bold text-sm shadow-md shadow-red-500/20 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+          >
+            <Copy className="w-4 h-4 stroke-[2.5]" />
+            <span>{t.btnCopy}</span>
+          </button>
+
+          {/* 7. 附加题：企业微信工作流折叠抽屉 */}
+          {webhookData && (
+            <div className="pt-1 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowWebhookDrawer(!showWebhookDrawer)}
+                className="w-full py-2.5 px-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/90 flex items-center justify-between text-[11px] font-bold transition-all text-slate-700"
+              >
+                <span className="flex items-center gap-1.5 text-emerald-700">
+                  <Bot className="w-3.5 h-3.5" />
+                  <span>{t.bonusTitle}</span>
+                  <span className="bg-emerald-100 text-emerald-800 text-[9px] px-1.5 py-0.5 rounded font-mono font-bold">
+                    {t.bonusReady}
+                  </span>
+                </span>
+                <span className="text-slate-400 text-[10px] font-normal">
+                  {showWebhookDrawer ? t.bonusHide : t.bonusShow}
+                </span>
+              </button>
+
+              {showWebhookDrawer && (
+                <div className="mt-2 p-3.5 rounded-2xl bg-emerald-50/50 border border-emerald-200/80 space-y-2 text-xs animate-fadeIn">
+                  <div>
+                    <span className="text-emerald-900 font-bold block text-[10px]">
+                      {t.bonusSummary}
+                    </span>
+                    <p className="mt-0.5 text-slate-800 font-semibold text-[11px]">
+                      {webhookData.summary}
+                    </p>
+                  </div>
+                  <div className="pt-1.5 border-t border-emerald-100">
+                    <span className="text-emerald-900 font-bold block text-[10px]">
+                      {t.bonusReply}
+                    </span>
+                    <p className="mt-1 text-slate-700 bg-white p-2.5 rounded-xl border border-emerald-100 leading-relaxed text-[11px] shadow-2xs">
+                      {webhookData.replyDraft}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+        </div>
 
       </main>
-
     </div>
   );
 }
