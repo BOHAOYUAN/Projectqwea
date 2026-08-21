@@ -7,14 +7,22 @@ const TAG_EN_MAP: Record<string, string> = {
   '环境干净': 'clean and comfortable seating atmosphere',
   '饮品颜值高': 'gorgeous and photo-worthy drink presentation',
   '口味独特': 'rich tea flavor with perfectly balanced sweetness',
+  '手工现熬': 'freshly handmade with authentic ingredients',
+  '珍珠筋道': 'super chewy and springy boba pearls',
+  '实惠': 'great value and affordable prices',
+  '分量足': 'generous and filling portions',
+  '环境出片': 'clean, cozy and aesthetic atmosphere',
+  '手工拉面': 'fresh handmade noodles',
+  '筋道': 'super chewy and bouncy texture',
+  '氛围好': 'warm and welcoming vibe',
 };
 
 // 1. Core Strict System Prompts
 const GOOGLE_SYSTEM_PROMPT = `You are a genuine local foodie living in San Jose, California (Bay Area).
 CRITICAL RULES:
 1. You must output ONLY in natural, fluent American English.
-2. NEVER output any Chinese characters under any circumstances. If the context contains Chinese, translate the concept into natural English.
-3. Tone: Authentic, relaxed, objective, like a Google Local Guide (not robotic marketing buzzwords).
+2. NEVER output any Chinese characters under any circumstances. If keywords are in Chinese, seamlessly translate the concept into natural English food descriptions.
+3. Tone: Authentic, relaxed, objective, like a real Google Local Guide (not robotic marketing buzzwords).
 4. Length & Structure: Keep it strictly under 75 words. Format the review into 2 to 3 short paragraphs with a blank line between each for effortless mobile reading.
 5. Output ONLY the raw plain text review without quotation marks, markdown headings, or commentary.`;
 
@@ -30,9 +38,9 @@ const XHS_SYSTEM_PROMPT = `你是一位常驻美国加州湾区（圣何塞 San 
 function getLocalFallback(platform: string, tags: string[]): string {
   if (platform === 'Google') {
     const enTags = tags
-      .map((t) => TAG_EN_MAP[t] || 'great drinks and fast service')
+      .map((t) => TAG_EN_MAP[t] || t)
       .join(', ');
-    return `Sunny Tea House in San Jose is hands down one of my favorite boba spots in the South Bay!\n\nThe ${enTags} really made my visit memorable. The boba texture was super chewy and fresh, and the sweetness level was spot on.\n\nDefinitely my new go-to place whenever I'm in San Jose!`;
+    return `Sunny Tea House in San Jose is hands down one of my favorite spots in the South Bay!\n\nThe ${enTags || 'friendly staff and great quality'} really made my visit memorable. Everything was fresh and the sweetness was spot on.\n\nDefinitely my new go-to place whenever I'm in San Jose!`;
   } else {
     return `🧋在San Jose挖到宝藏奶茶店啦！Sunny Tea House亲测不踩雷✨\n\n店员真的超级热情，${tags.join('、') || '服务好、出餐快'}！\n\n奶茶口感醇厚，珍珠Q弹软糯，甜度刚刚好～\n\n拍照打卡巨出片，湾区的宝子们快冲！\n\n#奶茶推荐 #圣何塞美食 #湾区探店`;
   }
@@ -126,7 +134,7 @@ export async function POST(req: NextRequest) {
 
     const userPrompt =
       platform === 'Google'
-        ? `Customer experience highlights: ${englishTags || 'great boba and friendly service'}. Write the short Google review in English now.`
+        ? `Customer experience highlights: ${englishTags || 'great quality and friendly service'}. Write a fresh, realistic English review now.`
         : `顾客本次打卡 Sunny Tea House 体验标签：${tags.join('、') || '服务好、出餐快'}。请写小红书种草笔记。`;
 
     // Smart summaries for bonus question
@@ -157,7 +165,7 @@ export async function POST(req: NextRequest) {
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt },
           ],
-          temperature: platform === 'Google' ? 0.65 : 0.85,
+          temperature: platform === 'Google' ? 0.75 : 0.85,
         }),
       });
 
