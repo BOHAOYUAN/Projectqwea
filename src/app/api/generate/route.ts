@@ -4,43 +4,36 @@ import { NextRequest, NextResponse } from 'next/server';
 const TAG_EN_MAP: Record<string, string> = {
   '服务好': 'friendly and welcoming staff',
   '出餐快': 'super fast turnaround even during rush hour',
-  '环境干净': 'clean and comfortable seating atmosphere',
+  '环境干净': 'clean and cozy seating atmosphere',
   '饮品颜值高': 'gorgeous and photo-worthy drink presentation',
-  '口味独特': 'rich tea flavor with perfectly balanced sweetness',
-  '手工现熬': 'freshly handmade with authentic ingredients',
-  '珍珠筋道': 'super chewy and springy boba pearls',
-  '实惠': 'great value and affordable prices',
-  '分量足': 'generous and filling portions',
-  '环境出片': 'clean, cozy and aesthetic atmosphere',
-  '手工拉面': 'fresh handmade noodles',
-  '筋道': 'super chewy and bouncy texture',
-  '氛围好': 'warm and welcoming vibe',
+  '口味独特': 'rich authentic tea aroma and perfectly balanced sweetness',
 };
 
 // 1. Core Strict System Prompts
-const GOOGLE_SYSTEM_PROMPT = `You are a genuine local foodie living in San Jose, California (Bay Area).
+const GOOGLE_SYSTEM_PROMPT = `You are a genuine local foodie living in San Jose, California (Bay Area) writing a Google Maps review for Sunny Tea House boba shop.
 CRITICAL RULES:
-1. You must output ONLY in natural, fluent American English.
-2. NEVER output any Chinese characters under any circumstances. If keywords are in Chinese, seamlessly translate the concept into natural English food descriptions.
-3. Tone: Authentic, relaxed, objective, like a real Google Local Guide (not robotic marketing buzzwords).
-4. Length & Structure: Keep it strictly under 75 words. Format the review into 2 to 3 short paragraphs with a blank line between each for effortless mobile reading.
+1. Output ONLY in 100% natural, fluent American English.
+2. NEVER output any Chinese characters, Chinese punctuation, or translation notes under any circumstances.
+3. Tone: Authentic, relaxed, objective, like a real Google Local Guide (avoid robotic marketing buzzwords).
+4. Format: 2 to 3 short paragraphs with a blank line between each for effortless mobile reading. Keep length strictly between 50 and 70 words.
 5. Output ONLY the raw plain text review without quotation marks, markdown headings, or commentary.`;
 
 const XHS_SYSTEM_PROMPT = `你是一位常驻美国加州湾区（圣何塞 San Jose）的小红书资深探店博主。
 核心排版与风格规范：
-1. 爆款标题：1行，必须带有 Emoji 和地点（如：🧋在San Jose挖到了宝藏神仙奶茶！✨）。
-2. 正文呼吸感排版：3-4个短段落，每句话必须换行留出空行，绝不能堆叠大段文字。
-3. 穿插灵动Emoji（🧋✨🍵💖🔥），语气热情、网络化、闺蜜安利感。
-4. 结尾附带3个相关话题标签（如：#奶茶推荐 #圣何塞美食 #湾区探店）。
-5. 直接输出纯文本内容，不要输出Markdown代码块。`;
+1. 语言：必须全中文输出（除品牌名 Sunny Tea House 与地点 San Jose 以外，严禁夹杂任何英文字句）。
+2. 爆款标题：第1行必须带有 Emoji 和地点（如：🧋在San Jose挖到了宝藏神仙奶茶！✨）。
+3. 正文呼吸感排版：3-4个精炼微段落，段与段之间必须空出一行，绝不能堆叠大段文字。
+4. 穿插灵动Emoji（🧋✨🍵💖🔥），语气热情、网络化、闺蜜安利感。
+5. 结尾附带3个相关话题标签（如：#奶茶推荐 #圣何塞美食 #湾区探店）。
+6. 直接输出纯文本内容，不要输出Markdown代码块。`;
 
 // 2. Intelligent Pure-English & Pure-Chinese Fallbacks
 function getLocalFallback(platform: string, tags: string[]): string {
   if (platform === 'Google') {
     const enTags = tags
-      .map((t) => TAG_EN_MAP[t] || t)
+      .map((t) => TAG_EN_MAP[t] || 'great boba and friendly service')
       .join(', ');
-    return `Sunny Tea House in San Jose is hands down one of my favorite spots in the South Bay!\n\nThe ${enTags || 'friendly staff and great quality'} really made my visit memorable. Everything was fresh and the sweetness was spot on.\n\nDefinitely my new go-to place whenever I'm in San Jose!`;
+    return `Sunny Tea House in San Jose is hands down one of my favorite boba spots in the South Bay!\n\nThe ${enTags} really made my visit memorable. The boba texture was super chewy and fresh, and the sweetness level was spot on.\n\nDefinitely my new go-to place whenever I'm in San Jose!`;
   } else {
     return `🧋在San Jose挖到宝藏奶茶店啦！Sunny Tea House亲测不踩雷✨\n\n店员真的超级热情，${tags.join('、') || '服务好、出餐快'}！\n\n奶茶口感醇厚，珍珠Q弹软糯，甜度刚刚好～\n\n拍照打卡巨出片，湾区的宝子们快冲！\n\n#奶茶推荐 #圣何塞美食 #湾区探店`;
   }
@@ -134,8 +127,8 @@ export async function POST(req: NextRequest) {
 
     const userPrompt =
       platform === 'Google'
-        ? `Customer experience highlights: ${englishTags || 'great quality and friendly service'}. Write a fresh, realistic English review now.`
-        : `顾客本次打卡 Sunny Tea House 体验标签：${tags.join('、') || '服务好、出餐快'}。请写小红书种草笔记。`;
+        ? `Customer experience highlights: ${englishTags || 'great boba and friendly service'}. Write the short Google review in 100% English now.`
+        : `顾客本次打卡 Sunny Tea House 体验标签：${tags.join('、') || '服务好、出餐快'}。请用全中文写小红书种草笔记。`;
 
     // Smart summaries for bonus question
     const tagSummaryStr = tags.length > 0 ? tags.join('、') : '服务好、出餐快';
@@ -165,7 +158,7 @@ export async function POST(req: NextRequest) {
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt },
           ],
-          temperature: platform === 'Google' ? 0.75 : 0.85,
+          temperature: platform === 'Google' ? 0.7 : 0.85,
         }),
       });
 
@@ -178,9 +171,14 @@ export async function POST(req: NextRequest) {
         data.choices?.[0]?.message?.content?.trim() ||
         getLocalFallback(platform, tags);
 
-      // Post-processing guard: If Google output somehow still contains Chinese, replace with clean fallback
+      // Post-processing guard 1: Google English must NOT contain Chinese characters
       if (platform === 'Google' && /[\u4e00-\u9fa5]/.test(reviewText)) {
         reviewText = getLocalFallback('Google', tags);
+      }
+
+      // Post-processing guard 2: Xiaohongshu Chinese must be clean
+      if (platform === '小红书' && !/[\u4e00-\u9fa5]/.test(reviewText)) {
+        reviewText = getLocalFallback('小红书', tags);
       }
 
       // Trigger Webhook asynchronously in background (Non-blocking)
