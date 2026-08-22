@@ -13,7 +13,6 @@ import {
   Loader2,
   ChevronDown,
   Bot,
-  ExternalLink,
 } from 'lucide-react';
 
 // 1. 预置关键词标签（中英双语，100% 对应截图）
@@ -34,25 +33,21 @@ const PRESET_TAGS: TagItem[] = [
   { id: 'fresh_made', zh: '现点现做', en: 'Freshly made to order' },
 ];
 
-// 2. 界面双语文字字典 (100% 还原截图文字)
+// 2. 界面双语文字字典 (100% 还原截图)
 const I18N = {
   zh: {
     transBtn: '全文翻译 >',
     langSelect: '中文',
     heroTitle: '写下评价或选择关键词',
-    inputPlaceholder: '简单输入您的用餐感受或补充关键词...',
+    inputPlaceholder: '简单输入您的用餐感受...',
     sectionTags: '猜你想要',
-    btnGenerate: '✨ AI 生成地道英文评价',
+    btnGenerate: '✨ AI 生成英文评价',
     btnGenerating: '⏳ 正在构思地道文案...',
     optSuccess: 'Google 评价已为您优化完成：',
     btnEdit: 'Edit',
-    btnEditZh: '编辑',
     btnRegenerate: 'Regenerate',
-    btnRegenerateZh: '换一批',
     disclaimer: 'AI content is for reference only. Please verify before publishing.',
-    disclaimerZh: 'AI 内容仅供参考，发布前请仔细核实。',
     btnCopy: 'Copy and publish',
-    btnCopyZh: '复制并发布',
     toastSuccess: '✅ 已复制，请去粘贴发布',
     bonusTitle: '🤖 附加题：企微工作流',
     bonusReady: '已就绪',
@@ -72,13 +67,9 @@ const I18N = {
     btnGenerating: '⏳ Crafting authentic review...',
     optSuccess: 'Google Review review has been optimized for you:',
     btnEdit: 'Edit',
-    btnEditZh: 'Edit',
     btnRegenerate: 'Regenerate',
-    btnRegenerateZh: 'Regenerate',
     disclaimer: 'AI content is for reference only. Please verify before publishing.',
-    disclaimerZh: 'AI content is for reference only. Please verify before publishing.',
     btnCopy: 'Copy and publish',
-    btnCopyZh: 'Copy and publish',
     toastSuccess: '✅ Copied to clipboard! Ready to paste & publish',
     bonusTitle: '🤖 Bonus: WeCom Workflow',
     bonusReady: 'Ready',
@@ -95,20 +86,20 @@ export default function HomePage() {
   const [lang, setLang] = useState<'zh' | 'en'>('en');
   const t = I18N[lang];
 
-  // 页面状态：'input'（初始选词页面） vs 'result'（生成结果优化页面）
-  const [viewState, setViewState] = useState<'input' | 'result'>('result');
+  // 页面状态：'input'（初始选词页） vs 'result'（生成结果页）
+  const [viewState, setViewState] = useState<'input' | 'result'>('input');
 
   // 用户输入的自定义感受文本
   const [customExperience, setCustomExperience] = useState<string>('');
 
-  // 选中的标签列表
+  // 选中的标签列表（默认选中图2中的 Hand-pulled noodles, Chewy noodles, Generous portions）
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([
     'hand_pulled',
     'chewy',
-    'rich_broth',
+    'portions',
   ]);
 
-  // 生成的评价内容（默认展示截图中原汁原味的兰州牛肉拉面英文真实评价）
+  // 生成的评价内容（默认展示图1截图中地道经典的兰州拉面英文评价）
   const [generatedReview, setGeneratedReview] = useState<string>(
     'That Lanzhou beef noodle soup was something else. The clear broth had such a deep taste, and those noodles were so bouncy (my friend recommended it for my solo lunch). Not as spicy as I thought but still really good.'
   );
@@ -121,8 +112,8 @@ export default function HomePage() {
     summary: string;
     replyDraft: string;
   } | null>({
-    summary: '顾客高度评价了手工拉面的筋道口感与浓郁汤底。',
-    replyDraft: '亲爱的顾客，非常感谢您的喜爱与支持，期待很快再次为您制作美味拉面！',
+    summary: '顾客高度评价了手工拉面的筋道口感与浓郁高汤。',
+    replyDraft: '亲爱的顾客，非常感谢您对本店手工拉面的喜爱，期待您的再次光临！',
   });
   const [showWebhookDrawer, setShowWebhookDrawer] = useState<boolean>(false);
 
@@ -167,7 +158,7 @@ export default function HomePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           platform: 'Google',
-          tags: allTags.length > 0 ? allTags : ['Hand-pulled noodles', 'Chewy noodles', 'Rich broth'],
+          tags: allTags.length > 0 ? allTags : ['Hand-pulled noodles', 'Chewy noodles', 'Generous portions'],
         }),
       });
 
@@ -213,16 +204,16 @@ export default function HomePage() {
       setShowCopyToast(true);
       setTimeout(() => setShowCopyToast(false), 1500);
 
-      // 打开 Google Maps 目标评价页
+      // 打开 Google Maps 评价入口
       setTimeout(() => {
         window.open('https://www.google.com/maps', '_blank');
       }, 700);
     } catch {
-      alert('复制失败，请手动长按复制');
+      alert('复制失败，请长按手动复制');
     }
   };
 
-  // 点击 Edit 聚焦或切换回编辑
+  // 点击 Edit 聚焦或返回输入
   const handleFocusEdit = () => {
     if (textareaRef.current) {
       textareaRef.current.focus();
@@ -240,8 +231,8 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* 移动端 H5 容器 (100% 还原真机两张实拍图) */}
-      <main className="w-full max-w-[420px] bg-white min-h-screen sm:min-h-[760px] sm:rounded-3xl shadow-sm border-x sm:border border-slate-200/80 p-5 flex flex-col justify-between space-y-4">
+      {/* 移动端 H5 容器 (100% 还原两张真机截图) */}
+      <main className="w-full max-w-[420px] bg-white min-h-screen sm:min-h-[780px] sm:rounded-3xl shadow-sm border-x sm:border border-slate-200/80 p-5 flex flex-col justify-between space-y-4">
         
         <div className="space-y-4">
           
@@ -261,7 +252,7 @@ export default function HomePage() {
               onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')}
               className="flex items-center gap-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 px-3.5 py-1.5 rounded-full text-xs font-semibold shadow-2xs transition-all active:scale-95"
             >
-              <span className="text-sm">🔤</span>
+              <span className="text-xs bg-slate-200 text-slate-700 px-1 py-0.2 rounded font-mono">abc</span>
               <span>{t.transBtn}</span>
             </button>
 
@@ -294,19 +285,19 @@ export default function HomePage() {
 
               {/* 橙色可爱吉祥物头像 🟠 */}
               <div className="flex justify-center pt-1">
-                <div className="w-14 h-14 rounded-full bg-[#FF6B35] flex items-center justify-center gap-2 shadow-xs shadow-orange-500/20">
-                  <div className="w-2.5 h-2.5 rounded-full bg-white"></div>
-                  <div className="w-2.5 h-2.5 rounded-full bg-white"></div>
+                <div className="w-14 h-14 rounded-full bg-[#FF5722] flex items-center justify-center gap-2 shadow-sm shadow-orange-500/20">
+                  <div className="w-2 h-2 rounded-full bg-white"></div>
+                  <div className="w-2 h-2 rounded-full bg-white"></div>
                 </div>
               </div>
 
               {/* 主标题：Write your review or choose keywords */}
-              <h2 className="text-center text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight leading-snug px-4">
+              <h2 className="text-center text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight leading-snug px-2">
                 {t.heroTitle}
               </h2>
 
               {/* 文本输入框：Simple input your experience... */}
-              <div className="bg-slate-50/80 rounded-2xl border border-slate-200/90 p-4 focus-within:border-slate-400 focus-within:bg-white transition-all shadow-2xs">
+              <div className="bg-slate-50/70 rounded-2xl border border-slate-200/80 p-4 focus-within:border-slate-300 focus-within:bg-white transition-all">
                 <textarea
                   value={customExperience}
                   onChange={(e) => setCustomExperience(e.target.value)}
@@ -322,7 +313,7 @@ export default function HomePage() {
                   {t.sectionTags}
                 </h3>
 
-                {/* 胶囊标签网格 (100% 还原图2排版) */}
+                {/* 胶囊标签网格 (100% 还原图2排版与高亮选中态) */}
                 <div className="flex flex-wrap gap-2">
                   {PRESET_TAGS.map((tag) => {
                     const isSelected = selectedTagIds.includes(tag.id);
@@ -331,9 +322,9 @@ export default function HomePage() {
                         key={tag.id}
                         type="button"
                         onClick={() => handleTagToggle(tag.id)}
-                        className={`min-h-[38px] px-4 py-2 rounded-full text-xs font-medium transition-all select-none flex items-center gap-1 active:scale-95 ${
+                        className={`min-h-[38px] px-4 py-2 rounded-full text-xs transition-all select-none flex items-center gap-1 active:scale-95 ${
                           isSelected
-                            ? 'bg-amber-50/70 text-[#9A3412] border border-[#FDBA74] shadow-xs font-semibold'
+                            ? 'bg-[#FFF8F3] text-[#D9531E] border border-[#FDBA74] font-semibold shadow-2xs'
                             : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
                         }`}
                       >
@@ -344,7 +335,7 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* 生成按钮 */}
+              {/* 醒目红色生成按钮：[✨ Generate English Review] */}
               <button
                 type="button"
                 disabled={isLoading}
@@ -426,7 +417,7 @@ export default function HomePage() {
                     onClick={() => setViewState('input')}
                     className="text-slate-400 hover:text-slate-600 font-normal"
                   >
-                    自定义选词 &gt;
+                    返回修改关键词 &gt;
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
@@ -439,7 +430,7 @@ export default function HomePage() {
                         onClick={() => handleTagToggle(tag.id)}
                         className={`min-h-[32px] px-3 py-1 rounded-full text-[11px] font-medium transition-all flex items-center gap-1 active:scale-95 ${
                           isSelected
-                            ? 'bg-amber-50 text-[#9A3412] border border-[#FDBA74] font-semibold'
+                            ? 'bg-amber-50 text-[#D9531E] border border-[#FDBA74] font-semibold'
                             : 'bg-white text-slate-600 border border-slate-200'
                         }`}
                       >
