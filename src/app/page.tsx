@@ -10,18 +10,25 @@ import {
   ExternalLink,
   Bot,
   Edit3,
+  Plus,
 } from 'lucide-react';
 
-const TAG_OPTIONS = ['服务好', '出餐快', '环境干净', '饮品颜值高', '口味独特'];
+const PRESET_TAG_OPTIONS = ['服务好', '出餐快', '环境干净', '饮品颜值高', '口味独特'];
 
 export default function HomePage() {
   // 1. 状态管理
+  const [tagsList, setTagsList] = useState<string[]>(PRESET_TAG_OPTIONS);
   const [selectedTags, setSelectedTags] = useState<string[]>(['服务好', '出餐快']);
   const [platform, setPlatform] = useState<'Google' | '小红书'>('小红书');
   const [generatedReview, setGeneratedReview] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isRegenerating, setIsRegenerating] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [showCopyToast, setShowCopyToast] = useState<boolean>(false);
+
+  // 自定义标签输入状态
+  const [showCustomInput, setShowCustomInput] = useState<boolean>(false);
+  const [customTagText, setCustomTagText] = useState<string>('');
 
   // 附加题 Webhook 数据与折叠抽屉状态
   const [webhookData, setWebhookData] = useState<{
@@ -54,14 +61,44 @@ export default function HomePage() {
     }
   };
 
-  // 3. AI 生成评价逻辑
-  const handleGenerate = async () => {
+  // 添加自定义标签
+  const handleAddCustomTag = () => {
+    const trimmed = customTagText.trim();
+    if (!trimmed) return;
+    if (tagsList.includes(trimmed)) {
+      setErrorMessage('该标签已存在');
+      return;
+    }
+    // 添加到标签列表
+    setTagsList([...tagsList, trimmed]);
+    // 如果当前选中的少于2个，自动选中新加的自定义标签
+    if (selectedTags.length < 2) {
+      setSelectedTags([...selectedTags, trimmed]);
+    }
+    setCustomTagText('');
+    setShowCustomInput(false);
+    setErrorMessage('');
+  };
+
+  // 删除自定义标签
+  const handleDeleteCustomTag = (tagToDelete: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setTagsList(tagsList.filter((t) => t !== tagToDelete));
+    setSelectedTags(selectedTags.filter((t) => t !== tagToDelete));
+  };
+
+  // 3. AI 生成评价逻辑（包含主生成与换一批）
+  const handleGenerate = async (isRefresh = false) => {
     if (selectedTags.length === 0) {
       setErrorMessage('请至少选择 1 个消费感受标签');
       return;
     }
 
-    setIsLoading(true);
+    if (isRefresh) {
+      setIsRegenerating(true);
+    } else {
+      setIsLoading(true);
+    }
     setErrorMessage('');
 
     try {
@@ -71,6 +108,7 @@ export default function HomePage() {
         body: JSON.stringify({
           platform,
           tags: selectedTags,
+          seed: Date.now() + Math.floor(Math.random() * 10000), // 每次传递随机 seed 确保换一批不重复
         }),
       });
 
@@ -92,6 +130,7 @@ export default function HomePage() {
       setErrorMessage(msg);
     } finally {
       setIsLoading(false);
+      setIsRegenerating(false);
     }
   };
 
@@ -189,7 +228,7 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* 步骤 1：感受选择（限选 1-2 项，至多选2个） */}
+        {/* 步骤 1：感受选择（限选 1-2 项，支持自定义添加 tag） */}
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <label className="text-xs font-bold text-slate-800 tracking-wide">
@@ -201,9 +240,10 @@ export default function HomePage() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {TAG_OPTIONS.map((tag) => {
+            {tagsList.map((tag) => {
               const isSelected = selectedTags.includes(tag);
               const isDisabled = !isSelected && selectedTags.length >= 2;
+              const isCustom = !PRESET_TAG_OPTIONS.includes(tag);
 
               return (
                 <button
@@ -211,7 +251,7 @@ export default function HomePage() {
                   type="button"
                   disabled={isDisabled}
                   onClick={() => handleTagClick(tag)}
-                  className={`min-h-[44px] px-4 py-2.5 rounded-xl text-xs font-semibold transition-all select-none flex items-center gap-1 active:scale-95 ${
+                  className={`min-h-[44px] px-4 py-2.5 rounded-xl text-xs font-semibold transition-all select-none flex items-center gap-1.5 active:scale-95 ${
                     isSelected
                       ? 'bg-amber-500 text-white shadow-sm ring-2 ring-amber-500/20'
                       : isDisabled
@@ -221,10 +261,51 @@ export default function HomePage() {
                 >
                   <span>{tag}</span>
                   {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                  {isCustom && !isDisabled && (
+                    <span
+                      onClick={(e) => handleDeleteCustomTag(tag, e)}
+                      className={`ml-1 text-[10px] rounded-full w-3.5 h-3.5 flex items-center justify-center ${
+                        isSelected ? 'bg-amber-600 text-white' : 'bg-slate-200 text-slate-500 hover:bg-slate-300'
+                      }`}
+                    >
+                      ×
+                    </span>
+                  )}
                 </button>
               );
             })}
+
+            {/* + 自定义标签胶囊按钮 */}
+            <button
+              type="button"
+              onClick={() => setShowCustomInput(!showCustomInput)}
+              className="min-h-[44px] px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-slate-50 text-amber-700 border border-dashed border-amber-300 hover:bg-amber-50/60 transition-all flex items-center gap-1 active:scale-95"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>自定义</span>
+            </button>
           </div>
+
+          {/* 展开的自定义标签输入框 */}
+          {showCustomInput && (
+            <div className="flex gap-2 pt-1 animate-fadeIn">
+              <input
+                type="text"
+                value={customTagText}
+                onChange={(e) => setCustomTagText(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddCustomTag()}
+                placeholder="输入自定义感受（如：珍珠筋道、茶香浓郁）"
+                className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-500 focus:bg-white transition-all font-sans"
+              />
+              <button
+                type="button"
+                onClick={handleAddCustomTag}
+                className="bg-slate-900 text-white text-xs font-bold px-4 py-2 rounded-xl active:scale-95"
+              >
+                添加
+              </button>
+            </div>
+          )}
         </section>
 
         {/* 步骤 2：平台选择 (Google vs 小红书) */}
@@ -272,8 +353,8 @@ export default function HomePage() {
         <div>
           <button
             type="button"
-            disabled={isLoading}
-            onClick={handleGenerate}
+            disabled={isLoading || isRegenerating}
+            onClick={() => handleGenerate(false)}
             className="w-full min-h-[48px] py-3.5 px-4 rounded-2xl bg-amber-500 hover:bg-amber-600 active:bg-amber-700 disabled:opacity-75 disabled:cursor-not-allowed text-white font-extrabold text-sm shadow-sm transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
           >
             {isLoading ? (
@@ -299,17 +380,16 @@ export default function HomePage() {
               <span className="text-slate-400 font-normal text-[11px]">(可二次编辑)</span>
             </label>
 
-            {generatedReview && (
-              <button
-                type="button"
-                disabled={isLoading}
-                onClick={handleGenerate}
-                className="text-[11px] font-bold text-slate-600 hover:text-slate-900 flex items-center gap-1 bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded-lg transition-all active:scale-95 disabled:opacity-50"
-              >
-                <RefreshCw className={`w-3 h-3 ${isLoading ? 'animate-spin text-amber-600' : ''}`} />
-                <span>换一批</span>
-              </button>
-            )}
+            {/* 换一批按钮（支持实时重新生成不同文案，带动画） */}
+            <button
+              type="button"
+              disabled={isLoading || isRegenerating}
+              onClick={() => handleGenerate(true)}
+              className="text-[11px] font-bold text-slate-600 hover:text-slate-900 flex items-center gap-1 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 px-2.5 py-1.5 rounded-lg transition-all active:scale-95 disabled:opacity-50 min-h-[30px]"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRegenerating ? 'animate-spin text-amber-600' : 'text-slate-500'}`} />
+              <span>{isRegenerating ? '正在换一批...' : '🔄 换一批'}</span>
+            </button>
           </div>
 
           <div className="relative">
@@ -331,7 +411,7 @@ export default function HomePage() {
           {/* 一键复制并前往发布按钮 */}
           <button
             type="button"
-            disabled={isLoading || !generatedReview.trim()}
+            disabled={isLoading || isRegenerating || !generatedReview.trim()}
             onClick={handleCopyAndRedirect}
             className="w-full min-h-[44px] py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-black disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
           >
