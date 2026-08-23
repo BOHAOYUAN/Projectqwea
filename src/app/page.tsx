@@ -11,12 +11,14 @@ import {
   Bot,
   Edit3,
   Plus,
+  MessageSquarePlus,
 } from 'lucide-react';
 
 const PRESET_TAG_OPTIONS = ['服务好', '出餐快', '环境干净', '饮品颜值高', '口味独特'];
 
 export default function HomePage() {
   // 1. 状态管理
+  const [userInput, setUserInput] = useState<string>('');
   const [tagsList, setTagsList] = useState<string[]>(PRESET_TAG_OPTIONS);
   const [selectedTags, setSelectedTags] = useState<string[]>(['服务好', '出餐快']);
   const [platform, setPlatform] = useState<'Google' | '小红书'>('小红书');
@@ -47,7 +49,7 @@ export default function HomePage() {
     }
   }, [generatedReview]);
 
-  // 2. 标签点击切换（严格限制：至多只能选择 2 个）
+  // 2. 标签点击切换（至多只能选择 2 个）
   const handleTagClick = (tag: string) => {
     setErrorMessage('');
     if (selectedTags.includes(tag)) {
@@ -69,9 +71,7 @@ export default function HomePage() {
       setErrorMessage('该标签已存在');
       return;
     }
-    // 添加到标签列表
     setTagsList([...tagsList, trimmed]);
-    // 如果当前选中的少于2个，自动选中新加的自定义标签
     if (selectedTags.length < 2) {
       setSelectedTags([...selectedTags, trimmed]);
     }
@@ -87,10 +87,11 @@ export default function HomePage() {
     setSelectedTags(selectedTags.filter((t) => t !== tagToDelete));
   };
 
-  // 3. AI 生成评价逻辑（包含主生成与换一批）
+  // 3. AI Agent 智能生成（支持：纯打字 / 纯选标签 / 打字+选标签）
   const handleGenerate = async (isRefresh = false) => {
-    if (selectedTags.length === 0) {
-      setErrorMessage('请至少选择 1 个消费感受标签');
+    // 如果用户既没有输入文字，也没有选择标签
+    if (!userInput.trim() && selectedTags.length === 0) {
+      setErrorMessage('请在步骤1输入打卡感受，或在步骤2选择消费感受标签');
       return;
     }
 
@@ -107,8 +108,9 @@ export default function HomePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           platform,
+          userInput: userInput.trim(),
           tags: selectedTags,
-          seed: Date.now() + Math.floor(Math.random() * 10000), // 每次传递随机 seed 确保换一批不重复
+          seed: Date.now() + Math.floor(Math.random() * 10000), // 确保每次换一批均生成全新视角文案
         }),
       });
 
@@ -228,11 +230,41 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* 步骤 1：感受选择（限选 1-2 项，支持自定义添加 tag） */}
+        {/* 步骤 1：Agent 自由打字输入 (不选标签也能直接生成) */}
+        <section className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold text-slate-800 tracking-wide flex items-center gap-1.5">
+              <MessageSquarePlus className="w-3.5 h-3.5 text-amber-600" />
+              <span>1. 告诉 AI Agent 您的用餐感受</span>
+              <span className="text-slate-400 font-normal text-[11px]">(可选)</span>
+            </label>
+            <span className="text-[10px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full font-medium">
+              支持直接打字
+            </span>
+          </div>
+
+          <div className="relative">
+            <textarea
+              value={userInput}
+              onChange={(e) => {
+                setUserInput(e.target.value);
+                setErrorMessage('');
+              }}
+              placeholder="例如：“今天点了杨枝甘露少冰微糖，奶香超级浓郁，珍珠也很筋道，拍照特别出片～”"
+              rows={2}
+              className="w-full p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-slate-800 text-xs leading-relaxed outline-none focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-500/20 transition-all resize-none placeholder-slate-400 font-sans"
+            />
+          </div>
+          <p className="text-[10px] text-slate-400">
+            💡 提示：即使不选下方标签，直接打字也可生成完整评价。
+          </p>
+        </section>
+
+        {/* 步骤 2：选择消费感受（限选 1-2 项，支持自定义添加 tag） */}
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <label className="text-xs font-bold text-slate-800 tracking-wide">
-              1. 选择消费感受 <span className="text-slate-400 font-normal">(限选 1-2 项)</span>
+              2. 快速选择消费感受 <span className="text-slate-400 font-normal">(限选 1-2 项)</span>
             </label>
             <span className="text-[11px] font-mono font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/60">
               {selectedTags.length}/2
@@ -308,10 +340,10 @@ export default function HomePage() {
           )}
         </section>
 
-        {/* 步骤 2：平台选择 (Google vs 小红书) */}
+        {/* 步骤 3：选择发布目标平台 (Google vs 小红书) */}
         <section className="space-y-3">
           <label className="text-xs font-bold text-slate-800 tracking-wide block">
-            2. 选择发布目标平台
+            3. 选择发布目标平台
           </label>
 
           <div className="grid grid-cols-2 gap-3">
@@ -349,7 +381,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* 步骤 3：AI 智能生成主按钮 */}
+        {/* AI 生成评价主按钮 */}
         <div>
           <button
             type="button"
@@ -360,12 +392,12 @@ export default function HomePage() {
             {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>⏳ AI正在思考中...</span>
+                <span>⏳ AI Agent 正在构思中...</span>
               </>
             ) : (
               <>
                 <Sparkles className="w-4 h-4" />
-                <span>✨ AI生成评价</span>
+                <span>✨ AI Agent 智能生成评价</span>
               </>
             )}
           </button>
@@ -376,7 +408,7 @@ export default function HomePage() {
           <div className="flex items-center justify-between">
             <label className="text-xs font-bold text-slate-800 tracking-wide flex items-center gap-1">
               <Edit3 className="w-3.5 h-3.5 text-slate-500" />
-              <span>3. 评价内容预览</span>
+              <span>4. 评价内容预览</span>
               <span className="text-slate-400 font-normal text-[11px]">(可二次编辑)</span>
             </label>
 
@@ -424,7 +456,7 @@ export default function HomePage() {
             点击将自动复制文案并打开对应平台的发布页面
           </p>
 
-          {/* 步骤 5 / 附加题：企业微信工作流折叠抽屉 */}
+          {/* 附加题：企业微信工作流折叠抽屉 */}
           {webhookData && (
             <div className="pt-2 border-t border-slate-100">
               <button

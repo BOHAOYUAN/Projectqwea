@@ -17,7 +17,7 @@ const TAG_EN_MAP: Record<string, string> = {
 const GOOGLE_SYSTEM_PROMPT = `You are a genuine local foodie living in San Jose, California (Bay Area) writing a Google Maps review for Sunny Tea House boba shop.
 CRITICAL RULES:
 1. Output ONLY in 100% natural, fluent American English.
-2. NEVER output any Chinese characters, Chinese punctuation, or translation notes under any circumstances. If custom tags are in Chinese, seamlessly translate them into natural English foodie descriptions.
+2. NEVER output any Chinese characters, Chinese punctuation, or translation notes under any circumstances. If the user input or custom tags are in Chinese, seamlessly extract the foodie experience and translate it into natural English.
 3. Tone: Authentic, relaxed, objective, like a real Google Local Guide (avoid robotic marketing buzzwords).
 4. Format: 2 to 3 short paragraphs with a blank line between each for effortless mobile reading. Keep length strictly between 50 and 70 words.
 5. Output ONLY the raw plain text review without quotation marks, markdown headings, or commentary.`;
@@ -27,33 +27,35 @@ const XHS_SYSTEM_PROMPT = `你是一位常驻美国加州湾区（圣何塞 San 
 1. 语言：必须全中文输出（除品牌名 Sunny Tea House 与地点 San Jose 以外，严禁夹杂任何英文字句）。
 2. 爆款标题：第1行必须带有 Emoji 和地点（如：🧋在San Jose挖到了宝藏神仙奶茶！✨）。
 3. 正文呼吸感排版：3-4个精炼微段落，段与段之间必须空出一行，绝不能堆叠大段文字。
-4. 穿插灵动Emoji（🧋✨🍵💖🔥），语气热情、网络化、闺蜜安利感。
-5. 结尾附带3个相关话题标签（如：#奶茶推荐 #圣何塞美食 #湾区探店）。
-6. 直接输出纯文本内容，不要输出Markdown代码块。`;
+4. 结合顾客的自由描述与标签，生成富有情绪价值的种草文案。
+5. 穿插灵动Emoji（🧋✨🍵💖🔥），语气热情、网络化、闺蜜安利感。
+6. 结尾附带3个相关话题标签（如：#奶茶推荐 #圣何塞美食 #湾区探店）。
+7. 直接输出纯文本内容，不要输出Markdown代码块。`;
 
 // 2. Intelligent Pure-English & Pure-Chinese Diverse Fallbacks
 const GOOGLE_FALLBACKS = [
-  (tags: string) => `Sunny Tea House in San Jose is hands down one of my favorite boba spots in the South Bay!\n\nThe ${tags} really made my visit memorable. The boba texture was super chewy and fresh, and the sweetness level was spot on.\n\nDefinitely my new go-to place whenever I'm in San Jose!`,
-  (tags: string) => `Checked out Sunny Tea House for a quick afternoon pick-me-up. The tea aroma hit me the second I walked in.\n\nReally appreciated the ${tags}. Drinks came out super fast and tasted genuinely authentic without being artificial.\n\nSolid 5-star spot in San Jose, highly recommend!`,
-  (tags: string) => `If you're in the South Bay and craving quality boba, Sunny Tea House never disappoints.\n\nThe highlights for me were definitely the ${tags}. Clean store, great vibe, and well-balanced flavors.\n\nWill definitely be bringing friends here next time!`,
+  (details: string) => `Sunny Tea House in San Jose is hands down one of my favorite boba spots in the South Bay!\n\n${details ? `Loved the ${details}. ` : ''}The boba texture was super chewy and fresh, and the sweetness level was spot on.\n\nDefinitely my new go-to place whenever I'm in San Jose!`,
+  (details: string) => `Checked out Sunny Tea House for a quick afternoon pick-me-up. The tea aroma hit me the second I walked in.\n\n${details ? `Really appreciated the ${details}. ` : ''}Drinks came out super fast and tasted genuinely authentic without being artificial.\n\nSolid 5-star spot in San Jose, highly recommend!`,
+  (details: string) => `If you're in the South Bay and craving quality boba, Sunny Tea House never disappoints.\n\n${details ? `The highlights for me were ${details}. ` : ''}Clean store, great vibe, and well-balanced flavors.\n\nWill definitely be bringing friends here next time!`,
 ];
 
 const XHS_FALLBACKS = [
-  (tags: string) => `🧋在San Jose挖到宝藏奶茶店啦！Sunny Tea House亲测不踩雷✨\n\n店员真的超级热情，${tags}！\n\n奶茶口感醇厚，珍珠Q弹软糯，甜度刚刚好～\n\n拍照打卡巨出片，湾区的宝子们快冲！\n\n#奶茶推荐 #圣何塞美食 #湾区探店`,
-  (tags: string) => `✨湾区下午茶天花板！被Sunny Tea House惊艳到了💖\n\n今天和闺蜜去打卡，${tags}体验感直接拉满！\n\n茶底清香不甜腻，奶味丝滑，每一口都超治愈～\n\n就在San Jose，周末不知道去哪儿的赶紧收藏！🧋🔥\n\n#圣何塞探店 #周末去哪儿 #湾区奶茶`,
-  (tags: string) => `🔥答应我！去San Jose一定要喝Sunny Tea House！🧋\n\n亲测必点招牌奶茶，${tags}真不是吹的！\n\n包装颜值巨高，出餐速度飞快，喝完一杯毫无负担～\n\n路过的宝子千万别错过呀！🍵✨\n\n#加州美食 #奶茶测评 #硅谷探店`,
+  (details: string) => `🧋在San Jose挖到宝藏奶茶店啦！Sunny Tea House亲测不踩雷✨\n\n${details ? `这次打卡真的被惊艳到了：${details}！\n\n` : ''}奶茶口感醇厚，珍珠Q弹软糯，甜度刚刚好～\n\n拍照打卡巨出片，湾区的宝子们快冲！\n\n#奶茶推荐 #圣何塞美食 #湾区探店`,
+  (details: string) => `✨湾区下午茶天花板！被Sunny Tea House惊艳到了💖\n\n今天去打卡，${details || '出餐超快，店员超热情'}，体验感直接拉满！\n\n茶底清香不甜腻，奶味丝滑，每一口都超治愈～\n\n就在San Jose，周末不知道去哪儿的赶紧收藏！🧋🔥\n\n#圣何塞探店 #周末去哪儿 #湾区奶茶`,
+  (details: string) => `🔥答应我！去San Jose一定要喝Sunny Tea House！🧋\n\n亲测必点招牌奶茶，${details || '颜值高、味道正'}真不是吹的！\n\n包装颜值巨高，出餐速度飞快，喝完一杯毫无负担～\n\n路过的宝子千万别错过呀！🍵✨\n\n#加州美食 #奶茶测评 #硅谷探店`,
 ];
 
-function getLocalFallback(platform: string, tags: string[], seed: number = 0): string {
+function getLocalFallback(platform: string, tags: string[], userInput: string = '', seed: number = 0): string {
   const index = Math.abs(seed) % 3;
   if (platform === 'Google') {
     const enTags = tags
       .map((t) => TAG_EN_MAP[t] || t)
-      .join(', ') || 'friendly staff and great boba';
-    return GOOGLE_FALLBACKS[index](enTags);
+      .join(', ');
+    const combined = [userInput, enTags].filter(Boolean).join(', ') || 'friendly staff and great boba';
+    return GOOGLE_FALLBACKS[index](combined);
   } else {
-    const tagStr = tags.join('、') || '服务好、出餐快';
-    return XHS_FALLBACKS[index](tagStr);
+    const combined = [userInput, tags.join('、')].filter(Boolean).join('，') || '服务好、出餐快';
+    return XHS_FALLBACKS[index](combined);
   }
 }
 
@@ -62,6 +64,7 @@ async function triggerWecomWebhookAsync(
   reviewText: string,
   platform: string,
   tags: string[],
+  userInput: string,
   apiKey: string,
   apiUrl: string,
   model: string
@@ -87,7 +90,7 @@ async function triggerWecomWebhookAsync(
       }),
     });
 
-    let summary = '顾客对饮品品质与服务效率给予高度评价。';
+    let summary = '顾客对饮品品质与整体打卡体验给予高度评价。';
     let replyDraft = '感谢您对Sunny Tea House的喜爱与支持，期待您的再次光临！';
 
     if (aiRes.ok) {
@@ -101,10 +104,11 @@ async function triggerWecomWebhookAsync(
       }
     }
 
+    const tagDisplay = tags.length > 0 ? tags.join(' / ') : (userInput ? '自由输入描述' : '优质体验');
     const wecomPayload = {
       msgtype: 'markdown',
       markdown: {
-        content: `### 🧋 Sunny Tea House 新评价通知\n> **来源平台**：<font color="info">${platform}</font>\n> **用户标签**：<font color="comment">${tags.join(' / ')}</font>\n\n**📝 评价内容**：\n>${reviewText.slice(0, 120)}\n\n**📌 AI 核心摘要 (20字)**：\n>${summary}\n\n**💬 建议老板回复草稿 (50字)**：\n>${replyDraft}\n\n> <font color="comment">⏰ 生成时间：${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}</font>`,
+        content: `### 🧋 Sunny Tea House 新评价通知\n> **来源平台**：<font color="info">${platform}</font>\n> **用户标签/输入**：<font color="comment">${tagDisplay}</font>\n\n**📝 评价内容**：\n>${reviewText.slice(0, 120)}\n\n**📌 AI 核心摘要 (20字)**：\n>${summary}\n\n**💬 建议老板回复草稿 (50字)**：\n>${replyDraft}\n\n> <font color="comment">⏰ 生成时间：${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}</font>`,
       },
     };
 
@@ -122,7 +126,12 @@ async function triggerWecomWebhookAsync(
 
 export async function POST(req: NextRequest) {
   try {
-    const { platform = '小红书', tags = [], seed = Date.now() } = await req.json();
+    const {
+      platform = '小红书',
+      tags = [],
+      userInput = '',
+      seed = Date.now(),
+    } = await req.json();
 
     const apiKey =
       process.env.GROQ_API_KEY ||
@@ -144,18 +153,30 @@ export async function POST(req: NextRequest) {
     const englishTags = tags.map((t: string) => TAG_EN_MAP[t] || t).join(', ');
 
     const randomSeedNum = typeof seed === 'number' ? seed : Date.now();
-    const userPrompt =
-      platform === 'Google'
-        ? `Customer experience highlights: ${englishTags || 'great boba and friendly service'}. Write a fresh, uniquely styled Google review in 100% English now (variation #${randomSeedNum % 100}).`
-        : `顾客本次打卡 Sunny Tea House 体验标签：${tags.join('、') || '服务好、出餐快'}。请用全中文写一段全新的小红书种草笔记（视角批次 #${randomSeedNum % 100}）。`;
+
+    // Context composition (Agent merges typed input and tags)
+    let userPrompt = '';
+    if (platform === 'Google') {
+      const detailsList = [];
+      if (userInput.trim()) detailsList.push(`Customer typed thoughts: "${userInput.trim()}"`);
+      if (englishTags) detailsList.push(`Selected tags: [${englishTags}]`);
+      const detailsStr = detailsList.length > 0 ? detailsList.join('. ') : 'Customer had a delicious and fresh boba experience.';
+      userPrompt = `${detailsStr}. Translate any non-English concepts into authentic American foodie language and write a fresh, realistic Google review (variation #${randomSeedNum % 100}).`;
+    } else {
+      const detailsList = [];
+      if (userInput.trim()) detailsList.push(`顾客打字描述：“${userInput.trim()}”`);
+      if (tags.length > 0) detailsList.push(`勾选感受标签：【${tags.join('、')}】`);
+      const detailsStr = detailsList.length > 0 ? detailsList.join('；') : '顾客打卡体验极佳。';
+      userPrompt = `${detailsStr}。请根据这些真实细节，用全中文写一篇生动种草的小红书笔记（视角批次 #${randomSeedNum % 100}）。`;
+    }
 
     // Smart summaries for bonus question
-    const tagSummaryStr = tags.length > 0 ? tags.join('、') : '服务好、出餐快';
+    const tagSummaryStr = tags.length > 0 ? tags.join('、') : (userInput.slice(0, 15) || '打卡体验极佳');
     const bonusSummary = `顾客赞赏了${tagSummaryStr}，整体体验优秀。`;
     const bonusReplyDraft = `亲爱的顾客，感谢您对 Sunny Tea House 的喜爱与支持，期待再次为您制作美味饮品！`;
 
     if (!apiKey) {
-      const fallbackText = getLocalFallback(platform, tags, randomSeedNum);
+      const fallbackText = getLocalFallback(platform, tags, userInput, randomSeedNum);
       return NextResponse.json({
         review: fallbackText,
         summary: bonusSummary,
@@ -188,20 +209,20 @@ export async function POST(req: NextRequest) {
       const data = await response.json();
       let reviewText =
         data.choices?.[0]?.message?.content?.trim() ||
-        getLocalFallback(platform, tags, randomSeedNum);
+        getLocalFallback(platform, tags, userInput, randomSeedNum);
 
       // Post-processing guard 1: Google English must NOT contain Chinese characters
       if (platform === 'Google' && /[\u4e00-\u9fa5]/.test(reviewText)) {
-        reviewText = getLocalFallback('Google', tags, randomSeedNum);
+        reviewText = getLocalFallback('Google', tags, userInput, randomSeedNum);
       }
 
       // Post-processing guard 2: Xiaohongshu Chinese must be clean
       if (platform === '小红书' && !/[\u4e00-\u9fa5]/.test(reviewText)) {
-        reviewText = getLocalFallback('小红书', tags, randomSeedNum);
+        reviewText = getLocalFallback('小红书', tags, userInput, randomSeedNum);
       }
 
       // Trigger Webhook asynchronously in background (Non-blocking)
-      triggerWecomWebhookAsync(reviewText, platform, tags, apiKey, apiUrl, model).catch(
+      triggerWecomWebhookAsync(reviewText, platform, tags, userInput, apiKey, apiUrl, model).catch(
         (err) => console.warn('Background webhook trigger error:', err)
       );
 
@@ -213,7 +234,7 @@ export async function POST(req: NextRequest) {
       });
     } catch (apiErr) {
       console.warn('API call failed, using pure fallback:', apiErr);
-      const fallbackText = getLocalFallback(platform, tags, randomSeedNum);
+      const fallbackText = getLocalFallback(platform, tags, userInput, randomSeedNum);
       return NextResponse.json({
         review: fallbackText,
         summary: bonusSummary,
