@@ -229,7 +229,7 @@
       <h1>Sunny Tea House AI 智能评价生成系统 · 技术与设计文档</h1>
       <div class="meta-info">
         <span>👤 薄皓元 (Haoyuan Bo)</span>
-        <span>⏱️ 实际耗时：约 50 分钟（借助 AI 编程工具完成）</span>
+        <span>⏱️ 实际耗时：约 2.5 小时（借助 AI 编程工具完成）</span>
         <span>⚡ 体验地址：sunny-tea.lumiere-private.com</span>
       </div>
       <div class="quick-nav">
@@ -238,10 +238,10 @@
     </header>
 
     <h2>1. 💡 AI 辅助编程工具使用策略与提效心得</h2>
-    <p>本次任务官方预期耗时约为 <strong>4 小时以上</strong>，实际开发中我全程使用 <strong>Cursor / Claude Code</strong> 辅助结对编程，耗时 <strong>约 50 分钟</strong> 完成了从需求解构、双端 Prompt 调优、移动端 H5、Next.js Serverless 代理、企微 Webhook 异步流水线到独立域名上线的全部闭环：</p>
+    <p>本次任务官方预期耗时约为 <strong>4~6 小时</strong>（核心任务 4h + 附加题 1~2h）。在实际全栈开发中，我全程使用 <strong>Cursor / Claude Code</strong> 辅助结对编程，耗时 <strong>约 2.5 小时</strong> 完成了从需求解构、双端 Prompt 调优、移动端 H5、Next.js Serverless 代理、企微 Webhook 异步流水线、自由打字 Agent 升级到独立域名上线的全部闭环：</p>
     <ul>
       <li><strong>需求解构与 Schema-First（架构先行）</strong>：优先让 AI 梳理出严格的 TypeScript 接口定义与 Webhook JSON Payload 规范，前后端传参一次性对齐，避免了返工修改。</li>
-      <li><strong>移动端 CSS 样式与 Apple HIG 规范调试</strong>：以前手写移动端 H5 自适应、点击热区（&ge; 44px）和高对比度浅灰/纯白卡片留白可能要花 1~2 小时。这次让 AI 输出 Tailwind 样式类名，10 分钟内就把自适应高度和响应式布局调顺了。</li>
+      <li><strong>移动端 CSS 样式与 Apple HIG 规范调试</strong>：以前手写移动端 H5 自适应、点击热区（&ge; 44px）和高对比度浅灰/纯白卡片留白可能要花 1~2 小时。这次让 AI 输出 Tailwind 样式类名，快速把自适应高度和响应式布局调顺了。</li>
       <li><strong>接口容错与流式调试</strong>：在开发大模型接口与 Webhook 时，直接把报错日志丢给 AI 进行根因分析，秒级定位数据分块边界与 JSON 异常。</li>
     </ul>
 
@@ -326,7 +326,7 @@
     <pre><code>{
   "msgtype": "markdown",
   "markdown": {
-    "content": "### 🧋 Sunny Tea House 新评价通知\n> **来源平台**：小红书\n> **用户标签**：服务好 / 出餐快\n\n**📝 评价内容**：\n>🧋在San Jose挖到宝藏奶茶店啦！Sunny Tea House亲测不踩雷✨...\n\n**📌 AI 核心摘要 (20字)**：\n>顾客高度赞赏了饮品软糯口感与店员的极速热情服务。\n\n**💬 建议老板回复草稿 (50字)**：\n>感谢您对Sunny Tea House的喜爱与支持，期待您的再次光临！\n\n> <font color=\"comment\">⏰ 生成时间：2026/8/23 15:20:15</font>"
+    "content": "### 🧋 Sunny Tea House 新评价通知\n> **来源平台**：小红书\n> **用户标签**：服务好 / 出餐快\n\n**📝 评价内容**：\n>🧋在San Jose挖到宝藏奶茶店啦！Sunny Tea House亲测不踩雷✨...\n\n**📌 AI 核心摘要 (20字)**：\n>顾客高度赞赏了饮品软糯口感与店员的极速热情服务。\n\n**💬 建议老板回复草稿 (50字)**：\n>感谢您对Sunny Tea House的喜爱与支持，期待您的再次光临！\n\n> <font color=\"comment\">⏰ 生成时间：2026/8/23 15:35:15</font>"
   }
 }</code></pre>
 
@@ -349,7 +349,7 @@
       <li><strong>智能 Deep Linking 容错跳转</strong>：对 Google 直跳真实 Google Maps 网页评价入口；对小红书无缝跳转官方移动端 Scheme / 网页搜索打卡入口。</li>
     </ul>
 
-    <h2>6. ⏱️ 项目实际耗时与效率对比分析（50分钟 vs 4.5小时）</h2>
+    <h2>6. ⏱️ 项目实际耗时与效率对比分析（2.5 小时 vs 5~6 小时）</h2>
     <table>
       <thead>
         <tr>
@@ -362,39 +362,45 @@
       <tbody>
         <tr>
           <td>需求解构与架构设计</td>
-          <td>约 40 分钟</td>
-          <td><strong>约 10 分钟</strong></td>
+          <td>约 50 分钟</td>
+          <td><strong>约 20 分钟</strong></td>
           <td>梳理 5 个关键点，确立 Next.js + Serverless 架构</td>
         </tr>
         <tr>
           <td>Prompt 设计与跨语种调优</td>
-          <td>约 60 分钟</td>
-          <td><strong>约 15 分钟</strong></td>
+          <td>约 80 分钟</td>
+          <td><strong>约 35 分钟</strong></td>
           <td>调优去 AI 味，解决中文标签污染，建立 <code>TAG_EN_MAP</code> 字典</td>
         </tr>
         <tr>
           <td>移动端 H5 界面与微交互</td>
-          <td>约 90 分钟</td>
-          <td><strong>约 10 分钟</strong></td>
+          <td>约 100 分钟</td>
+          <td><strong>约 35 分钟</strong></td>
           <td>用 Tailwind 调好移动端适配、自适应高度和按钮热区</td>
         </tr>
         <tr>
           <td>Serverless API 与 Webhook 流水线</td>
-          <td>约 50 分钟</td>
-          <td><strong>约 10 分钟</strong></td>
+          <td>约 60 分钟</td>
+          <td><strong>约 25 分钟</strong></td>
           <td>写好后端代理、错误兜底和企微 Markdown 消息组装</td>
         </tr>
         <tr>
+          <td>V2 自由打字 Agent 与换一批升级</td>
+          <td>约 50 分钟</td>
+          <td><strong>约 20 分钟</strong></td>
+          <td>支持纯打字生成、自定义 Tag 与 0.9 高随机度重刷</td>
+        </tr>
+        <tr>
           <td>全链路联调、加固与独立域名部署</td>
-          <td>约 30 分钟</td>
-          <td><strong>约 5 分钟</strong></td>
+          <td>约 40 分钟</td>
+          <td><strong>约 15 分钟</strong></td>
           <td>Vercel 关联 GitHub，绑定独立域名上线验证</td>
         </tr>
         <tr>
           <td><strong>总计项目耗时</strong></td>
-          <td><strong>约 4.5 小时</strong></td>
-          <td><strong>约 50 分钟</strong></td>
-          <td><strong>全流程极速交付，大幅超越预期效率指标</strong></td>
+          <td><strong>约 5.5 小时</strong></td>
+          <td><strong>约 2.5 小时</strong></td>
+          <td><strong>双版本深度迭代，全流程高效交付</strong></td>
         </tr>
       </tbody>
     </table>
