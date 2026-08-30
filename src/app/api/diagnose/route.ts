@@ -1,61 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const SYSTEM_PROMPT = `你是一位常驻美国硅谷、拥有丰富餐饮与零售经验的资深商业运营咨询专家。
-你需要对加州圣何塞奶茶店 Sunny Tea House 的全渠道顾客评价数据进行深度商业诊断，输出专业、客观、有洞察力的 Markdown 报告。`;
+const SYSTEM_PROMPT = `你是一位在北美（加州湾区/纽约）操盘过多家人气茶饮连锁、实战经验超过15年的资深餐饮督导兼品牌主理人。
+你的风格：老道、犀利、极度务实、拒绝套话与公文腔，句句直击门店毛利、出餐SOP、翻台率与顾客复购心理。
+禁止使用：“综上所述”、“在当今竞争激烈的市场中”、“赋能”、“抓手”等空洞AI套话。请用门店老板和一线督导开早会时的实战语气说话。`;
 
 export async function POST(req: NextRequest) {
   try {
-    const { reviews = [] } = await req.json();
+    const { reviews = [], apiKey: customApiKey, storeName = 'Sunny Tea House' } = await req.json();
 
     const apiKey =
+      customApiKey ||
       process.env.GROQ_API_KEY ||
       process.env.DEEPSEEK_API_KEY ||
       '';
 
-    const apiUrl = process.env.DEEPSEEK_API_KEY
-      ? 'https://api.deepseek.com/v1/chat/completions'
-      : 'https://api.groq.com/openai/v1/chat/completions';
-
-    const model = process.env.DEEPSEEK_API_KEY
-      ? 'deepseek-chat'
-      : process.env.DEFAULT_MODEL || 'llama-3.3-70b-versatile';
+    const apiUrl = 'https://api.groq.com/openai/v1/chat/completions';
+    const model = 'llama-3.3-70b-versatile';
 
     const reviewsText =
       reviews.length > 0
         ? reviews.slice(0, 25).map((r: { platform: string; rating: number; text: string }) => `- [${r.platform} ${r.rating}★]: ${r.text}`).join('\n')
         : '顾客普遍评价出餐快、茶香浓郁、珍珠筋道、拍照出片，但高峰期排队略有拥挤。';
 
-    const userPrompt = `以下是 Sunny Tea House 门店近期的全渠道顾客真实评价数据：
+    const userPrompt = `店名：${storeName}
+以下是这家店最近从 Google 和小红书收集到的顾客一手评价：
 ${reviewsText}
 
-请输出结构化商业诊断分析报告，必须包含：
-### 🌟 1. 核心竞争优势（Top 3 顾客最爱与品牌壁垒）
-### ⚠️ 2. 潜在运营风险与痛点（服务、动线或产品波动点）
-### 📈 3. 面向店长/管理层的下周可落地行动清单（3条高优先级 Actionable Tips）
-
-要求：语言专业干练，直击门店复购与利润痛点。`;
+请直接输出一份给老板和店长看的【实战内参诊断】：
+1. 🎯 【真正能带来复购的核心杀手锏】（别扯虚的，顾客到底是冲着哪款单品、哪道工序、哪个体验持续掏钱的？）
+2. 🚨 【藏在好评背后的隐形炸弹】（别等变成 Yelp 1星差评才后悔！挑出 1~2 个最容易在高峰期翻车的产品或动线细节）
+3. 📋 【下周一早会，店长必须直接落地的 3 个动作】（具体到吧台站位、备料、引导话术，必须是员工听得懂、做得到的操作）`;
 
     if (!apiKey) {
-      // 高保真模拟诊断
+      // 超接地气、实战派的高保真去 AI 味诊断
       return NextResponse.json({
         success: true,
-        report: `### 🌟 1. 核心竞争优势（Top 3 顾客最爱与品牌壁垒）
-1. **极速出餐效率**：全渠道超 70% 评价高频提及“3分钟出餐”、“不用大排长龙”，出餐流水线标准化成为最强心智护城河；
-2. **真材实料茶底与珍珠品质**：顾客对“烘焙乌龙茶香”和“现煮手作珍珠”复购意愿极高，摆脱了传统糖浆香精奶茶的低质竞争；
-3. **视觉出片与社交货币**：杨枝甘露、芝士多肉葡萄等渐变色单品在小红书与 Instagram 上形成自发传播裂变。
+        report: `🎯 【真正带来复购的核心杀手锏】
+- **“3分钟极速出餐”把下午茶刚需锁死了**：硅谷这边的上班族和学生最怕排队，你们把出品速度压到4分钟以内，这就是附近几家竞品打不过你们的命门。
+- **真茶底的香气立住了客单价**：评价里反复夸“烘焙乌龙茶底有真茶香而不是糖精味”，这证明原材料没省是对的，直接拉开了和街头廉价奶茶的档次。
+- **渐变色杯身是天然的免费广告**：小红书顾客自发发图，全是杨枝甘露和多肉葡萄的分层特写。杯贴和杯套质感在线，顾客买的不仅是饮料，是社交货币。
 
----
+🚨 【藏在好评背后的隐形炸弹】
+- **店外排队动线混乱（随时会炸出 1 星差评）**：周末人多时，堂食取餐和外卖骑手全挤在门口狭窄过道。现在顾客还没给差评是因为出餐快，一旦哪天出餐慢两分钟，门口立刻会变成冲突现场。
+- **手作珍珠批次口感轻微波动**：有老顾客隐晦提到某天珍珠偏软。下午两点和傍晚六点这批珍珠的焖煮时间需要再校准，别让新员工凭感觉捞。
 
-### ⚠️ 2. 潜在运营风险与痛点
-1. **周末高峰期店外动线指引不足**：部分顾客反馈人多时排队动线略显混乱；
-2. **甜度稳定性把控**：少数反馈微糖与半糖批次间存在微小口感波动，需进一步标准化糖量刻度。
-
----
-
-### 📈 3. 面向店长/管理层的下周可落地行动清单
-- **优化 NFC 碰一碰卡片陈列**：在取餐台与堂食桌角放置精美亚克力牌，引导顾客扫码 5 秒一键发布 Google / 小红书好评；
-- **设立「快捷取餐专线」**：进一步放大“出餐快”的差异化优势，提升高峰期坪效；
-- **推出爆款季节限定**：以高颜值果茶为主打，拉动周末高客单价消费。`
+📋 【下周一早会，店长必须落地的 3 个动作】
+1. **地贴动线改造（预算 $20）**：在门口用黄色贴纸分出【现场取餐通道】和【外卖/点单等待区】，让动线顺时针单向流动，彻底告别堵门；
+2. **吧台 NFC 亚克力牌前置（抓牢五星好评）**：把 NFC 碰一碰立牌从角落挪到“打包递杯区”，店员递饮品时顺口带一句：*“帮我们碰一下留个言，送您一张下次立减 $1 券”*，每天至少多收 20 条 Google 真实好评；
+3. **珍珠煮制实行定时器硬考核**：焖煮 25 分钟 + 冰水过温标准写成大字贴在后厨墙上，彻底锁死口感一致性。`
       });
     }
 
@@ -71,12 +63,12 @@ ${reviewsText}
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: userPrompt },
         ],
-        temperature: 0.5,
+        temperature: 0.6,
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`Upstream AI Error: ${response.statusText}`);
+      throw new Error(`Upstream API Error: ${response.statusText}`);
     }
 
     const data = await response.json();

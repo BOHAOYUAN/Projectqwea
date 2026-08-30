@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Sparkles,
@@ -15,6 +15,10 @@ import {
   Store,
   Filter,
   Loader2,
+  KeyRound,
+  Building2,
+  ChevronDown,
+  Check,
 } from 'lucide-react';
 
 interface ReviewItem {
@@ -29,82 +33,221 @@ interface ReviewItem {
   reply?: string;
 }
 
-const INITIAL_REVIEWS: ReviewItem[] = [
-  {
-    id: 1,
-    date: '2026-08-28',
-    customerName: 'Emily R.',
-    platform: 'Google',
-    rating: 5,
-    tags: ['服务好', '出餐快'],
-    text: 'Sunny Tea House is hands down my favorite boba spot in San Jose! Super fast service and the crew is always so welcoming. The boba was chewy and fresh!',
-    summary: '顾客对快速出餐与店员热情服务给予高度赞赏。',
-    reply: 'Thank you Emily! We are thrilled you enjoyed the fresh boba. Looking forward to serving you again soon!',
+interface StoreConfig {
+  id: string;
+  name: string;
+  location: string;
+  rating: number;
+  totalReviews: number;
+  positiveRate: number;
+  tagDist: { label: string; pct: number; color: string }[];
+  googleScore: number;
+  googleCount: number;
+  xhsScore: number;
+  xhsCount: number;
+  reviews: ReviewItem[];
+}
+
+const STORES: Record<string, StoreConfig> = {
+  sunny_tea: {
+    id: 'sunny_tea',
+    name: 'Sunny Tea House',
+    location: 'San Jose 旗舰店',
+    rating: 4.86,
+    totalReviews: 30,
+    positiveRate: 96.7,
+    tagDist: [
+      { label: '出餐快 ⚡', pct: 38, color: 'bg-amber-500' },
+      { label: '饮品颜值高 📸', pct: 28, color: 'bg-rose-500' },
+      { label: '口味独特 🧋', pct: 20, color: 'bg-blue-500' },
+      { label: '服务好 / 环境干净 ✨', pct: 14, color: 'bg-emerald-500' },
+    ],
+    googleScore: 4.82,
+    googleCount: 16,
+    xhsScore: 4.91,
+    xhsCount: 14,
+    reviews: [
+      {
+        id: 1,
+        date: '2026-08-28',
+        customerName: 'Emily R.',
+        platform: 'Google',
+        rating: 5,
+        tags: ['服务好', '出餐快'],
+        text: 'Sunny Tea House is hands down my favorite boba spot in San Jose! Super fast service and the crew is always so welcoming. The boba was chewy and fresh!',
+        summary: '顾客对快速出餐与店员热情服务给予高度赞赏。',
+        reply: 'Thank you Emily! We are thrilled you enjoyed the fresh boba. Looking forward to serving you again soon!',
+      },
+      {
+        id: 2,
+        date: '2026-08-28',
+        customerName: '湾区小甜心',
+        platform: '小红书',
+        rating: 5,
+        tags: ['饮品颜值高', '口味独特'],
+        text: '🧋在San Jose挖到宝藏奶茶啦！杨枝甘露拍照巨出片，少糖配比超级绝，奶香浓郁清爽不腻～必须安利给所有姐妹！',
+        summary: '顾客重点好评了杨枝甘露的颜值与清爽口感。',
+        reply: '感谢宝子的打卡安利！我们会继续保持高颜值与高品质茶底，期待下次再来哦～',
+      },
+      {
+        id: 3,
+        date: '2026-08-27',
+        customerName: 'Michael Chen',
+        platform: 'Google',
+        rating: 5,
+        tags: ['环境干净', '口味独特'],
+        text: 'Really clean store and great modern vibe. Ordered the Roasted Oolong Milk Tea at 50% sugar. Perfect tea aroma and boba consistency.',
+        summary: '顾客赞赏了烘焙乌龙茶香与整洁现代的就餐环境。',
+        reply: 'Thanks Michael! We take pride in sourcing authentic tea leaves. See you next time!',
+      },
+      {
+        id: 4,
+        date: '2026-08-27',
+        customerName: '硅谷打工人',
+        platform: '小红书',
+        rating: 4,
+        tags: ['出餐快', '服务好'],
+        text: '下午茶点单不到3分钟就拿到了，出餐速度感人！店员小哥态度超好，拯救了社畜的一天～',
+        summary: '顾客对3分钟极速出餐与贴心服务表示满意。',
+        reply: '能为打工人的下午茶充能是我们的荣幸！祝工作顺利，天天好心情！',
+      },
+      {
+        id: 5,
+        date: '2026-08-26',
+        customerName: 'Sarah L.',
+        platform: 'Google',
+        rating: 5,
+        tags: ['饮品颜值高', '服务好'],
+        text: 'The drink presentation is gorgeous! Tried their signature fruit tea, colorful and full of fresh mango and passionfruit. 10/10.',
+        summary: '顾客对招牌水果茶的新鲜用料与高颜值给予满分好评。',
+        reply: 'Thank you Sarah! Fresh fruits and high quality ingredients are our priority. Glad you loved it!',
+      },
+      {
+        id: 6,
+        date: '2026-08-25',
+        customerName: '圣何塞探店阿猫',
+        platform: '小红书',
+        rating: 5,
+        tags: ['环境干净', '饮品颜值高'],
+        text: '店面装修超级干净明亮，原木风太戳我了！拍了二十分钟照片根本停不下来，奶茶不仅好看还超好喝✨',
+        summary: '顾客喜爱原木风极简装修，打卡拍照体验极佳。',
+        reply: '感谢精美返图！Sunny Tea House 永远是大家在湾区最治愈的打卡聚集地～',
+      },
+    ],
   },
-  {
-    id: 2,
-    date: '2026-08-28',
-    customerName: '湾区小甜心',
-    platform: '小红书',
-    rating: 5,
-    tags: ['饮品颜值高', '口味独特'],
-    text: '🧋在San Jose挖到宝藏奶茶啦！杨枝甘露拍照巨出片，少糖配比超级绝，奶香浓郁清爽不腻～必须安利给所有姐妹！',
-    summary: '顾客重点好评了杨枝甘露的颜值与清爽口感。',
-    reply: '感谢宝子的打卡安利！我们会继续保持高颜值与高品质茶底，期待下次再来哦～',
+  heytea_ny: {
+    id: 'heytea_ny',
+    name: 'HEYTEA 喜茶',
+    location: 'New York SOHO 旗舰店',
+    rating: 4.92,
+    totalReviews: 45,
+    positiveRate: 98.2,
+    tagDist: [
+      { label: '饮品颜值高 📸', pct: 45, color: 'bg-rose-500' },
+      { label: '口味独特 🧋', pct: 30, color: 'bg-blue-500' },
+      { label: '环境干净 ✨', pct: 15, color: 'bg-emerald-500' },
+      { label: '出餐快 ⚡', pct: 10, color: 'bg-amber-500' },
+    ],
+    googleScore: 4.9,
+    googleCount: 22,
+    xhsScore: 4.95,
+    xhsCount: 23,
+    reviews: [
+      {
+        id: 101,
+        date: '2026-08-28',
+        customerName: 'Jennifer K.',
+        platform: 'Google',
+        rating: 5,
+        tags: ['饮品颜值高', '口味独特'],
+        text: 'Best cheese foam fruit tea in Manhattan! The grape boom is refreshing with huge chunks of real fruit.',
+        summary: '顾客对芝士多肉葡萄的浓郁奶盖与真实果肉赞不绝口。',
+        reply: 'Thanks Jennifer! Real fruit and premium tea are our signature.',
+      },
+      {
+        id: 102,
+        date: '2026-08-27',
+        customerName: '曼哈顿小吃货',
+        platform: '小红书',
+        rating: 5,
+        tags: ['饮品颜值高', '环境干净'],
+        text: 'SOHO店的装修太有艺术感了！芝芝莓莓一如既往的高水准，排队20分钟也值了！',
+        summary: '顾客认可SOHO店艺术空间设计与经典饮品口感。',
+        reply: '感谢支持！我们会进一步优化取餐动线，减少大家的等待时间～',
+      },
+    ],
   },
-  {
-    id: 3,
-    date: '2026-08-27',
-    customerName: 'Michael Chen',
-    platform: 'Google',
-    rating: 5,
-    tags: ['环境干净', '口味独特'],
-    text: 'Really clean store and great modern vibe. Ordered the Roasted Oolong Milk Tea at 50% sugar. Perfect tea aroma and boba consistency.',
-    summary: '顾客赞赏了烘焙乌龙茶香与整洁现代的就餐环境。',
-    reply: 'Thanks Michael! We take pride in sourcing authentic tea leaves. See you next time!',
+  boba_guys_sf: {
+    id: 'boba_guys_sf',
+    name: 'Boba Guys',
+    location: 'San Francisco 联合广场店',
+    rating: 4.78,
+    totalReviews: 38,
+    positiveRate: 94.5,
+    tagDist: [
+      { label: '口味独特 🧋', pct: 40, color: 'bg-blue-500' },
+      { label: '出餐快 ⚡', pct: 28, color: 'bg-amber-500' },
+      { label: '服务好 ✨', pct: 20, color: 'bg-emerald-500' },
+      { label: '饮品颜值高 📸', pct: 12, color: 'bg-rose-500' },
+    ],
+    googleScore: 4.75,
+    googleCount: 20,
+    xhsScore: 4.82,
+    xhsCount: 18,
+    reviews: [
+      {
+        id: 201,
+        date: '2026-08-28',
+        customerName: 'David H.',
+        platform: 'Google',
+        rating: 5,
+        tags: ['口味独特', '出餐快'],
+        text: 'The Strawberry Matcha Latte with oat milk is iconic. Fast pickup through the app.',
+        summary: '顾客夸赞草莓抹茶拿铁风味地道，取餐高效。',
+        reply: 'Thank you David! Oat milk pairing is always a crowd favorite.',
+      },
+    ],
   },
-  {
-    id: 4,
-    date: '2026-08-27',
-    customerName: '硅谷打工人',
-    platform: '小红书',
-    rating: 4,
-    tags: ['出餐快', '服务好'],
-    text: '下午茶点单不到3分钟就拿到了，出餐速度感人！店员小哥态度超好，拯救了社畜的一天～',
-    summary: '顾客对3分钟极速出餐与贴心服务表示满意。',
-    reply: '能为打工人的下午茶充能是我们的荣幸！祝工作顺利，天天好心情！',
-  },
-  {
-    id: 5,
-    date: '2026-08-26',
-    customerName: 'Sarah L.',
-    platform: 'Google',
-    rating: 5,
-    tags: ['饮品颜值高', '服务好'],
-    text: 'The drink presentation is gorgeous! Tried their signature fruit tea, colorful and full of fresh mango and passionfruit. 10/10.',
-    summary: '顾客对招牌水果茶的新鲜用料与高颜值给予满分好评。',
-    reply: 'Thank you Sarah! Fresh fruits and high quality ingredients are our priority. Glad you loved it!',
-  },
-  {
-    id: 6,
-    date: '2026-08-25',
-    customerName: '圣何塞探店阿猫',
-    platform: '小红书',
-    rating: 5,
-    tags: ['环境干净', '饮品颜值高'],
-    text: '店面装修超级干净明亮，原木风太戳我了！拍了二十分钟照片根本停不下来，奶茶不仅好看还超好喝✨',
-    summary: '顾客喜爱原木风极简装修，打卡拍照体验极佳。',
-    reply: '感谢精美返图！Sunny Tea House 永远是大家在湾区最治愈的打卡聚集地～',
-  },
-];
+};
 
 export default function DashboardPage() {
+  const [selectedStoreId, setSelectedStoreId] = useState<string>('sunny_tea');
   const [activeTab, setActiveTab] = useState<'analytics' | 'diagnosis' | 'batch'>('analytics');
   const [platformFilter, setPlatformFilter] = useState<'全部' | 'Google' | '小红书'>('全部');
   const [isDiagnosing, setIsDiagnosing] = useState<boolean>(false);
   const [diagnosisReport, setDiagnosisReport] = useState<string>('');
   const [isProcessingBatch, setIsProcessingBatch] = useState<boolean>(false);
-  const [reviewsList, setReviewsList] = useState<ReviewItem[]>(INITIAL_REVIEWS);
+
+  // API Key 状态与持久化
+  const [apiKey, setApiKey] = useState<string>('');
+  const [showKeyModal, setShowKeyModal] = useState<boolean>(false);
+  const [keyInput, setKeyInput] = useState<string>('');
+  const [keySavedToast, setKeySavedToast] = useState<boolean>(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('GROQ_USER_API_KEY') || '';
+    if (saved) {
+      setApiKey(saved);
+      setKeyInput(saved);
+    }
+  }, []);
+
+  const handleSaveApiKey = () => {
+    localStorage.setItem('GROQ_USER_API_KEY', keyInput.trim());
+    setApiKey(keyInput.trim());
+    setShowKeyModal(false);
+    setKeySavedToast(true);
+    setTimeout(() => setKeySavedToast(false), 3000);
+  };
+
+  const currentStore = STORES[selectedStoreId] || STORES.sunny_tea;
+  const [reviewsList, setReviewsList] = useState<ReviewItem[]>(currentStore.reviews);
+
+  // 当切换门店时更新列表
+  useEffect(() => {
+    setReviewsList(currentStore.reviews);
+    setDiagnosisReport('');
+  }, [selectedStoreId, currentStore]);
 
   // 筛选逻辑
   const filteredReviews = reviewsList.filter((r) => {
@@ -112,7 +255,7 @@ export default function DashboardPage() {
     return r.platform === platformFilter;
   });
 
-  // 执行 AI 商业诊断
+  // 执行 AI 商业诊断 (去 AI 味、接地气实战派)
   const handleGenerateDiagnosis = async () => {
     setIsDiagnosing(true);
     try {
@@ -120,6 +263,8 @@ export default function DashboardPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          apiKey: apiKey || undefined,
+          storeName: `${currentStore.name} (${currentStore.location})`,
           reviews: filteredReviews.map((r) => ({
             platform: r.platform,
             rating: r.rating,
@@ -167,41 +312,127 @@ export default function DashboardPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Sunny_Tea_House_Analytics_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `${currentStore.name}_Analytics_${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
   };
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans antialiased p-4 sm:p-8">
+      {/* 保存 Key 成功提示 */}
+      {keySavedToast && (
+        <div className="fixed top-8 left-1/2 -translate-x-1/2 z-50 bg-emerald-600 text-white text-xs sm:text-sm font-bold px-5 py-2.5 rounded-full shadow-2xl flex items-center gap-2 animate-bounce">
+          <Check className="w-4 h-4 stroke-[3]" />
+          <span>✅ API Key 已保存！AI 算力引擎已即时激活</span>
+        </div>
+      )}
+
+      {/* API Key 配置模态弹窗 */}
+      {showKeyModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white max-w-md w-full rounded-3xl p-6 shadow-2xl border border-slate-200 space-y-4 animate-fadeIn">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
+                  <KeyRound className="w-4 h-4" />
+                </div>
+                <h3 className="text-sm font-black text-slate-900">配置 Groq / AI API Key</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowKeyModal(false)}
+                className="text-slate-400 hover:text-slate-700 text-sm font-bold p-1"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              输入您的 <strong>Groq API Key</strong> 或 <strong>DeepSeek Key</strong>（以 gsk_ 或 sk- 开头），系统将在前端直连超高速 LPU 实时推理。Key 仅保存在您本地浏览器中。
+            </p>
+            <div>
+              <input
+                type="password"
+                value={keyInput}
+                onChange={(e) => setKeyInput(e.target.value)}
+                placeholder="gsk_xxxxxxxxxxxxxxxxxxxx"
+                className="w-full text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-3 text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+              />
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowKeyModal(false)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveApiKey}
+                className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-xs active:scale-95 transition-all"
+              >
+                保存并激活
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 顶部导航 Header */}
       <header className="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Link
               href="/"
-              className="inline-flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-slate-900 bg-white border border-slate-200 px-3 py-1.5 rounded-xl transition-all shadow-2xs active:scale-95"
+              className="inline-flex items-center gap-1 text-xs font-bold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-3 py-1.5 rounded-xl transition-all shadow-2xs active:scale-95"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>返回顾客 H5 评价</span>
             </Link>
-            <span className="text-[11px] bg-amber-50 text-amber-800 border border-amber-200 px-2.5 py-0.5 rounded-full font-bold">
-              San Jose 旗舰店
-            </span>
+
+            {/* 连锁门店一键切换器 */}
+            <div className="relative inline-block">
+              <select
+                value={selectedStoreId}
+                onChange={(e) => setSelectedStoreId(e.target.value)}
+                aria-label="选择切换门店"
+                className="text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200 pl-3 pr-7 py-1.5 rounded-xl cursor-pointer appearance-none focus:outline-hidden hover:bg-amber-100/80 transition-all"
+              >
+                <option value="sunny_tea">🧋 Sunny Tea House (San Jose 旗舰店)</option>
+                <option value="heytea_ny">🍵 喜茶 HEYTEA (New York SOHO 旗舰店)</option>
+                <option value="boba_guys_sf">🧋 Boba Guys (SF 联合广场店)</option>
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-amber-700 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
           </div>
+
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 mt-2 flex items-center gap-2">
-            <span>Sunny Tea House 🧋</span>
-            <span className="text-slate-400 font-normal text-sm sm:text-base">| AI 商业智能与评论分析中台</span>
+            <span>{currentStore.name} 🧋</span>
+            <span className="text-slate-400 font-normal text-xs sm:text-sm">| AI 商业智能与多维度分析中台</span>
           </h1>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* API Key 状态激活按钮 */}
+          <button
+            type="button"
+            onClick={() => setShowKeyModal(true)}
+            className={`flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl transition-all shadow-2xs border ${
+              apiKey
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            <KeyRound className={`w-3.5 h-3.5 ${apiKey ? 'text-emerald-600' : 'text-slate-400'}`} />
+            <span>{apiKey ? '🟢 AI 引擎已激活' : '🔑 填 Key 激活算力'}</span>
+          </button>
+
           <button
             type="button"
             onClick={handleExportCSV}
-            className="flex items-center gap-1.5 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-xl transition-all shadow-sm active:scale-95"
+            className="flex items-center gap-1.5 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-xl transition-all shadow-xs active:scale-95"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>导出全店报表 (CSV)</span>
+            <span>导出报表 (CSV)</span>
           </button>
         </div>
       </header>
@@ -213,12 +444,12 @@ export default function DashboardPage() {
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-1">
             <div className="flex items-center justify-between text-slate-400 text-xs font-bold">
               <span>监控评价总量</span>
-              <Store className="w-4 h-4 text-slate-400" />
+              <Building2 className="w-4 h-4 text-slate-400" />
             </div>
-            <div className="text-2xl sm:text-3xl font-black text-slate-900">30 条</div>
+            <div className="text-2xl sm:text-3xl font-black text-slate-900">{currentStore.totalReviews} 条</div>
             <div className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
               <TrendingUp className="w-3 h-3" />
-              <span>+12 本周新增打卡</span>
+              <span>全渠道沉淀数据</span>
             </div>
           </div>
 
@@ -227,7 +458,7 @@ export default function DashboardPage() {
               <span>综合平均星级</span>
               <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
             </div>
-            <div className="text-2xl sm:text-3xl font-black text-amber-500">4.86 ★</div>
+            <div className="text-2xl sm:text-3xl font-black text-amber-500">{currentStore.rating.toFixed(2)} ★</div>
             <div className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
               <TrendingUp className="w-3 h-3" />
               <span>+0.15 环比上月提升</span>
@@ -239,7 +470,7 @@ export default function DashboardPage() {
               <span>顾客好评率 (4-5★)</span>
               <CheckCircle2 className="w-4 h-4 text-emerald-500" />
             </div>
-            <div className="text-2xl sm:text-3xl font-black text-emerald-600">96.7%</div>
+            <div className="text-2xl sm:text-3xl font-black text-emerald-600">{currentStore.positiveRate}%</div>
             <div className="text-[11px] font-semibold text-slate-500">优于全湾区 94% 同行</div>
           </div>
 
@@ -278,7 +509,7 @@ export default function DashboardPage() {
             }`}
           >
             <BrainCircuit className="w-3.5 h-3.5" />
-            <span>AI 商业诊断</span>
+            <span>AI 实战内参</span>
           </button>
 
           <button
@@ -306,45 +537,17 @@ export default function DashboardPage() {
                   <span>🏷️ 消费感受标签占比</span>
                 </h3>
                 <div className="space-y-3">
-                  <div>
-                    <div className="flex justify-between text-xs font-bold mb-1">
-                      <span>出餐快 ⚡</span>
-                      <span className="text-amber-600 font-mono">38%</span>
+                  {currentStore.tagDist.map((t) => (
+                    <div key={t.label}>
+                      <div className="flex justify-between text-xs font-bold mb-1">
+                        <span>{t.label}</span>
+                        <span className="font-mono text-slate-700">{t.pct}%</span>
+                      </div>
+                      <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div className={`h-full ${t.color} rounded-full`} style={{ width: `${t.pct}%` }} />
+                      </div>
                     </div>
-                    <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-amber-500 rounded-full" style={{ width: '38%' }} />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between text-xs font-bold mb-1">
-                      <span>饮品颜值高 📸</span>
-                      <span className="text-rose-500 font-mono">28%</span>
-                    </div>
-                    <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-rose-500 rounded-full" style={{ width: '28%' }} />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between text-xs font-bold mb-1">
-                      <span>口味独特 🧋</span>
-                      <span className="text-blue-500 font-mono">20%</span>
-                    </div>
-                    <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-blue-500 rounded-full" style={{ width: '20%' }} />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between text-xs font-bold mb-1">
-                      <span>服务好 / 环境干净 ✨</span>
-                      <span className="text-emerald-500 font-mono">14%</span>
-                    </div>
-                    <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-500 rounded-full" style={{ width: '14%' }} />
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
 
@@ -356,14 +559,14 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-2 gap-3 pt-2">
                   <div className="bg-blue-50/60 p-4 rounded-2xl border border-blue-100 text-center space-y-1">
                     <span className="text-xs font-bold text-blue-800">Google Review</span>
-                    <div className="text-2xl font-black text-blue-900">4.82 ★</div>
-                    <span className="text-[11px] text-blue-600 font-medium">16 条客观英文</span>
+                    <div className="text-2xl font-black text-blue-900">{currentStore.googleScore.toFixed(2)} ★</div>
+                    <span className="text-[11px] text-blue-600 font-medium">{currentStore.googleCount} 条客观英文</span>
                   </div>
 
                   <div className="bg-rose-50/60 p-4 rounded-2xl border border-rose-100 text-center space-y-1">
                     <span className="text-xs font-bold text-rose-800">小红书种草</span>
-                    <div className="text-2xl font-black text-rose-900">4.91 ★</div>
-                    <span className="text-[11px] text-rose-600 font-medium">14 条爆款图文</span>
+                    <div className="text-2xl font-black text-rose-900">{currentStore.xhsScore.toFixed(2)} ★</div>
+                    <span className="text-[11px] text-rose-600 font-medium">{currentStore.xhsCount} 条爆款图文</span>
                   </div>
                 </div>
               </div>
@@ -457,7 +660,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Tab 2: AI 商业智能诊断 */}
+        {/* Tab 2: AI 实战内参诊断 */}
         {activeTab === 'diagnosis' && (
           <div className="space-y-6 animate-fadeIn">
             <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs space-y-4">
@@ -465,10 +668,10 @@ export default function DashboardPage() {
                 <div>
                   <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
                     <BrainCircuit className="w-5 h-5 text-amber-500" />
-                    <span>AI 商业智能深度诊断 Copilot</span>
+                    <span>资深督导内参 · 门店经营实战诊断</span>
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    基于 Groq LPU 极速算力，毫秒级扫描当前全渠道真实评价语料，输出战略级经营洞察。
+                    拒绝空洞 AI 套话，直击复购杀手锏、排查隐形客诉炸弹、提供下周一早会即可落地的操作 SOP。
                   </p>
                 </div>
 
@@ -481,12 +684,12 @@ export default function DashboardPage() {
                   {isDiagnosing ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>正在深度推理中...</span>
+                      <span>正在提炼实战内参...</span>
                     </>
                   ) : (
                     <>
                       <Sparkles className="w-4 h-4" />
-                      <span>✨ 一键生成全店 AI 商业诊断报告</span>
+                      <span>✨ 一键生成经营实战诊断报告</span>
                     </>
                   )}
                 </button>
@@ -499,7 +702,7 @@ export default function DashboardPage() {
               ) : (
                 <div className="p-12 text-center text-slate-400 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 space-y-2">
                   <BrainCircuit className="w-8 h-8 mx-auto opacity-40 text-amber-600" />
-                  <p className="text-xs font-semibold">点击上方按钮，AI 顾问将基于当前 30 条真实评价数据输出完整分析报告</p>
+                  <p className="text-xs font-semibold">点击上方按钮，AI 顾问将基于当前评价数据输出接地气的经营内参</p>
                 </div>
               )}
             </div>
@@ -560,8 +763,8 @@ export default function DashboardPage() {
                       <th className="p-3">平台</th>
                       <th className="p-3">顾客与评分</th>
                       <th className="p-3">原始评价</th>
-                      <th className="p-3 w-48">📌 AI 核心摘要 (20字)</th>
-                      <th className="p-3 w-64">💬 建议老板回复草稿 (50字)</th>
+                      <th className="p-3 w-48">📌 核心要点</th>
+                      <th className="p-3 w-64">💬 建议老板回复草稿</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -591,7 +794,7 @@ export default function DashboardPage() {
 
       {/* Footer */}
       <footer className="mt-8 text-center text-xs text-slate-400 max-w-6xl mx-auto">
-        Sunny Tea House 商业智能中台 · Powered by Next.js App Router & Groq LPU
+        {currentStore.name} 商业智能中台 · Multi-Tenant Architecture Powered by Next.js & Groq LPU
       </footer>
     </div>
   );
