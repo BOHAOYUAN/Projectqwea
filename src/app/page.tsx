@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import {
   Sparkles,
   RefreshCw,
@@ -12,6 +13,7 @@ import {
   Edit3,
   Plus,
   MessageSquarePlus,
+  BarChart3,
 } from 'lucide-react';
 
 const PRESET_TAG_OPTIONS = ['服务好', '出餐快', '环境干净', '饮品颜值高', '口味独特'];
@@ -203,6 +205,17 @@ export default function HomePage() {
           <span>✅ 已复制到剪贴板，即将跳转...</span>
         </div>
       )}
+
+      {/* 顶部商户中台切换入口 */}
+      <div className="w-full max-w-[420px] flex justify-end mb-2">
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 px-3.5 py-1.5 rounded-full shadow-2xs transition-all active:scale-95"
+        >
+          <BarChart3 className="w-3.5 h-3.5 text-amber-500" />
+          <span>进入商户 AI 数据分析大屏 ↗</span>
+        </Link>
+      </div>
 
       {/* 移动端 H5 卡片容器 (max-width: 420px, 纯白卡片，高对比度，呼吸感留白) */}
       <main className="w-full max-w-[420px] bg-white rounded-3xl shadow-sm border border-slate-200/80 p-6 sm:p-7 space-y-6">
