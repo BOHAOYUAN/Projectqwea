@@ -1,52 +1,62 @@
-# 🧋 Sunny Tea House · AI 智能评价生成与自动化流转系统
+# Sunny Tea House — AI Merchant Operations & Business Intelligence Platform
 
-> 专为圣何塞奶茶店 **Sunny Tea House** 打造的移动端 H5 AI 评价助手，涵盖多平台精调 Prompt、毫秒级流式生成、一键复制跳转以及企业微信机器人自动化工作流。
+<p align="center">
+  <a href="https://sunny-tea.lumiere-private.com/"><img src="https://img.shields.io/badge/Customer_H5-Live_App-green?style=for-the-badge&logo=vercel" alt="Customer H5" /></a>
+  <a href="https://sunny-tea.lumiere-private.com/dashboard"><img src="https://img.shields.io/badge/Merchant_BI_Dashboard-Live_Platform-blue?style=for-the-badge&logo=next.js" alt="Merchant BI" /></a>
+  <img src="https://img.shields.io/badge/Next.js_16-App_Router-black?style=for-the-badge&logo=next.js" alt="Next.js 16" />
+  <img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Groq_LPU-Llama_3.3_70B-f55036?style=for-the-badge" alt="Groq LPU" />
+</p>
 
----
-
-## ✨ 核心特性
-
-- 📱 **移动端极简高对比度体验**：针对手机端优化，自适应视觉留白与微动效。
-- ⚡ **Groq LPU 毫秒级极速推理**：首字响应（TTFT）仅 200~300ms，500+ Tokens/s 流式涌现。
-- 🎯 **去 AI 化的地道双平台 Prompt 矩阵**：
-  - 🌐 **Google Review**：地道北美本地食客口吻，英文 50-70 字，杜绝机器翻译腔。
-  - 📕 **小红书 (RED)**：中文爆款种草排版，灵动 Emoji，空行呼吸感排版与热门话题 Tag。
-- 🚀 **一键复制与智能深度唤起（Deep Linking）**：自动复制剪贴板 + 彩蛋动效 + 尝试唤起 App / Google Maps。
-- 🤖 **附加题：企业微信群机器人工作流（Webhook）**：后台自动提取中文摘要 + 撰写店长回复草稿并推送到群。
-- 🔒 **服务端密钥隔离（Zero Key Leakage）**：Next.js Serverless 代理调用，彻底解决前端 Key 暴露隐患。
+> **Sunny Tea House** is a production-ready, full-stack AI review acquisition & multi-tenant business intelligence platform built for global F&B brands entering the North American market.
+> 
+> Features a dual-end business closed-loop: a mobile-optimized customer review generator (NFC tap-to-review) and a real-time merchant analytics dashboard with Google Places API integration and AI operational copilot.
 
 ---
 
-## 🚀 本地快速启动
+## 🌟 Dual-End Architecture & Features
+
+### 1. Customer-Facing NFC AI Review Generator (`/`)
+- **NFC Tap / QR Quick Intake**: 3-second bilingual (English/Chinese) high-conversion review generation.
+- **Negative Constraint Guardrails**: Multi-language anti-pollution prompt engineering.
+- **Zero-Friction Conversion**: Direct 1-tap copy & redirect to Google Maps / Xiaohongshu.
+
+### 2. Merchant AI Operations & Decision BI Dashboard (`/dashboard`)
+- **Google Places API Integration**: One-click binding to synchronize live Google Maps store ratings, reviews, and sentiment.
+- **AI Operational Copilot**: Automated root-cause diagnosis for repeat purchases and queuing risks.
+- **Batch AI Pipeline**: Auto-generation of structured owner replies and 1-click Excel/CSV reporting.
+- **Multi-Tenant Architecture**: Pre-engineered for instant onboarding of multi-location franchise stores across North America.
+
+---
+
+## 🏛️ Tech Stack
+
+- **Framework**: Next.js 16.3.1 (App Router, Turbopack, Serverless API Routes)
+- **Language**: TypeScript (Strict Type Safety)
+- **Styling**: Tailwind CSS + Lucide Icons + Responsive UI
+- **AI Acceleration**: Groq LPU (`llama-3.3-70b-versatile`) + DeepSeek API Fallback
+- **Data Visualizations**: Recharts / Canvas 2D / Plotly Analytics
+
+---
+
+## 🚀 Getting Started
 
 ```bash
-# 1. 安装依赖
+# Clone the repository
+git clone https://github.com/BOHAOYUAN/sunny-tea-review.git
+cd sunny-tea-review
+
+# Install dependencies
 npm install
 
-# 2. 配置环境变量 (.env.local)
-# GROQ_API_KEY=your_groq_api_key
-
-# 3. 启动开发服务器
+# Run local development server
 npm run dev
-# 访问 http://localhost:3000
 ```
 
----
-
-## 🌐 部署上线指南 (Vercel)
-
-本项目完全适配 Vercel 一键零配置部署：
-
-1. 将代码推送到 GitHub 仓库；
-2. 导入 Vercel 项目；
-3. 在 Vercel 后台 Environment Variables 添加：
-   - `GROQ_API_KEY`: `your_groq_api_key_here`
-   - `DEFAULT_MODEL`: `openai/gpt-oss-120b`
-4. 点击 **Deploy**，30 秒即可获得公开可访问的线上体验 URL！
+Open [http://localhost:3000](http://localhost:3000) for Customer H5 and [http://localhost:3000/dashboard](http://localhost:3000/dashboard) for Merchant BI.
 
 ---
 
-## 📄 交付文档
+## 📄 License
 
-- 完整项目设计与技术结项文档：[PROJECT_DOCUMENTATION.md](./PROJECT_DOCUMENTATION.md)
-- 导出打印版网页文档：[PROJECT_DOCUMENTATION.html](./PROJECT_DOCUMENTATION.html)
+MIT License.
