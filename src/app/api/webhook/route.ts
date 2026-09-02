@@ -1,9 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { WECOM_SUMMARY_REPLY_PROMPT } from '@/lib/prompts';
+import { NextResponse } from 'next/server';
+
+/*
+ * Retired implementation retained below only until the next repository
+ * cleanup. Unauthenticated callers must not be able to forward arbitrary
+ * content to an internal webhook or invoke a model provider.
+ *
 
 export async function POST(req: NextRequest) {
   try {
-    const { reviewText, platform, tags, webhookUrl } = await req.json();
+    const { reviewText, platform, tags } = await req.json();
 
     if (!reviewText) {
       return NextResponse.json({ error: 'Review text is required' }, { status: 400 });
@@ -12,9 +17,9 @@ export async function POST(req: NextRequest) {
     const apiKey = process.env.GROQ_API_KEY;
     const model = process.env.DEFAULT_MODEL || 'openai/gpt-oss-120b';
 
-    let summary = '顾客高度赞赏了饮品软糯口感与店员的极速热情服务。';
-    let sentiment = '正向好评 (5星)';
-    let merchantReply = '亲爱的顾客，非常感谢您对 Sunny Tea House 的喜爱与支持！期待很快再次为您制作美味饮品！';
+    let summary = '请根据顾客原文核对后再归纳重点。';
+    let sentiment = '待人工核对';
+    let merchantReply = '感谢您花时间分享反馈。我们很珍惜每一条意见，也会继续关注服务细节。';
 
     if (apiKey) {
       try {
@@ -52,12 +57,12 @@ export async function POST(req: NextRequest) {
 
     // Build Enterprise WeChat (WeCom) Markdown Message
     const platformLabel = platform === 'google' ? 'Google Reviews' : '小红书种草';
-    const targetWebhook = webhookUrl || process.env.WECOM_WEBHOOK_URL;
+    const targetWebhook = process.env.WECOM_WEBHOOK_URL;
 
     const wecomMarkdown = {
       msgtype: 'markdown',
       markdown: {
-        content: `### 🧋 Sunny Tea House 新评价提醒
+        content: `### ✨ ${BUSINESS_CONFIG.name} 新评价提醒
 > **来源平台**：<font color="info">${platformLabel}</font>
 > **情感倾向**：<font color="warning">${sentiment}</font>
 > **关注标签**：<font color="comment">${tags?.join(' / ') || '顾客自发好评'}</font>
@@ -87,7 +92,7 @@ export async function POST(req: NextRequest) {
         });
         wecomResponse = await pushRes.json();
         pushStatus = wecomResponse.errcode === 0 ? 'sent' : 'failed';
-      } catch (err: unknown) {
+      } catch {
         pushStatus = 'failed';
       }
     }
@@ -105,4 +110,12 @@ export async function POST(req: NextRequest) {
     const message = error instanceof Error ? error.message : 'Unknown webhook error';
     return NextResponse.json({ error: message }, { status: 500 });
   }
+}
+*/
+
+export async function POST() {
+  return NextResponse.json(
+    { error: 'Webhook forwarding is not enabled in this release.', code: 'FEATURE_NOT_ENABLED' },
+    { status: 410 }
+  );
 }

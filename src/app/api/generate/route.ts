@@ -1,68 +1,88 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
-// English semantic mapping for Chinese tags to prevent multi-lingual leakage
+/*
+ * Retired implementation retained below only until the next repository
+ * cleanup. It is deliberately outside the module graph: this endpoint used
+ * to bypass the tenant-scoped, grounded review flow.
+ *
+
+type Platform = 'Google' | '小红书';
+
+interface GenerateRequest {
+  platform: Platform;
+  tags: string[];
+  userInput: string;
+  seed: number;
+}
+
 const TAG_EN_MAP: Record<string, string> = {
-  '服务好': 'friendly and welcoming staff',
-  '出餐快': 'super fast turnaround even during rush hour',
-  '环境干净': 'clean and cozy seating atmosphere',
-  '饮品颜值高': 'gorgeous and photo-worthy drink presentation',
-  '口味独特': 'rich authentic tea aroma and perfectly balanced sweetness',
-  '珍珠筋道': 'super chewy and springy boba pearls',
-  '分量足': 'generous and satisfying portions',
-  '性价比高': 'great value for money',
-  '茶香浓郁': 'deep fragrant tea flavor',
+  服务好: 'friendly and welcoming service',
+  技师专业: 'professional and attentive therapist',
+  环境干净: 'clean, peaceful, and comfortable treatment space',
+  放松舒适: 'deeply relaxing and comfortable experience',
+  效果满意: 'felt refreshed and cared for after the treatment',
+  手法专业: 'skilled and thoughtful technique',
+  皮肤水润: 'skin felt hydrated and refreshed',
+  头皮清爽: 'scalp felt clean and refreshed',
+  性价比高: 'great value for money',
 };
 
-// 1. Core Strict System Prompts
-const GOOGLE_SYSTEM_PROMPT = `You are a genuine local foodie living in San Jose, California (Bay Area) writing a Google Maps review for Sunny Tea House boba shop.
+const GOOGLE_SYSTEM_PROMPT = `You are a customer in Baltimore, Maryland writing a Google Maps review for ${BUSINESS_CONFIG.name}, a beauty and wellness spa at ${BUSINESS_CONFIG.address}.
 CRITICAL RULES:
-1. Output ONLY in 100% natural, fluent American English.
-2. NEVER output any Chinese characters, Chinese punctuation, or translation notes under any circumstances. If the user input or custom tags are in Chinese, seamlessly extract the foodie experience and translate it into natural English.
-3. Tone: Authentic, relaxed, objective, like a real Google Local Guide (avoid robotic marketing buzzwords).
-4. Format: 2 to 3 short paragraphs with a blank line between each for effortless mobile reading. Keep length strictly between 50 and 70 words.
-5. Output ONLY the raw plain text review without quotation marks, markdown headings, or commentary.`;
+1. Output only natural, fluent American English.
+2. Translate non-English experience details naturally; never include translation notes.
+3. Sound authentic, relaxed, and specific. Never invent medical claims, guaranteed results, prices, staff names, or services not mentioned by the customer.
+4. Write 2-3 short paragraphs and keep the review between 50 and 70 words.
+5. Output only the plain-text review without headings, quotation marks, or commentary.`;
 
-const XHS_SYSTEM_PROMPT = `你是一位常驻美国加州湾区（圣何塞 San Jose）的小红书资深探店博主。
-核心排版与风格规范：
-1. 语言：必须全中文输出（除品牌名 Sunny Tea House 与地点 San Jose 以外，严禁夹杂任何英文字句）。
-2. 爆款标题：第1行必须带有 Emoji 和地点（如：🧋在San Jose挖到了宝藏神仙奶茶！✨）。
-3. 正文呼吸感排版：3-4个精炼微段落，段与段之间必须空出一行，绝不能堆叠大段文字。
-4. 结合顾客的自由描述与标签，生成富有情绪价值的种草文案。
-5. 穿插灵动Emoji（🧋✨🍵💖🔥），语气热情、网络化、闺蜜安利感。
-6. 结尾附带3个相关话题标签（如：#奶茶推荐 #圣何塞美食 #湾区探店）。
-7. 直接输出纯文本内容，不要输出Markdown代码块。`;
+const XHS_SYSTEM_PROMPT = `你是一位在美国生活的美容护理体验分享者，刚刚到访 Baltimore 的 ${BUSINESS_CONFIG.name}。
+核心规范：
+1. 除品牌名和地点外，使用自然中文。
+2. 第1行写带 Emoji 和 Baltimore 地点信息的自然标题。
+3. 正文写3-4个短段落，段落之间留空行。
+4. 围绕顾客明确提供的护理体验与标签展开。
+5. 可穿插适量 Emoji（✨💆🌿💖），语气真实自然。
+6. 结尾附3个相关话题标签，如 #Baltimore探店 #美容护理 #头疗SPA。
+7. 不虚构疗效、价格、技师姓名或顾客未提供的体验。
+8. 直接输出纯文本，不要 Markdown 代码块。`;
 
-// 2. Intelligent Pure-English & Pure-Chinese Diverse Fallbacks
 const GOOGLE_FALLBACKS = [
-  (details: string) => `Sunny Tea House in San Jose is hands down one of my favorite boba spots in the South Bay!\n\n${details ? `Loved the ${details}. ` : ''}The boba texture was super chewy and fresh, and the sweetness level was spot on.\n\nDefinitely my new go-to place whenever I'm in San Jose!`,
-  (details: string) => `Checked out Sunny Tea House for a quick afternoon pick-me-up. The tea aroma hit me the second I walked in.\n\n${details ? `Really appreciated the ${details}. ` : ''}Drinks came out super fast and tasted genuinely authentic without being artificial.\n\nSolid 5-star spot in San Jose, highly recommend!`,
-  (details: string) => `If you're in the South Bay and craving quality boba, Sunny Tea House never disappoints.\n\n${details ? `The highlights for me were ${details}. ` : ''}Clean store, great vibe, and well-balanced flavors.\n\nWill definitely be bringing friends here next time!`,
+  (details: string) =>
+    `I had such a relaxing visit at ${BUSINESS_CONFIG.name} in Baltimore.\n\n${details ? `What stood out most was the ${details}. ` : ''}The space felt clean and peaceful, and the service was attentive from start to finish.\n\nI left feeling refreshed and would happily come back.`,
+  (details: string) =>
+    `Really enjoyed my appointment at ${BUSINESS_CONFIG.name}.\n\n${details ? `I especially appreciated the ${details}. ` : ''}Everything felt calm, comfortable, and thoughtfully handled without being rushed.\n\nA lovely Baltimore spot when you want to unwind and take care of yourself.`,
+  (details: string) =>
+    `${BUSINESS_CONFIG.name} made my spa visit feel easy and genuinely restorative.\n\n${details ? `The highlights for me were the ${details}. ` : ''}The treatment space was welcoming and the service felt professional throughout.\n\nI would definitely recommend giving this Baltimore beauty spa a try.`,
 ];
 
 const XHS_FALLBACKS = [
-  (details: string) => `🧋在San Jose挖到宝藏奶茶店啦！Sunny Tea House亲测不踩雷✨\n\n${details ? `这次打卡真的被惊艳到了：${details}！\n\n` : ''}奶茶口感醇厚，珍珠Q弹软糯，甜度刚刚好～\n\n拍照打卡巨出片，湾区的宝子们快冲！\n\n#奶茶推荐 #圣何塞美食 #湾区探店`,
-  (details: string) => `✨湾区下午茶天花板！被Sunny Tea House惊艳到了💖\n\n今天去打卡，${details || '出餐超快，店员超热情'}，体验感直接拉满！\n\n茶底清香不甜腻，奶味丝滑，每一口都超治愈～\n\n就在San Jose，周末不知道去哪儿的赶紧收藏！🧋🔥\n\n#圣何塞探店 #周末去哪儿 #湾区奶茶`,
-  (details: string) => `🔥答应我！去San Jose一定要喝Sunny Tea House！🧋\n\n亲测必点招牌奶茶，${details || '颜值高、味道正'}真不是吹的！\n\n包装颜值巨高，出餐速度飞快，喝完一杯毫无负担～\n\n路过的宝子千万别错过呀！🍵✨\n\n#加州美食 #奶茶测评 #硅谷探店`,
+  (details: string) =>
+    `✨在Baltimore解锁超放松的SPA体验\n\n这次来${BUSINESS_CONFIG.name}做护理，${details || '技师专业又细心，整个过程很舒服'}。\n\n环境干净安静，节奏不赶，做完感觉整个人都轻松了很多。想给自己安排放松时间的可以收藏～\n\n#Baltimore探店 #美容护理 #头疗SPA`,
+  (details: string) =>
+    `💆Baltimore宝藏美容护理店\n\n在${BUSINESS_CONFIG.name}体验后最直观的感受就是：${details || '服务细致，过程很放松'}。\n\n从进门到结束都很舒适，空间也清爽整洁。适合忙完一周来认真放松一下自己🌿\n\n#Baltimore生活 #面部SPA #美容护理`,
+  (details: string) =>
+    `🌿把周末留给一场舒服的SPA\n\n这次在${BUSINESS_CONFIG.name}体验了护理，${details || '手法专业，服务也很有耐心'}。\n\n过程安静放松，没有催促感，结束后状态很清爽。下次想试试店里的其他护理项目✨\n\n#Baltimore探店 #背部SPA #放松时刻`,
 ];
 
-function getLocalFallback(platform: string, tags: string[], userInput: string = '', seed: number = 0): string {
-  const index = Math.abs(seed) % 3;
+function getLocalFallback(platform: Platform, tags: string[], userInput: string, seed: number): string {
+  const index = Math.abs(seed) % GOOGLE_FALLBACKS.length;
+
   if (platform === 'Google') {
-    const enTags = tags
-      .map((t) => TAG_EN_MAP[t] || t)
-      .join(', ');
-    const combined = [userInput, enTags].filter(Boolean).join(', ') || 'friendly staff and great boba';
-    return GOOGLE_FALLBACKS[index](combined);
-  } else {
-    const combined = [userInput, tags.join('、')].filter(Boolean).join('，') || '服务好、出餐快';
-    return XHS_FALLBACKS[index](combined);
+    const englishInput = /[\u4e00-\u9fa5]/.test(userInput) ? '' : userInput;
+    const englishTags = tags.map((tag) => TAG_EN_MAP[tag] || tag).join(', ');
+    const details =
+      [englishInput, englishTags].filter(Boolean).join(', ') ||
+      'professional service and a relaxing spa experience';
+    return GOOGLE_FALLBACKS[index](details);
   }
+
+  const details = [userInput, tags.join('、')].filter(Boolean).join('，') || '服务专业、过程放松';
+  return XHS_FALLBACKS[index](details);
 }
 
-// 3. Asynchronous Enterprise WeChat Webhook Task (Non-blocking)
 async function triggerWecomWebhookAsync(
   reviewText: string,
-  platform: string,
+  platform: Platform,
   tags: string[],
   userInput: string,
   apiKey: string,
@@ -73,11 +93,11 @@ async function triggerWecomWebhookAsync(
   if (!webhookUrl) return;
 
   try {
-    const summaryPrompt = `请将以下主评论提炼为20字以内的中文摘要，并生成一段给奶茶店老板的回复草稿（50字，亲切感谢口吻）。
-主评论内容：${reviewText}
-请输出纯JSON：{"summary": "20字中文摘要", "replyDraft": "50字感谢回复草稿"}`;
+    const summaryPrompt = `请将以下评论提炼为20字以内的中文摘要，并生成一段给美容与头疗SPA店老板的回复草稿（50字，亲切感谢口吻）。
+评论内容：${reviewText}
+请输出纯JSON：{"summary":"20字中文摘要","replyDraft":"50字感谢回复草稿"}`;
 
-    const aiRes = await fetch(apiUrl, {
+    const aiResponse = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -90,25 +110,28 @@ async function triggerWecomWebhookAsync(
       }),
     });
 
-    let summary = '顾客对饮品品质与整体打卡体验给予高度评价。';
-    let replyDraft = '感谢您对Sunny Tea House的喜爱与支持，期待您的再次光临！';
+    let summary = '顾客对专业护理与放松体验给予高度评价。';
+    let replyDraft = `感谢您对${BUSINESS_CONFIG.name}的认可，期待再次为您提供舒适细致的护理体验！`;
 
-    if (aiRes.ok) {
-      const data = await aiRes.json();
+    if (aiResponse.ok) {
+      const data = await aiResponse.json();
       try {
-        const parsed = JSON.parse(data.choices?.[0]?.message?.content || '{}');
+        const parsed = JSON.parse(data.choices?.[0]?.message?.content || '{}') as {
+          summary?: string;
+          replyDraft?: string;
+        };
         if (parsed.summary) summary = parsed.summary;
         if (parsed.replyDraft) replyDraft = parsed.replyDraft;
       } catch {
-        // Safe fallback
+        // Keep safe local defaults when the upstream output is not valid JSON.
       }
     }
 
-    const tagDisplay = tags.length > 0 ? tags.join(' / ') : (userInput ? '自由输入描述' : '优质体验');
+    const tagDisplay = tags.length > 0 ? tags.join(' / ') : userInput ? '自由输入描述' : '优质体验';
     const wecomPayload = {
       msgtype: 'markdown',
       markdown: {
-        content: `### 🧋 Sunny Tea House 新评价通知\n> **来源平台**：<font color="info">${platform}</font>\n> **用户标签/输入**：<font color="comment">${tagDisplay}</font>\n\n**📝 评价内容**：\n>${reviewText.slice(0, 120)}\n\n**📌 AI 核心摘要 (20字)**：\n>${summary}\n\n**💬 建议老板回复草稿 (50字)**：\n>${replyDraft}\n\n> <font color="comment">⏰ 生成时间：${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}</font>`,
+        content: `### ✨ ${BUSINESS_CONFIG.name} 新评价通知\n> **来源平台**：<font color="info">${platform}</font>\n> **用户标签/输入**：<font color="comment">${tagDisplay}</font>\n\n**📝 评价内容**：\n>${reviewText.slice(0, 120)}\n\n**📌 AI 核心摘要 (20字)**：\n>${summary}\n\n**💬 建议老板回复草稿 (50字)**：\n>${replyDraft}\n\n> <font color="comment">⏰ 生成时间：${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}</font>`,
       },
     };
 
@@ -119,66 +142,49 @@ async function triggerWecomWebhookAsync(
         body: JSON.stringify(wecomPayload),
       });
     }
-  } catch (err) {
-    console.warn('[WeCom Webhook Background Task Error]:', err);
+  } catch (error) {
+    console.warn('[WeCom Webhook Background Task Error]:', error);
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const {
-      platform = '小红书',
-      tags = [],
-      userInput = '',
-      seed = Date.now(),
-    } = await req.json();
+    const body = (await req.json()) as Partial<GenerateRequest>;
+    const platform: Platform = body.platform === 'Google' ? 'Google' : '小红书';
+    const tags = Array.isArray(body.tags) ? body.tags.filter((tag): tag is string => typeof tag === 'string') : [];
+    const userInput = typeof body.userInput === 'string' ? body.userInput : '';
+    const randomSeed = typeof body.seed === 'number' ? body.seed : Date.now();
 
-    const apiKey =
-      process.env.GROQ_API_KEY ||
-      process.env.DEEPSEEK_API_KEY ||
-      '';
-
+    const apiKey = process.env.GROQ_API_KEY || process.env.DEEPSEEK_API_KEY || '';
     const apiUrl = process.env.DEEPSEEK_API_KEY
       ? 'https://api.deepseek.com/v1/chat/completions'
       : 'https://api.groq.com/openai/v1/chat/completions';
-
     const model = process.env.DEEPSEEK_API_KEY
       ? 'deepseek-chat'
       : process.env.DEFAULT_MODEL || 'openai/gpt-oss-120b';
 
-    const systemPrompt =
-      platform === 'Google' ? GOOGLE_SYSTEM_PROMPT : XHS_SYSTEM_PROMPT;
+    const englishTags = tags.map((tag) => TAG_EN_MAP[tag] || tag).join(', ');
+    let userPrompt: string;
 
-    // Convert Chinese tags to English for Google prompt to prevent language leaking
-    const englishTags = tags.map((t: string) => TAG_EN_MAP[t] || t).join(', ');
-
-    const randomSeedNum = typeof seed === 'number' ? seed : Date.now();
-
-    // Context composition (Agent merges typed input and tags)
-    let userPrompt = '';
     if (platform === 'Google') {
-      const detailsList = [];
-      if (userInput.trim()) detailsList.push(`Customer typed thoughts: "${userInput.trim()}"`);
-      if (englishTags) detailsList.push(`Selected tags: [${englishTags}]`);
-      const detailsStr = detailsList.length > 0 ? detailsList.join('. ') : 'Customer had a delicious and fresh boba experience.';
-      userPrompt = `${detailsStr}. Translate any non-English concepts into authentic American foodie language and write a fresh, realistic Google review (variation #${randomSeedNum % 100}).`;
+      const details: string[] = [];
+      if (userInput.trim()) details.push(`Customer typed thoughts: "${userInput.trim()}"`);
+      if (englishTags) details.push(`Selected tags: [${englishTags}]`);
+      userPrompt = `${details.join('. ') || 'Customer had a professional and relaxing spa experience.'} Translate any non-English concepts into authentic American customer language and write a realistic Google review (variation #${randomSeed % 100}).`;
     } else {
-      const detailsList = [];
-      if (userInput.trim()) detailsList.push(`顾客打字描述：“${userInput.trim()}”`);
-      if (tags.length > 0) detailsList.push(`勾选感受标签：【${tags.join('、')}】`);
-      const detailsStr = detailsList.length > 0 ? detailsList.join('；') : '顾客打卡体验极佳。';
-      userPrompt = `${detailsStr}。请根据这些真实细节，用全中文写一篇生动种草的小红书笔记（视角批次 #${randomSeedNum % 100}）。`;
+      const details: string[] = [];
+      if (userInput.trim()) details.push(`顾客打字描述：“${userInput.trim()}”`);
+      if (tags.length > 0) details.push(`勾选感受标签：【${tags.join('、')}】`);
+      userPrompt = `${details.join('；') || '顾客护理体验很好。'}请根据这些真实细节写一篇自然的小红书体验笔记（视角批次 #${randomSeed % 100}）。`;
     }
 
-    // Smart summaries for bonus question
-    const tagSummaryStr = tags.length > 0 ? tags.join('、') : (userInput.slice(0, 15) || '打卡体验极佳');
-    const bonusSummary = `顾客赞赏了${tagSummaryStr}，整体体验优秀。`;
-    const bonusReplyDraft = `亲爱的顾客，感谢您对 Sunny Tea House 的喜爱与支持，期待再次为您制作美味饮品！`;
+    const tagSummary = tags.length > 0 ? tags.join('、') : userInput.slice(0, 15) || '护理体验良好';
+    const bonusSummary = `顾客赞赏了${tagSummary}，整体体验优秀。`;
+    const bonusReplyDraft = `亲爱的顾客，感谢您对 ${BUSINESS_CONFIG.name} 的认可与支持，期待再次为您提供舒适细致的护理体验！`;
 
     if (!apiKey) {
-      const fallbackText = getLocalFallback(platform, tags, userInput, randomSeedNum);
       return NextResponse.json({
-        review: fallbackText,
+        review: getLocalFallback(platform, tags, userInput, randomSeed),
         summary: bonusSummary,
         replyDraft: bonusReplyDraft,
         success: true,
@@ -195,35 +201,35 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({
           model,
           messages: [
-            { role: 'system', content: systemPrompt },
+            { role: 'system', content: platform === 'Google' ? GOOGLE_SYSTEM_PROMPT : XHS_SYSTEM_PROMPT },
             { role: 'user', content: userPrompt },
           ],
-          temperature: 0.9, // Higher temperature so every "换一批" generates visibly distinct creative reviews
+          temperature: 0.9,
         }),
       });
 
-      if (!response.ok) {
-        throw new Error(`Upstream AI Error: ${response.statusText}`);
-      }
+      if (!response.ok) throw new Error(`Upstream AI Error: ${response.statusText}`);
 
       const data = await response.json();
       let reviewText =
         data.choices?.[0]?.message?.content?.trim() ||
-        getLocalFallback(platform, tags, userInput, randomSeedNum);
+        getLocalFallback(platform, tags, userInput, randomSeed);
 
-      // Post-processing guard 1: Google English must NOT contain Chinese characters
       if (platform === 'Google' && /[\u4e00-\u9fa5]/.test(reviewText)) {
-        reviewText = getLocalFallback('Google', tags, userInput, randomSeedNum);
+        reviewText = getLocalFallback('Google', tags, userInput, randomSeed);
       }
-
-      // Post-processing guard 2: Xiaohongshu Chinese must be clean
       if (platform === '小红书' && !/[\u4e00-\u9fa5]/.test(reviewText)) {
-        reviewText = getLocalFallback('小红书', tags, userInput, randomSeedNum);
+        reviewText = getLocalFallback('小红书', tags, userInput, randomSeed);
       }
 
-      // Trigger Webhook asynchronously in background (Non-blocking)
-      triggerWecomWebhookAsync(reviewText, platform, tags, userInput, apiKey, apiUrl, model).catch(
-        (err) => console.warn('Background webhook trigger error:', err)
+      void triggerWecomWebhookAsync(
+        reviewText,
+        platform,
+        tags,
+        userInput,
+        apiKey,
+        apiUrl,
+        model
       );
 
       return NextResponse.json({
@@ -232,18 +238,28 @@ export async function POST(req: NextRequest) {
         replyDraft: bonusReplyDraft,
         success: true,
       });
-    } catch (apiErr) {
-      console.warn('API call failed, using pure fallback:', apiErr);
-      const fallbackText = getLocalFallback(platform, tags, userInput, randomSeedNum);
+    } catch (error) {
+      console.warn('API call failed, using local fallback:', error);
       return NextResponse.json({
-        review: fallbackText,
+        review: getLocalFallback(platform, tags, userInput, randomSeed),
         summary: bonusSummary,
         replyDraft: bonusReplyDraft,
         success: true,
       });
     }
   } catch (error: unknown) {
-    const errMsg = error instanceof Error ? error.message : '服务器内部处理异常';
-    return NextResponse.json({ error: errMsg, success: false }, { status: 500 });
+    const message = error instanceof Error ? error.message : '服务器内部处理异常';
+    return NextResponse.json({ error: message, success: false }, { status: 500 });
   }
+}
+*/
+
+export async function POST() {
+  return NextResponse.json(
+    {
+      error: 'This legacy endpoint has been retired. Use the public review page to create a grounded draft.',
+      code: 'LEGACY_ENDPOINT_RETIRED',
+    },
+    { status: 410 }
+  );
 }

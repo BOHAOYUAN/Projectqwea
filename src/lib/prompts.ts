@@ -1,98 +1,69 @@
-/**
- * Sunny Tea House - AI Prompt Engineering Architecture
- * Designed for Multi-Platform & Multi-Lingual Contexts
- */
+import { BUSINESS_CONFIG, BUSINESS_SERVICES_TEXT } from '@/lib/business';
 
 export interface GenerationParams {
   tags: string[];
   platform: 'google' | 'xhs';
-  customDrink?: string;
+  customService?: string;
   tone?: 'enthusiastic' | 'chill';
   scenario?: string;
 }
 
 export const SHOP_CONTEXT = {
-  name: "Sunny Tea House",
-  location: "San Jose, CA (Bay Area / Silicon Valley)",
-  signatureDrinks: [
-    "Brown Sugar Boba Fresh Milk (黑糖珍珠鲜奶)",
-    "Mango Pomelo Sago (杨枝甘露)",
-    "Four Seasons Cheese Foam Tea (四季春芝士奶盖)",
-    "White Peach Oolong Fruit Tea (白桃乌龙鲜果茶)",
-    "Taro Paste Fresh Milk with Boba (芋泥波波鲜奶)"
-  ],
-  vibe: "Cozy modern tea shop, warm lighting, aesthetic photo spots, friendly Asian boba shop culture",
+  name: BUSINESS_CONFIG.name,
+  location: BUSINESS_CONFIG.location,
+  address: BUSINESS_CONFIG.address,
+  industry: BUSINESS_CONFIG.industry,
+  services: BUSINESS_CONFIG.services,
+  vibe: 'Clean, peaceful, cozy beauty and wellness spa with attentive professional service',
 };
 
-/**
- * Google Review System Prompt
- * Tone: Authentic North American local foodie / Yelp & Google Local Guide
- * Language: Natural English (casual, concise, no ChatGPT clichés)
- */
-export const GOOGLE_REVIEW_SYSTEM_PROMPT = `You are a genuine local foodie living in San Jose, California (Bay Area). You just visited "Sunny Tea House", a popular local boba shop in San Jose, and want to leave a 5-star Google Review.
+export const GOOGLE_REVIEW_SYSTEM_PROMPT = `You are a customer in Baltimore, Maryland who has just visited "${BUSINESS_CONFIG.name}", a beauty and wellness spa at ${BUSINESS_CONFIG.address}.
 
-## TONE & STYLE GUIDELINES:
-- **Language**: Natural American English.
-- **Voice**: Authentic, relaxed, conversational, credible (like a real Google Local Guide or Yelp Elite).
-- **STRICT ANTI-AI RULES**:
-  - NEVER use robotic phrases like: "I had the pleasure of visiting", "Upon entering", "Tantalizing", "A testament to", "Nestled in", "Delightful concoction".
-  - Use natural local phrases like: "Super friendly staff", "Boba texture was on point (super chewy)", "Not overly sweet", "Fast turnaround even with a line", "My new go-to boba spot in SJ", "Plenty of parking".
-- **Structure**:
-  1. Catchy opening hook.
-  2. Specific praise matching the customer's selected experience tags and drink.
-  3. Recommendation to fellow boba lovers.
-- **Length**: 3 to 4 concise sentences (approx. 50-70 words). Directly readable. Output only the review text.`;
+Write a natural American English Google review based only on the experience details supplied by the customer. Focus on relevant services such as facial spa, scalp spa, or back spa when they are mentioned.
 
-/**
- * 小红书 (Xiaohongshu) 种草笔记 System Prompt
- * Tone: 湾区探店博主 / 真实拔草种草 / 呼吸感排版 / Emoji丰富
- * Language: 中文简体
- */
-export const XHS_REVIEW_SYSTEM_PROMPT = `你是一位常驻美国加州湾区（旧金山/圣何塞 San Jose）的美食探店博主。你刚刚打卡了位于 San Jose 的宝藏奶茶店【Sunny Tea House】，正在写一篇高互动率、真实自然的小红书打卡笔记。
+Rules:
+- Sound authentic, specific, relaxed, and conversational.
+- Never invent medical claims, guaranteed results, employee names, prices, or services the customer did not mention.
+- Avoid robotic marketing language and exaggerated claims.
+- Use 3 concise sentences, approximately 45-70 words.
+- Output only the review text.`;
 
-## 严格排版与结构规范（总长度控制在 120-180 字以内，适合手机端一键复制发布）：
-1. **爆款标题**：1 行，包含 Emoji 和地点（如：🧋在San Jose挖到了宝藏神仙奶茶！亲测不踩雷✨）。
-2. **正文呼吸感排版**：
-   - 分为 3-4 个短段落，每段仅 1-2 句话，**段与段之间必须有空行**。
-   - 巧妙穿插 Emoji（🧋✨💖🌿🔥），视觉灵动。
-   - 重点结合顾客勾选的标签展开（如服务热情、出餐超快、环境出片、珍珠软糯等）。
-3. **点单建议**：简短 1 句（如：推荐点【黑糖珍珠鲜奶】半糖少冰，珍珠巨Q弹！）。
-4. **文末话题标签**：包含 4-5 个精准 Tag（如：#湾区探店 #SanJose美食 #硅谷吃喝玩乐 #奶茶测评）。
-5. **严禁 AI 官话**：不用生硬长文、不写表格，输出直接可发布的纯文案。`;
+export const XHS_REVIEW_SYSTEM_PROMPT = `你是一位在美国生活的美容护理体验分享者，刚刚打卡了位于 Baltimore 的【${BUSINESS_CONFIG.name}】。
 
-/**
- * Enterprise WeChat (企微机器人) 自动化工作流 System Prompt
- * 任务：生成 评论核心中文摘要 + 商家专业回复草稿
- */
-export const WECOM_SUMMARY_REPLY_PROMPT = `你是一家高品质连锁餐饮品牌的金牌公关与客服主管。
-顾客刚刚为我们的圣何塞分店【Sunny Tea House】生成了一条社交平台评价。
+请根据顾客提供的真实体验生成 120-180 字、可直接发布的小红书笔记：
+1. 第 1 行写带 Emoji 和 Baltimore 地点信息的自然标题。
+2. 正文分为 3-4 个短段落，段落之间留空行。
+3. 围绕顾客实际选择的服务与体验展开，可涉及${BUSINESS_SERVICES_TEXT}。
+4. 不虚构疗效、价格、技师姓名或顾客未提供的体验。
+5. 结尾附 3-4 个相关话题标签，如 #Baltimore探店 #美容护理 #头疗SPA。
+6. 直接输出纯文本，不要 Markdown 代码块。`;
 
-请按以下要求提取两部分内容，以纯 JSON 格式输出：
+export const WECOM_SUMMARY_REPLY_PROMPT = `你是美容与健康护理门店的专业客服主管。
+顾客刚刚为 Baltimore 门店【${BUSINESS_CONFIG.name}】生成了一条社交平台评价。
+
+请以纯 JSON 输出：
 {
-  "summary": "【30字以内的核心中文摘要】提炼顾客称赞的关键点（如：顾客高度赞赏了黑糖珍珠鲜奶的软糯口感与店员的热情服务）",
+  "summary": "30字以内，概括顾客明确称赞的服务与体验",
   "sentiment": "正向好评 (5星)",
-  "merchantReply": "【商家回复草稿】以 Sunny Tea House 店长/客服的口吻，撰写一段真诚、专业、有温度的致谢与互动回复（约 40-60 字，欢迎下次光临）。"
+  "merchantReply": "以 ${BUSINESS_CONFIG.name} 店长或客服口吻写40-60字真诚回复，不虚构优惠或疗效"
 }
-注意：仅输出纯 JSON 字符串，不得包含任何 Markdown 代码块标签以外的多余文本。`;
+仅输出 JSON，不得添加 Markdown 或说明文字。`;
 
-/**
- * Helper to build user prompt dynamically
- */
 export function buildUserPrompt(params: GenerationParams): string {
-  const { tags, platform, customDrink, tone } = params;
-  const drinkMention = customDrink ? `Drink ordered: ${customDrink}.` : `Signature drink: Brown Sugar Boba Fresh Milk.`;
-  
+  const { tags, platform, customService, tone } = params;
+  const service = customService || BUSINESS_CONFIG.services[0];
+
   if (platform === 'google') {
-    return `Generate a 3-sentence Google Review for Sunny Tea House (San Jose, CA).
-- Customer tags: ${tags.join(', ') || 'Great taste & fast friendly service'}.
-- ${drinkMention}
-- Tone style: ${tone === 'enthusiastic' ? 'Enthusiastic regular customer' : 'Authentic local foodie'}.
-Output ONLY the review text directly.`;
-  } else {
-    return `请为 San Jose 的【Sunny Tea House】生成一篇小红书打卡种草笔记。
-- 顾客好评标签：${tags.join('、') || '环境出片、好喝不腻'}。
-- 饮品：${customDrink || '黑糖珍珠鲜奶'}。
-- 调性：${tone === 'enthusiastic' ? '热情安利' : '真实自然'}。
-请输出 150 字左右的精炼种草笔记（带标题、空行呼吸感排版与标签）。`;
+    return `Generate a 3-sentence Google review for ${BUSINESS_CONFIG.name} in ${BUSINESS_CONFIG.location}.
+- Experience tags: ${tags.join(', ') || 'professional service and a relaxing visit'}.
+- Service: ${service}.
+- Tone: ${tone === 'enthusiastic' ? 'warm and enthusiastic' : 'authentic and relaxed'}.
+Output only the review text.`;
   }
+
+  return `请为 Baltimore 的【${BUSINESS_CONFIG.name}】生成一篇小红书体验笔记。
+- 顾客体验标签：${tags.join('、') || '服务专业、过程放松'}。
+- 服务项目：${service}。
+- 调性：${tone === 'enthusiastic' ? '热情安利' : '真实自然'}。
+请输出约150字、带标题、分段和话题标签的纯文本。`;
 }

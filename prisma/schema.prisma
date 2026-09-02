@@ -1,0 +1,296 @@
+// Prisma schema for the multi-merchant review experience.
+//
+// Supabase owns authentication in auth.users. `User` is the application's
+// public-schema profile row and deliberately uses the same UUID as auth.users.
+// Create or upsert that row after a successful Supabase sign-in; do not store
+// credentials in this database.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum MerchantStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum MembershipRole {
+  OWNER
+  ADMIN
+  EDITOR
+  ANALYST
+  VIEWER
+}
+
+enum Platform {
+  GOOGLE
+  XIAOHONGSHU
+}
+
+enum GenerationProvider {
+  LOCAL
+  GROQ
+}
+
+enum ReplyDraftStatus {
+  DRAFT
+  APPROVED
+  SENT
+  ARCHIVED
+}
+
+enum ReviewSource {
+  /// Added by a merchant or staff member in the dashboard.
+  MANUAL
+  /// Clearly labeled sample data for local demos; never represent it as live.
+  DEMO
+  /// Reserved for a future approved platform integration.
+  API
+}
+
+model User {
+  /// Matches auth.users.id from Supabase Auth.
+  id          String   @id @db.Uuid
+  email       String?  @unique
+  displayName String?
+  avatarUrl   String?
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
+
+  memberships Membership[]
+  replyDrafts ReviewReplyDraft[] @relation("ReplyDraftAuthor")
+
+  @@map("app_users")
+}
+
+model Merchant {
+  id            String         @id @default(uuid()) @db.Uuid
+  slug          String         @unique @db.VarChar(96)
+  name          String
+  description   String?
+  industryTags  String[]       @default([])
+  logoUrl       String?
+  websiteUrl    String?
+  phone         String?
+  brandColor    String?        @db.VarChar(32)
+  defaultLocale String         @default("en-US") @db.VarChar(16)
+  status        MerchantStatus @default(DRAFT)
+  createdAt     DateTime       @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime       @updatedAt @db.Timestamptz(6)
+
+  memberships       Membership[]
+  locations         Location[]
+  generationMetrics GenerationMetric[]
+  replyDrafts       ReviewReplyDraft[]
+  managedReviews    ManagedReview[]
+
+  @@index([status])
+  @@map("merchants")
+}
+
+model Membership {
+  id         String         @id @default(uuid()) @db.Uuid
+  userId     String         @db.Uuid
+  merchantId String         @db.Uuid
+  role       MembershipRole @default(VIEWER)
+  createdAt  DateTime       @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime       @updatedAt @db.Timestamptz(6)
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, merchantId])
+  @@index([merchantId, role])
+  @@map("memberships")
+}
+
+model Location {
+  id           String   @id @default(uuid()) @db.Uuid
+  merchantId   String   @db.Uuid
+  slug         String   @db.VarChar(96)
+  name         String
+  addressLine1 String
+  addressLine2 String?
+  city         String?
+  region       String?
+  postalCode   String?
+  countryCode  String   @default("US") @db.Char(2)
+  timezone     String   @default("America/New_York") @db.VarChar(64)
+  latitude     Decimal? @db.Decimal(9, 6)
+  longitude    Decimal? @db.Decimal(9, 6)
+  phone        String?
+  openingHours String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(6)
+
+  merchant          Merchant           @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  services          Service[]
+  platformLinks     PlatformLink[]
+  publicPage        PublicPageConfig?
+  contentPreference ContentPreference?
+  generationMetrics GenerationMetric[]
+  reviews           ManagedReview[]
+  replyDrafts       ReviewReplyDraft[]
+
+  @@unique([merchantId, slug])
+  @@index([merchantId, isActive])
+  @@map("locations")
+}
+
+model Service {
+  id           String   @id @default(uuid()) @db.Uuid
+  locationId   String   @db.Uuid
+  slug         String   @db.VarChar(96)
+  nameEn       String
+  nameZh       String
+  description  String?
+  imageUrl     String?
+  displayOrder Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(6)
+
+  location          Location           @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  generationMetrics GenerationMetric[]
+
+  @@unique([locationId, slug])
+  @@index([locationId, isActive, displayOrder])
+  @@map("services")
+}
+
+model PlatformLink {
+  id             String   @id @default(uuid()) @db.Uuid
+  locationId     String   @db.Uuid
+  platform       Platform
+  destinationUrl String?
+  fallbackUrl    String?
+  ctaLabel       String?
+  publishHint    String?
+  isEnabled      Boolean  @default(true)
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(6)
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@unique([locationId, platform])
+  @@index([platform, isEnabled])
+  @@map("platform_links")
+}
+
+model PublicPageConfig {
+  id                 String   @id @default(uuid()) @db.Uuid
+  locationId         String   @unique @db.Uuid
+  isPublished        Boolean  @default(false)
+  headline           String?
+  subheadline        String?
+  heroImageUrl       String?
+  backgroundImageUrl String?
+  accentColor        String?  @db.VarChar(32)
+  showAddress        Boolean  @default(true)
+  showServices       Boolean  @default(true)
+  reviewDisclosure   String?
+  xiaohongshuQuery   String?
+  createdAt          DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime @updatedAt @db.Timestamptz(6)
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@map("public_page_configs")
+}
+
+model ContentPreference {
+  id              String   @id @default(uuid()) @db.Uuid
+  locationId      String   @unique @db.Uuid
+  suggestedTags   String[] @default([])
+  googleTone      String?  @db.VarChar(240)
+  xiaohongshuTone String?  @db.VarChar(240)
+  forbiddenClaims String[] @default([])
+  createdAt       DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(6)
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@map("content_preferences")
+}
+
+model GenerationMetric {
+  /// This table is intentionally anonymous: never persist the customer's
+  /// free-form experience text or generated review here.
+  id                String             @id @default(uuid()) @db.Uuid
+  merchantId        String             @db.Uuid
+  locationId        String             @db.Uuid
+  serviceId         String?            @db.Uuid
+  platform          Platform
+  provider          GenerationProvider @default(LOCAL)
+  selectedTags      String[]           @default([])
+  wasCopied         Boolean            @default(false)
+  wasPublishedClick Boolean            @default(false)
+  createdAt         DateTime           @default(now()) @db.Timestamptz(6)
+
+  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  service  Service? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+
+  @@index([merchantId, createdAt])
+  @@index([locationId, platform, createdAt])
+  @@map("generation_metrics")
+}
+
+model ManagedReview {
+  /// Store only merchant-supplied/manual review data. Customer review-agent
+  /// inputs are intentionally excluded from this model.
+  id               String       @id @default(uuid()) @db.Uuid
+  merchantId       String       @db.Uuid
+  locationId       String       @db.Uuid
+  platform         Platform
+  source           ReviewSource @default(MANUAL)
+  externalReviewId String?
+  reviewerAlias    String?      @db.VarChar(160)
+  rating           Int?
+  reviewText       String
+  reviewedAt       DateTime?    @db.Timestamptz(6)
+  createdAt        DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime     @updatedAt @db.Timestamptz(6)
+
+  merchant    Merchant           @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  location    Location           @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  replyDrafts ReviewReplyDraft[]
+
+  @@index([merchantId, platform, reviewedAt])
+  @@index([locationId, source, reviewedAt])
+  @@map("managed_reviews")
+}
+
+model ReviewReplyDraft {
+  id             String           @id @default(uuid()) @db.Uuid
+  merchantId     String           @db.Uuid
+  locationId     String           @db.Uuid
+  reviewId       String?          @db.Uuid
+  createdById    String?          @db.Uuid
+  sourcePlatform Platform
+  rating         Int?
+  reviewExcerpt  String?          @db.VarChar(600)
+  summary        String?
+  draftText      String
+  status         ReplyDraftStatus @default(DRAFT)
+  createdAt      DateTime         @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime         @updatedAt @db.Timestamptz(6)
+
+  merchant  Merchant       @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  location  Location       @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  review    ManagedReview? @relation(fields: [reviewId], references: [id], onDelete: SetNull)
+  createdBy User?          @relation("ReplyDraftAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([merchantId, status, updatedAt])
+  @@index([locationId, sourcePlatform, updatedAt])
+  @@index([reviewId])
+  @@map("review_reply_drafts")
+}
