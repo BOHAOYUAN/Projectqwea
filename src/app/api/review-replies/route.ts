@@ -18,7 +18,9 @@ export async function POST(request: NextRequest) {
       save?: unknown;
     };
     const platform: ReviewPlatform | null =
-      body.platform === 'google' || body.platform === 'xiaohongshu' ? body.platform : null;
+      body.platform === 'google' || body.platform === 'xiaohongshu' || body.platform === 'yelp' || body.platform === 'instagram'
+        ? body.platform
+        : null;
     const reviewText = typeof body.reviewText === 'string' ? body.reviewText.trim().slice(0, 1600) : '';
     const tone = typeof body.tone === 'string' ? body.tone.trim().slice(0, 80) : 'warm and thoughtful';
     const merchantSlug = typeof body.merchantSlug === 'string' ? body.merchantSlug.trim() : '';

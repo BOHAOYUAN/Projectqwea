@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateReviewDraft, type ReviewPlatform } from '@/lib/agent/review-generator';
+import { CONTENT_VOICES, generateReviewDraft, type ContentVoice, type ReviewPlatform } from '@/lib/agent/review-generator';
 import { getPublicReviewPage, recordAnonymousGenerationMetric } from '@/lib/server/merchant-repository';
 
 interface DraftRequestBody {
   platform?: unknown;
   tags?: unknown;
   experience?: unknown;
+  voice?: unknown;
   seed?: unknown;
   merchantSlug?: unknown;
   locationSlug?: unknown;
@@ -38,7 +39,12 @@ export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as DraftRequestBody;
     const platform: ReviewPlatform | null =
-      body.platform === 'google' || body.platform === 'xiaohongshu' ? body.platform : null;
+      body.platform === 'google' || body.platform === 'xiaohongshu' || body.platform === 'yelp' || body.platform === 'instagram'
+        ? body.platform
+        : null;
+    const voice: ContentVoice = typeof body.voice === 'string' && CONTENT_VOICES.includes(body.voice as ContentVoice)
+      ? body.voice as ContentVoice
+      : 'natural';
     const experience = typeof body.experience === 'string' ? body.experience.trim().slice(0, 900) : '';
     const serviceSlugs = asStringArray(body.serviceSlugs, 3);
     const tags = asStringArray(body.tags, 8);
@@ -93,6 +99,7 @@ export async function POST(request: NextRequest) {
       serviceNames: safeServiceNames,
       tags: safeTags,
       experience,
+      voice,
       seed,
     });
 

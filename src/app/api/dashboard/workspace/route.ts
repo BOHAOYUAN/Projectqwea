@@ -133,11 +133,23 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Merchant workspace was not found.' }, { status: 404 });
   }
 
-  const [metricGroups, reviews, replyDrafts] = await Promise.all([
+  const [metricGroups, funnelMetrics, reviews, replyDrafts] = await Promise.all([
     session.client.generationMetric.groupBy({
       by: ['platform', 'provider'],
       where: { merchantId: merchant.id },
       _count: { _all: true },
+    }),
+    // GenerationMetric deliberately contains no customer copy. Fetch only
+    // anonymous conversion flags so the dashboard can show durable,
+    // cross-device funnel counts for each location and platform.
+    session.client.generationMetric.findMany({
+      where: { merchantId: merchant.id },
+      select: {
+        locationId: true,
+        platform: true,
+        wasCopied: true,
+        wasPublishedClick: true,
+      },
     }),
     session.client.managedReview.findMany({
       where: { merchantId: merchant.id },
@@ -173,6 +185,22 @@ export async function GET(request: NextRequest) {
     }),
   ]);
 
+  const funnelByLocation = funnelMetrics.reduce<
+    Map<string, Record<string, { generated: number; copied: number; opened: number }>>
+  >((locations, metric) => {
+    const platform = metric.platform.toLowerCase();
+    const location = locations.get(metric.locationId) ?? {};
+    const counts = location[platform] ?? { generated: 0, copied: 0, opened: 0 };
+
+    counts.generated += 1;
+    if (metric.wasCopied) counts.copied += 1;
+    if (metric.wasPublishedClick) counts.opened += 1;
+
+    location[platform] = counts;
+    locations.set(metric.locationId, location);
+    return locations;
+  }, new Map());
+
   return NextResponse.json({
     user: safeUser(session.user),
     merchants: memberships,
@@ -181,6 +209,7 @@ export async function GET(request: NextRequest) {
       status: merchant.status.toLowerCase(),
       locations: merchant.locations.map((location) => ({
         ...location,
+        generationFunnel: funnelByLocation.get(location.id) ?? {},
         platformLinks: location.platformLinks.map((link) => ({
           ...link,
           platform: link.platform.toLowerCase(),
@@ -516,7 +545,7 @@ async function updateService(
 
 async function updatePlatformLink(client: PrismaClient, locationId: string, data: JsonRecord) {
   const platform = platformValue(data.platform);
-  if (!platform) return NextResponse.json({ error: 'Platform must be Google or Xiaohongshu.' }, { status: 400 });
+  if (!platform) return NextResponse.json({ error: 'Choose a supported platform.' }, { status: 400 });
   const existing = await client.platformLink.findUnique({ where: { locationId_platform: { locationId, platform } } });
   const destinationUrl = has(data, 'destinationUrl') ? safePlatformUrl(data.destinationUrl, platform) : existing?.destinationUrl ?? null;
   const fallbackUrl = has(data, 'fallbackUrl') ? safePlatformUrl(data.fallbackUrl, platform) : existing?.fallbackUrl ?? null;
@@ -706,6 +735,8 @@ function has(recordValue: JsonRecord, key: string): boolean {
 function platformValue(value: unknown): Platform | null {
   if (value === 'google' || value === 'GOOGLE') return Platform.GOOGLE;
   if (value === 'xiaohongshu' || value === 'XIAOHONGSHU') return Platform.XIAOHONGSHU;
+  if (value === 'yelp' || value === 'YELP') return Platform.YELP;
+  if (value === 'instagram' || value === 'INSTAGRAM') return Platform.INSTAGRAM;
   return null;
 }
 

@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useCallback, useState, type ElementType, type ReactNode } from 'react';
 import {
   ArrowLeft,
+  ArrowRight,
+  BarChart3,
   Bot,
   Building2,
   Check,
@@ -11,6 +13,7 @@ import {
   ChevronRight,
   Clipboard,
   Copy,
+  CircleCheck,
   ExternalLink,
   Eye,
   Globe2,
@@ -18,10 +21,10 @@ import {
   Link2,
   MapPin,
   MessageCircle,
+  MousePointerClick,
   Plus,
   Save,
   Sparkles,
-  Star,
   Store,
   Tags,
   Users,
@@ -29,7 +32,14 @@ import {
 } from 'lucide-react';
 
 type Panel = 'overview' | 'brand' | 'services' | 'links' | 'studio' | 'reviews';
-type Platform = 'google' | 'xiaohongshu';
+type Platform = 'google' | 'xiaohongshu' | 'yelp' | 'instagram';
+type DraftPlatform = Platform;
+
+type FunnelMetric = {
+  generated: number;
+  copied: number;
+  opened: number;
+};
 
 type Service = {
   id: string;
@@ -65,6 +75,9 @@ type Location = {
     reviews: number;
     generated: number;
     responseRate: number;
+    /** Demo data is local. Connected workspaces receive anonymous, durable
+     * generation/copy/open counts from the merchant-scoped API. */
+    funnel?: Partial<Record<Platform, FunnelMetric>>;
   };
 };
 
@@ -82,7 +95,7 @@ type Merchant = {
 type Review = {
   id: string;
   guest: string;
-  platform: 'Google' | '小红书';
+  platform: Platform;
   rating: number;
   date: string;
   text: string;
@@ -123,6 +136,7 @@ type RemoteLocation = {
   }>;
   publicPage: { isPublished: boolean } | null;
   contentPreference: { suggestedTags: string[]; googleTone: string | null; xiaohongshuTone: string | null } | null;
+  generationFunnel: Partial<Record<Platform, FunnelMetric>>;
   _count: { generationMetrics: number; reviews: number; replyDrafts: number };
 };
 
@@ -152,6 +166,186 @@ type RemoteWorkspace = {
   activeMerchant: RemoteMerchant | null;
 };
 
+const PLATFORM_ORDER: Platform[] = ['google', 'xiaohongshu', 'yelp', 'instagram'];
+
+const PLATFORM_META: Record<Platform, {
+  label: string;
+  shortLabel: string;
+  customerAction: string;
+  setupHint: string;
+  description: string;
+  surfaceClass: string;
+  textClass: string;
+}> = {
+  google: {
+    label: 'Google Reviews',
+    shortLabel: 'G',
+    customerAction: '撰写英文评价',
+    setupHint: 'Add the verified Google Maps review link before enabling.',
+    description: '面向本地搜索的英文评价入口。',
+    surfaceClass: 'bg-[#e8f0fe]',
+    textClass: 'text-[#3868c4]',
+  },
+  xiaohongshu: {
+    label: '小红书笔记',
+    shortLabel: '红',
+    customerAction: '生成中文笔记',
+    setupHint: 'Add a Xiaohongshu publishing or profile destination before enabling.',
+    description: '适合中文体验记录与门店内容种草。',
+    surfaceClass: 'bg-[#fff0f2]',
+    textClass: 'text-[#ce5367]',
+  },
+  yelp: {
+    label: 'Yelp Reviews',
+    shortLabel: 'Y',
+    customerAction: '撰写 Yelp 评价',
+    setupHint: 'Add the verified Yelp business review link before enabling.',
+    description: '面向美国本地生活评价的克制英文入口。',
+    surfaceClass: 'bg-[#fff0ee]',
+    textClass: 'text-[#bd4f3f]',
+  },
+  instagram: {
+    label: 'Instagram',
+    shortLabel: 'IG',
+    customerAction: '生成 Instagram caption',
+    setupHint: 'Add an Instagram profile or publishing destination before enabling.',
+    description: '用于将真实体验整理成轻量的社媒分享。',
+    surfaceClass: 'bg-[#f2edff]',
+    textClass: 'text-[#7957a8]',
+  },
+};
+
+const DRAFT_PREVIEW_COPY: Record<DraftPlatform, {
+  tab: string;
+  title: string;
+  placeholder: string;
+  rows: number;
+}> = {
+  google: {
+    tab: 'Google · EN',
+    title: 'Google review draft',
+    placeholder: '填写体验并生成后，英文评价会出现在这里。',
+    rows: 9,
+  },
+  xiaohongshu: {
+    tab: '小红书 · 中文',
+    title: '小红书笔记草稿',
+    placeholder: '填写体验并生成后，中文笔记会出现在这里。',
+    rows: 12,
+  },
+  yelp: {
+    tab: 'Yelp · EN',
+    title: 'Yelp review draft',
+    placeholder: '填写体验并生成后，Yelp 英文评价会出现在这里。',
+    rows: 9,
+  },
+  instagram: {
+    tab: 'Instagram · EN',
+    title: 'Instagram caption draft',
+    placeholder: '填写体验并生成后，Instagram caption 会出现在这里。',
+    rows: 10,
+  },
+};
+
+function emptyDrafts(): Record<DraftPlatform, string> {
+  return { google: '', xiaohongshu: '', yelp: '', instagram: '' };
+}
+
+function defaultPlatformConfigs(): Record<Platform, PlatformConfig> {
+  return PLATFORM_ORDER.reduce<Record<Platform, PlatformConfig>>((result, platform) => {
+    result[platform] = {
+      enabled: false,
+      url: '',
+      hint: PLATFORM_META[platform].setupHint,
+    };
+    return result;
+  }, {} as Record<Platform, PlatformConfig>);
+}
+
+function platformConfigFromRemote(
+  platform: Platform,
+  links: RemoteLocation['platformLinks']
+): PlatformConfig {
+  const link = links.find((item) => item.platform.toLowerCase() === platform);
+  return {
+    enabled: Boolean(link?.isEnabled),
+    url: link?.destinationUrl || link?.fallbackUrl || '',
+    hint: link?.publishHint || PLATFORM_META[platform].setupHint,
+  };
+}
+
+function platformReadiness(location: Location, platform: Platform): {
+  label: string;
+  detail: string;
+  ready: boolean;
+} {
+  const config = location.platforms[platform];
+  if (!location.published) {
+    return { label: '客户页未发布', detail: '先发布顾客页，平台入口才会对外可见。', ready: false };
+  }
+  if (!config.enabled) {
+    return { label: '暂未启用', detail: '可先保留为内部准备状态。', ready: false };
+  }
+  if (!config.url) {
+    return { label: '等待链接', detail: '需要填写已验证的发布去向。', ready: false };
+  }
+  return { label: '已就绪', detail: '顾客页可以展示这个平台入口。', ready: true };
+}
+
+function zeroFunnel(): Record<Platform, FunnelMetric> {
+  return PLATFORM_ORDER.reduce<Record<Platform, FunnelMetric>>((result, platform) => {
+    result[platform] = { generated: 0, copied: 0, opened: 0 };
+    return result;
+  }, {} as Record<Platform, FunnelMetric>);
+}
+
+function combineFunnel(
+  persisted: Partial<Record<Platform, FunnelMetric>> | undefined,
+  session: Partial<Record<Platform, FunnelMetric>> | undefined
+): Record<Platform, FunnelMetric> {
+  const result = zeroFunnel();
+  for (const platform of PLATFORM_ORDER) {
+    const stored = persisted?.[platform];
+    const current = session?.[platform];
+    result[platform] = {
+      generated: (stored?.generated || 0) + (current?.generated || 0),
+      copied: (stored?.copied || 0) + (current?.copied || 0),
+      opened: (stored?.opened || 0) + (current?.opened || 0),
+    };
+  }
+  return result;
+}
+
+function sumFunnel(funnel: Record<Platform, FunnelMetric>): FunnelMetric {
+  return PLATFORM_ORDER.reduce<FunnelMetric>(
+    (total, platform) => ({
+      generated: total.generated + funnel[platform].generated,
+      copied: total.copied + funnel[platform].copied,
+      opened: total.opened + funnel[platform].opened,
+    }),
+    { generated: 0, copied: 0, opened: 0 }
+  );
+}
+
+function funnelFromRemote(
+  remote: RemoteLocation['generationFunnel'] | undefined
+): Partial<Record<Platform, FunnelMetric>> {
+  const funnel: Partial<Record<Platform, FunnelMetric>> = {};
+
+  for (const platform of PLATFORM_ORDER) {
+    const counts = remote?.[platform];
+    if (!counts) continue;
+
+    funnel[platform] = {
+      generated: Math.max(0, Number.isFinite(counts.generated) ? counts.generated : 0),
+      copied: Math.max(0, Number.isFinite(counts.copied) ? counts.copied : 0),
+      opened: Math.max(0, Number.isFinite(counts.opened) ? counts.opened : 0),
+    };
+  }
+
+  return funnel;
+}
+
 function initialsFor(name: string): string {
   return name
     .split(/\s+/)
@@ -180,7 +374,9 @@ function mapRemoteWorkspace(remote: RemoteMerchant): { merchant: Merchant; revie
     result[location.id] = rows.map((review) => ({
       id: review.id,
       guest: review.reviewerAlias || 'Anonymous',
-      platform: review.platform === 'xiaohongshu' ? '小红书' : 'Google',
+      platform: PLATFORM_ORDER.includes(review.platform as Platform)
+        ? (review.platform as Platform)
+        : 'google',
       rating: review.rating || 0,
       date: review.reviewedAt ? new Date(review.reviewedAt).toLocaleDateString('en-US') : 'Manual entry',
       text: review.reviewText,
@@ -199,8 +395,6 @@ function mapRemoteWorkspace(remote: RemoteMerchant): { merchant: Merchant; revie
       description: remote.description || 'Add a brand description for the content workspace.',
       voice: remote.locations[0]?.contentPreference?.googleTone || 'Warm, specific, and grounded in real guest details.',
       locations: remote.locations.map((location) => {
-        const google = location.platformLinks.find((link) => link.platform === 'google');
-        const xiaohongshu = location.platformLinks.find((link) => link.platform === 'xiaohongshu');
         const locationReviews = remote.reviews.filter((review) => review.locationId === location.id);
         const ratings = locationReviews.map((review) => review.rating).filter((rating): rating is number => typeof rating === 'number');
         return {
@@ -227,23 +421,16 @@ function mapRemoteWorkspace(remote: RemoteMerchant): { merchant: Merchant; revie
             active: service.isActive,
           })),
           tags: location.contentPreference?.suggestedTags || [],
-          platforms: {
-            google: {
-              enabled: Boolean(google?.isEnabled),
-              url: google?.destinationUrl || google?.fallbackUrl || '',
-              hint: google?.publishHint || 'Add the verified Google Maps review link before enabling.',
-            },
-            xiaohongshu: {
-              enabled: Boolean(xiaohongshu?.isEnabled),
-              url: xiaohongshu?.destinationUrl || xiaohongshu?.fallbackUrl || '',
-              hint: xiaohongshu?.publishHint || 'Add a Xiaohongshu destination before enabling.',
-            },
-          },
+          platforms: PLATFORM_ORDER.reduce<Record<Platform, PlatformConfig>>((result, platform) => {
+            result[platform] = platformConfigFromRemote(platform, location.platformLinks);
+            return result;
+          }, {} as Record<Platform, PlatformConfig>),
           metrics: {
             rating: ratings.length ? ratings.reduce((total, rating) => total + rating, 0) / ratings.length : 0,
             reviews: location._count.reviews,
             generated: location._count.generationMetrics,
             responseRate: location._count.reviews ? Math.round((location._count.replyDrafts / location._count.reviews) * 100) : 0,
+            funnel: funnelFromRemote(location.generationFunnel),
           },
         };
       }),
@@ -308,8 +495,29 @@ const INITIAL_MERCHANTS: Merchant[] = [
             url: '',
             hint: 'Copy the note first. A team-managed Xiaohongshu publishing link can be added here.',
           },
+          yelp: {
+            enabled: false,
+            url: '',
+            hint: 'Add the verified Yelp business review link before enabling.',
+          },
+          instagram: {
+            enabled: false,
+            url: '',
+            hint: 'Add an Instagram profile or publishing destination before enabling.',
+          },
         },
-        metrics: { rating: 4.9, reviews: 50, generated: 18, responseRate: 94 },
+        metrics: {
+          rating: 4.9,
+          reviews: 50,
+          generated: 18,
+          responseRate: 94,
+          funnel: {
+            google: { generated: 11, copied: 8, opened: 6 },
+            xiaohongshu: { generated: 7, copied: 5, opened: 4 },
+            yelp: { generated: 0, copied: 0, opened: 0 },
+            instagram: { generated: 0, copied: 0, opened: 0 },
+          },
+        },
       },
     ],
   },
@@ -357,8 +565,29 @@ const INITIAL_MERCHANTS: Merchant[] = [
             url: '',
             hint: 'Enable after the team has created a Xiaohongshu destination.',
           },
+          yelp: {
+            enabled: false,
+            url: '',
+            hint: 'Add the verified Yelp business review link before enabling.',
+          },
+          instagram: {
+            enabled: false,
+            url: '',
+            hint: 'Add an Instagram profile or publishing destination before enabling.',
+          },
         },
-        metrics: { rating: 4.8, reviews: 12, generated: 6, responseRate: 83 },
+        metrics: {
+          rating: 4.8,
+          reviews: 12,
+          generated: 6,
+          responseRate: 83,
+          funnel: {
+            google: { generated: 4, copied: 3, opened: 2 },
+            xiaohongshu: { generated: 2, copied: 1, opened: 1 },
+            yelp: { generated: 0, copied: 0, opened: 0 },
+            instagram: { generated: 0, copied: 0, opened: 0 },
+          },
+        },
       },
     ],
   },
@@ -369,7 +598,7 @@ const REVIEW_FEED: Record<string, Review[]> = {
     {
       id: 'emily',
       guest: 'Emily R.',
-      platform: 'Google',
+      platform: 'google',
       rating: 5,
       date: 'Aug 28, 2026',
       text: 'The facial felt calm and unhurried. I appreciated how often they checked in about comfort.',
@@ -378,7 +607,7 @@ const REVIEW_FEED: Record<string, Review[]> = {
     {
       id: 'baltimore',
       guest: 'Baltimore生活家',
-      platform: '小红书',
+      platform: 'xiaohongshu',
       rating: 5,
       date: 'Aug 27, 2026',
       text: '下班后来做头疗，过程很安静，结束后觉得整个人都松下来了。',
@@ -387,7 +616,7 @@ const REVIEW_FEED: Record<string, Review[]> = {
     {
       id: 'michael',
       guest: 'Michael C.',
-      platform: 'Google',
+      platform: 'google',
       rating: 5,
       date: 'Aug 26, 2026',
       text: 'The space was spotless and the back treatment did not feel rushed at all.',
@@ -398,7 +627,7 @@ const REVIEW_FEED: Record<string, Review[]> = {
     {
       id: 'jordan',
       guest: 'Jordan P.',
-      platform: 'Google',
+      platform: 'google',
       rating: 5,
       date: 'Aug 25, 2026',
       text: 'A very welcoming first visit. The pace was just right after a long week.',
@@ -494,11 +723,14 @@ export default function DashboardPage() {
   const [selectedTagsByLocation, setSelectedTagsByLocation] = useState<Record<string, string[]>>({});
   const [selectedServiceByLocation, setSelectedServiceByLocation] = useState<Record<string, string>>({});
   const [experienceByLocation, setExperienceByLocation] = useState<Record<string, string>>({});
-  const [draftsByLocation, setDraftsByLocation] = useState<Record<string, Record<Platform, string>>>({});
-  const [draftPlatform, setDraftPlatform] = useState<Platform>('google');
+  const [draftsByLocation, setDraftsByLocation] = useState<Record<string, Record<DraftPlatform, string>>>({});
+  const [draftPlatform, setDraftPlatform] = useState<DraftPlatform>('google');
   const [replySourceByLocation, setReplySourceByLocation] = useState<Record<string, string>>({});
   const [replyPlatformByLocation, setReplyPlatformByLocation] = useState<Record<string, Platform>>({});
   const [replyByLocation, setReplyByLocation] = useState<Record<string, string>>({});
+  const [sessionFunnelByLocation, setSessionFunnelByLocation] = useState<
+    Record<string, Partial<Record<Platform, FunnelMetric>>>
+  >({});
   const [copied, setCopied] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [workspaceMode, setWorkspaceMode] = useState<'local' | 'connected'>('local');
@@ -546,7 +778,18 @@ export default function DashboardPage() {
   const selectedServiceId = selectedServiceByLocation[location.id] ?? activeServices[0]?.id ?? '';
   const selectedService = activeServices.find((item) => item.id === selectedServiceId) ?? activeServices[0];
   const selectedTags = selectedTagsByLocation[location.id] ?? [];
-  const drafts = draftsByLocation[location.id] ?? { google: '', xiaohongshu: '' };
+  const drafts = draftsByLocation[location.id] ?? emptyDrafts();
+  const draftPreview = DRAFT_PREVIEW_COPY[draftPlatform];
+  const draftPlatformMeta = PLATFORM_META[draftPlatform];
+  const funnelByPlatform = combineFunnel(location.metrics.funnel, sessionFunnelByLocation[location.id]);
+  const trackedFunnel = sumFunnel(funnelByPlatform);
+  const currentSessionFunnel = sumFunnel(combineFunnel(undefined, sessionFunnelByLocation[location.id]));
+  const funnelTotals: FunnelMetric = {
+    generated: location.metrics.funnel ? trackedFunnel.generated : location.metrics.generated + currentSessionFunnel.generated,
+    copied: trackedFunnel.copied,
+    opened: trackedFunnel.opened,
+  };
+  const readyPlatforms = PLATFORM_ORDER.filter((platform) => platformReadiness(location, platform).ready);
   const reviewFeed = workspaceMode === 'connected'
     ? remoteReviewFeed[location.id] ?? []
     : REVIEW_FEED[location.id] ?? [];
@@ -560,16 +803,56 @@ export default function DashboardPage() {
     window.setTimeout(() => setNotice(null), 2500);
   };
 
-  const copy = async (key: string, text: string) => {
+  const recordFunnelEvent = (platform: Platform, action: keyof FunnelMetric) => {
+    setSessionFunnelByLocation((current) => {
+      const byPlatform = current[location.id] ?? {};
+      const existing = byPlatform[platform] ?? { generated: 0, copied: 0, opened: 0 };
+      return {
+        ...current,
+        [location.id]: {
+          ...byPlatform,
+          [platform]: { ...existing, [action]: existing[action] + 1 },
+        },
+      };
+    });
+  };
+
+  const copy = async (key: string, text: string, platform?: Platform) => {
     try {
       if (!navigator.clipboard) throw new Error('Clipboard unavailable');
       await navigator.clipboard.writeText(text);
+      if (platform) recordFunnelEvent(platform, 'copied');
       setCopied(key);
       window.setTimeout(() => {
         setCopied((current) => (current === key ? null : current));
       }, 1800);
     } catch {
       announce('当前浏览器无法复制，请手动复制。');
+    }
+  };
+
+  const openPlatformDestination = (platform: Platform) => {
+    const config = location.platforms[platform];
+    const state = platformReadiness(location, platform);
+    if (!state.ready) {
+      announce(PLATFORM_META[platform].label + ' 还不能打开：' + state.label + '。');
+      return;
+    }
+
+    try {
+      const destination = new URL(config.url);
+      const isXiaohongshuDiscoverFallback =
+        platform === 'xiaohongshu' && destination.protocol === 'xhsdiscover:';
+      if (!isXiaohongshuDiscoverFallback && destination.protocol !== 'https:' && destination.protocol !== 'http:') {
+        throw new Error('Unsupported protocol');
+      }
+      const target = isXiaohongshuDiscoverFallback
+        ? 'https://www.xiaohongshu.com/search_result?keyword=' + encodeURIComponent(destination.searchParams.get('keyword') || merchant.name)
+        : destination.toString();
+      window.open(target, '_blank', 'noopener,noreferrer');
+      recordFunnelEvent(platform, 'opened');
+    } catch {
+      announce('这个平台链接无效，请先在平台链接页检查。');
     }
   };
 
@@ -706,7 +989,7 @@ export default function DashboardPage() {
         }
       }
 
-      for (const platform of ['google', 'xiaohongshu'] as Platform[]) {
+      for (const platform of PLATFORM_ORDER) {
         const config = location.platforms[platform];
         const fallback = platform === 'xiaohongshu' && config.url.startsWith('xhsdiscover:') ? config.url : null;
         const destination = fallback ? null : config.url || null;
@@ -725,7 +1008,7 @@ export default function DashboardPage() {
       }
 
       await loadConnectedWorkspace(merchant.slug, location.id);
-      const waitingForUrl = (['google', 'xiaohongshu'] as Platform[]).some(
+      const waitingForUrl = PLATFORM_ORDER.some(
         (platform) => location.platforms[platform].enabled && !location.platforms[platform].url
       );
       announce(waitingForUrl ? '云端设置已保存；缺少真实链接的平台已保持未启用。' : '云端设置已保存。');
@@ -788,10 +1071,7 @@ export default function DashboardPage() {
           published: false,
           services: [],
           tags: [],
-          platforms: {
-            google: { enabled: false, url: '', hint: 'Add a verified Google Maps review link.' },
-            xiaohongshu: { enabled: false, url: '', hint: 'Add a Xiaohongshu publishing destination.' },
-          },
+          platforms: defaultPlatformConfigs(),
           metrics: { rating: 0, reviews: 0, generated: 0, responseRate: 0 },
         },
       ],
@@ -819,10 +1099,7 @@ export default function DashboardPage() {
       published: false,
       services: [],
       tags: [],
-      platforms: {
-        google: { enabled: false, url: '', hint: 'Add a verified Google Maps review link.' },
-        xiaohongshu: { enabled: false, url: '', hint: 'Add a Xiaohongshu publishing destination.' },
-      },
+      platforms: defaultPlatformConfigs(),
       metrics: { rating: 0, reviews: 0, generated: 0, responseRate: 0 },
     };
     setMerchants((current) =>
@@ -895,16 +1172,28 @@ export default function DashboardPage() {
     }
     const note = experienceByLocation[location.id]?.trim();
     const tagText = selectedTags.length ? selectedTags.join('、') : '';
+    const englishDetail = note && !/[\u4e00-\u9fff]/.test(note)
+      ? 'One detail from my visit: ' + note + (note.endsWith('.') ? '' : '.')
+      : tagText
+        ? 'One thing I chose to mention is “' + tagText + '”.'
+        : 'I will add one true detail from my own visit before posting.';
     const google =
       'I visited ' + merchant.name + ' for ' + selectedService.englishName + '.\n\n' +
-      (note
-        ? 'One detail from my visit: ' + note + (note.endsWith('.') ? '' : '.')
+      englishDetail;
+    const yelp =
+      'I visited ' + merchant.name + ' for ' + selectedService.englishName + '.\n\n' +
+      englishDetail;
+    const instagram =
+      selectedService.englishName + ' at ' + merchant.name + '.\n\n' +
+      (note && !/[\u4e00-\u9fff]/.test(note)
+        ? 'A detail I want to share: ' + note + (note.endsWith('.') ? '' : '.')
         : tagText
-          ? 'The experience I chose to highlight is “' + tagText + '”.'
-          : 'Please add one specific detail from your own visit before posting this review.') +
-      '\n\nPlease edit this draft so every line reflects your own experience before posting.';
+          ? 'One thing I chose to share is “' + tagText + '”.'
+          : 'I will add one real detail from my visit before sharing.') +
+      '\n\n#' + merchant.name.replace(/[^a-zA-Z0-9]/g, '') +
+      ' #' + selectedService.englishName.replace(/[^a-zA-Z0-9]/g, '');
     const xiaohongshu =
-      '标题：记录一次' + selectedService.name + '体验\n\n' +
+      '记录一次' + selectedService.name + '体验\n\n' +
       '这次在 ' + merchant.name + ' 体验了' + selectedService.name + '。\n\n' +
       (note
         ? '我自己的感受是：' + note + (/[。！？]$/.test(note) ? '' : '。')
@@ -917,9 +1206,13 @@ export default function DashboardPage() {
       selectedService.name.replace(/\s+/g, '');
     setDraftsByLocation((current) => ({
       ...current,
-      [location.id]: { google, xiaohongshu },
+      [location.id]: { google, xiaohongshu, yelp, instagram },
     }));
-    announce('已生成本地体验模式草稿，请在发布前核对。');
+    recordFunnelEvent('google', 'generated');
+    recordFunnelEvent('xiaohongshu', 'generated');
+    recordFunnelEvent('yelp', 'generated');
+    recordFunnelEvent('instagram', 'generated');
+    announce('已生成四种本地体验模式草稿，请在发布前核对。');
   };
 
   const generateReply = async () => {
@@ -1060,10 +1353,41 @@ export default function DashboardPage() {
                 }
               />
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <Metric label="公开评分" value={location.metrics.rating ? location.metrics.rating.toFixed(1) + ' ★' : '—'} helper={String(location.metrics.reviews) + ' 条演示/手工评价'} icon={Star} color="bg-[#f6ead7] text-[#8a5b37]" />
-                <Metric label="本周内容草稿" value={String(location.metrics.generated)} helper="Google 与小红书内容工作台" icon={Sparkles} color="bg-[#f4e3df] text-[#9a6259]" />
-                <Metric label="回复覆盖率" value={String(location.metrics.responseRate) + '%'} helper="用于手工与导入评价的跟进" icon={MessageCircle} color="bg-[#e7eee5] text-[#5a765d]" />
-                <Metric label="已启用服务" value={String(activeServices.length)} helper={'共 ' + String(location.services.length) + ' 个本地商品'} icon={Store} color="bg-[#e8e3dc] text-[#4a4138]" />
+                <Metric label="Generated · 已生成" value={String(funnelTotals.generated)} helper="顾客完成的内容草稿" icon={Sparkles} color="bg-[#f4e3df] text-[#9a6259]" />
+                <Metric label="Copied · 已复制" value={String(funnelTotals.copied)} helper={funnelTotals.generated ? Math.round((funnelTotals.copied / funnelTotals.generated) * 100) + '% 从草稿复制' : '等待首个草稿'} icon={Copy} color="bg-[#e8f0fe] text-[#3868c4]" />
+                <Metric label="Platform opened · 已打开" value={String(funnelTotals.opened)} helper={funnelTotals.copied ? Math.round((funnelTotals.opened / funnelTotals.copied) * 100) + '% 从复制继续发布' : '等待平台跳转'} icon={MousePointerClick} color="bg-[#f2edff] text-[#7957a8]" />
+                <Metric label="四平台就绪" value={String(readyPlatforms.length) + ' / ' + String(PLATFORM_ORDER.length)} helper="已启用且已配置真实去向" icon={CircleCheck} color="bg-[#e7eee5] text-[#5a765d]" />
+              </div>
+
+              <div className="rounded-3xl border border-[#e8dfd2] bg-[#fbf7f0] p-4 sm:p-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#8d6242] shadow-sm"><BarChart3 className="h-4 w-4" /></div>
+                    <div>
+                      <p className="text-sm font-semibold text-[#473b31]">顾客内容漏斗</p>
+                      <p className="text-[11px] leading-5 text-[#8b7e72]">从生成，到复制，再到顾客打开目标平台。不会把“打开”当作已发布。</p>
+                    </div>
+                  </div>
+                  <span className="text-[11px] text-[#97897c]">
+                    {workspaceMode === 'local' ? '当前为演示数据 + 本次操作' : '云端同步生成、复制与打开统计；本次操作会即时累加'}
+                  </span>
+                </div>
+                <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_auto_1fr_auto_1fr] sm:items-center">
+                  {[
+                    { label: 'Generated', value: funnelTotals.generated, detail: '草稿生成' },
+                    { label: 'Copied', value: funnelTotals.copied, detail: '复制文案' },
+                    { label: 'Platform opened', value: funnelTotals.opened, detail: '打开目标平台' },
+                  ].map((stage, index) => (
+                    <div key={stage.label} className="contents">
+                      <div className="rounded-2xl border border-[#ebe2d6] bg-white px-4 py-3">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#9a7252]">{stage.label}</p>
+                        <p className="mt-1 text-2xl font-semibold text-[#3f342c]">{String(stage.value)}</p>
+                        <p className="mt-0.5 text-[11px] text-[#8d8175]">{stage.detail}</p>
+                      </div>
+                      {index < 2 && <ArrowRight className="mx-auto hidden h-4 w-4 text-[#b89b7f] sm:block" aria-hidden="true" />}
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
@@ -1102,23 +1426,38 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="rounded-3xl border border-[#ebe2d6] bg-[#f8f2e9] p-5">
-                  <p className="text-sm font-semibold text-[#423830]">发布准备度</p>
-                  <p className="mt-1 text-xs leading-5 text-[#83776b]">设置真实平台链接后，才适合正式对外分享。</p>
-                  <div className="mt-4 space-y-3">
-                    {(['google', 'xiaohongshu'] as Platform[]).map((platform) => {
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-[#423830]">四平台发布状态</p>
+                      <p className="mt-1 text-xs leading-5 text-[#83776b]">每个平台独立启用、独立配置去向，并显示当前真实状态。</p>
+                    </div>
+                    <button type="button" onClick={() => setPanel('links')} className="shrink-0 text-[11px] font-semibold text-[#8c6242] hover:text-[#543d2c]">管理链接</button>
+                  </div>
+                  <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                    {PLATFORM_ORDER.map((platform) => {
                       const config = location.platforms[platform];
-                      const name = platform === 'google' ? 'Google Reviews' : '小红书笔记';
-                      const ready = config.enabled && Boolean(config.url);
+                      const meta = PLATFORM_META[platform];
+                      const state = platformReadiness(location, platform);
+                      const metric = funnelByPlatform[platform];
                       return (
-                        <div key={platform} className="flex items-center justify-between rounded-2xl border border-[#e9dfd2] bg-white/80 px-3.5 py-3">
-                          <div className="flex items-center gap-2.5">
-                            <div className={platform === 'google' ? 'flex h-8 w-8 items-center justify-center rounded-xl bg-[#e8f0fe] text-xs font-bold text-[#3866bf]' : 'flex h-8 w-8 items-center justify-center rounded-xl bg-[#fff0f2] text-xs font-bold text-[#d65367]'}>{platform === 'google' ? 'G' : '红'}</div>
-                            <div>
-                              <p className="text-xs font-semibold text-[#4c4138]">{name}</p>
-                              <p className="mt-0.5 text-[11px] text-[#8e8174]">{config.url ? '链接已配置' : '等待真实链接'}</p>
+                        <div key={platform} className="rounded-2xl border border-[#e9dfd2] bg-white/80 p-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex min-w-0 items-center gap-2.5">
+                              <div className={'flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-[11px] font-bold ' + meta.surfaceClass + ' ' + meta.textClass}>{meta.shortLabel}</div>
+                              <div className="min-w-0">
+                                <p className="truncate text-xs font-semibold text-[#4c4138]">{meta.label}</p>
+                                <p className="mt-0.5 truncate text-[10px] text-[#8e8174]">{state.detail}</p>
+                              </div>
                             </div>
+                            <Pill active={state.ready}>{state.label}</Pill>
                           </div>
-                          <Pill active={ready}>{ready ? '就绪' : '待配置'}</Pill>
+                          <div className="mt-2 flex items-center justify-between border-t border-[#f0e8de] pt-2 text-[10px] text-[#897d71]">
+                            <span>{String(metric.generated)} 生成 · {String(metric.copied)} 复制 · {String(metric.opened)} 打开</span>
+                            <button type="button" disabled={!state.ready} onClick={() => openPlatformDestination(platform)} className="inline-flex items-center gap-1 font-semibold text-[#805a3e] disabled:cursor-not-allowed disabled:text-[#b8ada2]">
+                              <ExternalLink className="h-3 w-3" /> 验证去向
+                            </button>
+                          </div>
+                          {!config.enabled && <p className="mt-2 text-[10px] text-[#aa7e61]">{meta.customerAction}</p>}
                         </div>
                       );
                     })}
@@ -1132,16 +1471,20 @@ export default function DashboardPage() {
                     <p className="text-sm font-semibold text-[#423830]">近期评价运营</p>
                     <p className="mt-1 text-xs text-[#8a7e72]">保留手工/演示评价流；未接入 Google 或 Yelp 抓取。</p>
                   </div>
-                  <button type="button" onClick={() => setPanel('reviews')} className="inline-flex items-center gap-1 text-xs font-semibold text-[#8c6242] hover:text-[#543d2c]">
-                    查看回复工作台 <ChevronRight className="h-3.5 w-3.5" />
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-[#f7eee2] px-2.5 py-1 text-[11px] font-semibold text-[#865e3d]">{location.metrics.rating ? location.metrics.rating.toFixed(1) + ' ★' : '暂无评分'}</span>
+                    <span className="rounded-full bg-[#f2f5ed] px-2.5 py-1 text-[11px] font-semibold text-[#637862]">{String(location.metrics.reviews)} 条评价 · {String(location.metrics.responseRate)}% 已跟进</span>
+                    <button type="button" onClick={() => setPanel('reviews')} className="inline-flex items-center gap-1 text-xs font-semibold text-[#8c6242] hover:text-[#543d2c]">
+                      查看回复工作台 <ChevronRight className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
                 <div className="mt-4 divide-y divide-[#f0e8de]">
                   {reviewFeed.slice(0, 3).map((review) => (
                     <div key={review.id} className="py-3 first:pt-0 last:pb-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-xs font-semibold text-[#4a3f35]">{review.guest}</span>
-                        <span className={review.platform === 'Google' ? 'rounded-full bg-[#e9f0fe] px-2 py-0.5 text-[10px] font-semibold text-[#4a6fbc]' : 'rounded-full bg-[#fff0f2] px-2 py-0.5 text-[10px] font-semibold text-[#c55a69]'}>{review.platform}</span>
+                        <span className={'rounded-full px-2 py-0.5 text-[10px] font-semibold ' + PLATFORM_META[review.platform].surfaceClass + ' ' + PLATFORM_META[review.platform].textClass}>{PLATFORM_META[review.platform].label}</span>
                         <span className="text-[11px] text-[#b07c36]">{'★'.repeat(review.rating)}</span>
                         <span className="ml-auto text-[11px] text-[#a1968b]">{review.date}</span>
                       </div>
@@ -1273,38 +1616,52 @@ export default function DashboardPage() {
 
           {panel === 'links' && (
             <div className="space-y-7">
-              <SectionHeading eyebrow="Platform destinations" title="Google 与小红书链接" description="这里保存的是发布去向，而不是 API Key。未配置的链接会明确显示为待配置，绝不伪造。" action={<button type="button" onClick={() => void saveConnectedWorkspace()} disabled={isWorkspaceSaving} className="inline-flex items-center gap-2 rounded-xl border border-[#dcc8b2] bg-[#fffaf4] px-3.5 py-2.5 text-xs font-semibold text-[#6a4f39] transition hover:bg-[#f9eee2] disabled:cursor-wait disabled:opacity-60"><Save className="h-3.5 w-3.5" /> {isWorkspaceSaving ? '保存中' : workspaceMode === 'connected' ? '保存链接' : '连接后保存'}</button>} />
+              <SectionHeading eyebrow="Platform destinations" title="四平台发布链接" description="Google、小红书、Yelp 与 Instagram 各自独立配置。这里保存发布去向，不保存 API Key；未配置时绝不伪造链接。" action={<button type="button" onClick={() => void saveConnectedWorkspace()} disabled={isWorkspaceSaving} className="inline-flex items-center gap-2 rounded-xl border border-[#dcc8b2] bg-[#fffaf4] px-3.5 py-2.5 text-xs font-semibold text-[#6a4f39] transition hover:bg-[#f9eee2] disabled:cursor-wait disabled:opacity-60"><Save className="h-3.5 w-3.5" /> {isWorkspaceSaving ? '保存中' : workspaceMode === 'connected' ? '保存链接' : '连接后保存'}</button>} />
               <div className="grid gap-5 xl:grid-cols-2">
-                {(['google', 'xiaohongshu'] as Platform[]).map((platform) => {
+                {PLATFORM_ORDER.map((platform) => {
                   const config = location.platforms[platform];
-                  const google = platform === 'google';
-                  const name = google ? 'Google Reviews' : '小红书笔记';
-                  const ready = config.enabled && Boolean(config.url);
+                  const meta = PLATFORM_META[platform];
+                  const state = platformReadiness(location, platform);
+                  const destinationLabel = platform === 'google'
+                    ? '已验证的 Google Maps 评价链接'
+                    : platform === 'xiaohongshu'
+                      ? '团队维护的小红书发布/主页链接'
+                      : platform === 'yelp'
+                        ? '已验证的 Yelp 商家评价链接'
+                        : 'Instagram 主页或发布链接';
+                  const placeholder = platform === 'google'
+                    ? 'https://www.google.com/maps/...'
+                    : platform === 'xiaohongshu'
+                      ? '暂未配置；可先使用搜索兜底'
+                      : platform === 'yelp'
+                        ? 'https://www.yelp.com/biz/...'
+                        : 'https://www.instagram.com/...';
                   return (
                     <div key={platform} className="rounded-3xl border border-[#ebe2d6] bg-white p-5 sm:p-6">
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex gap-3">
-                          <div className={google ? 'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#e8f0fe] text-sm font-bold text-[#3968c5]' : 'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#fff0f2] text-sm font-bold text-[#d44f67]'}>{google ? 'G' : '红'}</div>
+                          <div className={'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-sm font-bold ' + meta.surfaceClass + ' ' + meta.textClass}>{meta.shortLabel}</div>
                           <div>
-                            <p className="text-sm font-semibold text-[#443a31]">{name}</p>
-                            <p className="mt-1 text-xs leading-5 text-[#887b70]">{google ? '英文评价页会复制草稿后打开此 Maps 链接。' : '中文笔记页会复制草稿后前往团队配置的发布链接。'}</p>
+                            <p className="text-sm font-semibold text-[#443a31]">{meta.label}</p>
+                            <p className="mt-1 text-xs leading-5 text-[#887b70]">{meta.description}</p>
                           </div>
                         </div>
-                        <Toggle checked={config.enabled} onChange={() => updatePlatform(platform, { enabled: !config.enabled })} label={'启用 ' + name} />
+                        <Toggle checked={config.enabled} onChange={() => updatePlatform(platform, { enabled: !config.enabled })} label={'启用 ' + meta.label} />
                       </div>
                       <div className="mt-5 space-y-4">
                         <label className="block text-xs font-semibold text-[#65594e]">
-                          {google ? '已验证的 Google Maps 评价链接' : '团队维护的小红书发布/主页链接'}
-                          <input value={config.url} onChange={(event) => updatePlatform(platform, { url: event.target.value })} placeholder={google ? 'https://www.google.com/maps/...' : '暂未配置，顾客端将使用搜索兜底'} className="mt-1.5 h-11 w-full rounded-xl border border-[#e4dbcf] bg-[#fffdfa] px-3 text-xs text-[#4a3f36] outline-none focus:border-[#aa7956]" />
+                          {destinationLabel}
+                          <input value={config.url} onChange={(event) => updatePlatform(platform, { url: event.target.value })} placeholder={placeholder} className="mt-1.5 h-11 w-full rounded-xl border border-[#e4dbcf] bg-[#fffdfa] px-3 text-xs text-[#4a3f36] outline-none focus:border-[#aa7956]" />
                         </label>
                         <label className="block text-xs font-semibold text-[#65594e]">
                           发布提示
                           <textarea value={config.hint} onChange={(event) => updatePlatform(platform, { hint: event.target.value })} rows={2} className="mt-1.5 w-full resize-none rounded-xl border border-[#e4dbcf] bg-[#fffdfa] px-3 py-2.5 text-xs leading-5 text-[#4a3f36] outline-none focus:border-[#aa7956]" />
                         </label>
                         <div className="flex flex-wrap items-center gap-2">
-                          <Pill active={ready}>{ready ? '已启用且已配置' : config.enabled ? '已启用，等待链接' : '暂未启用'}</Pill>
-                          {!google && !config.url && <a href={xiaohongshuFallback} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#a05c69] hover:text-[#7f3d4b]">查看搜索兜底 <ExternalLink className="h-3 w-3" /></a>}
+                          <Pill active={state.ready}>{state.label}</Pill>
+                          {platform === 'xiaohongshu' && !config.url && <a href={xiaohongshuFallback} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#a05c69] hover:text-[#7f3d4b]">查看搜索兜底 <ExternalLink className="h-3 w-3" /></a>}
                           {config.url && <button type="button" onClick={() => copy(platform + '-url', config.url)} className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#8c6242] hover:text-[#543d2c]">{copied === platform + '-url' ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}{copied === platform + '-url' ? '已复制' : '复制链接'}</button>}
+                          {config.url && <button type="button" onClick={() => openPlatformDestination(platform)} className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#8c6242] hover:text-[#543d2c]"><ExternalLink className="h-3 w-3" /> 验证去向</button>}
                         </div>
                       </div>
                     </div>
@@ -1313,14 +1670,14 @@ export default function DashboardPage() {
               </div>
               <div className="rounded-3xl border border-[#e4d6c7] bg-[#fbf5ec] p-5 text-sm leading-6 text-[#75685c]">
                 <p className="font-semibold text-[#594839]">安全说明</p>
-                <p className="mt-1 text-xs">此页不收集、不展示，也不把 Google 或 Groq API Key 写入浏览器。密钥只应在未来的服务端环境变量中配置。</p>
+                <p className="mt-1 text-xs">此页不收集、不展示，也不把 Google、Yelp、Instagram、DeepSeek 或 Groq 的密钥写入浏览器。外部平台链接只用于顾客完成文案后的主动跳转，系统不会替顾客自动发布。</p>
               </div>
             </div>
           )}
 
           {panel === 'studio' && (
             <div className="space-y-7">
-              <SectionHeading eyebrow="Content studio" title="平台专属内容工作台" description="先写下真实感受，再选服务与体验标签。体验模式不依赖 Groq Key，也不会编造价格、疗效或到店细节。" />
+              <SectionHeading eyebrow="Content studio" title="平台专属内容工作台" description="先写下真实感受，再选服务与体验标签。没有 AI Key 时仍可使用安全模板；不会编造价格、疗效或到店细节。" />
               <div className="grid gap-6 xl:grid-cols-[0.88fr_1.12fr]">
                 <div className="rounded-3xl border border-[#ebe2d6] bg-white p-5 sm:p-6">
                   <div className="flex items-center gap-2">
@@ -1359,7 +1716,7 @@ export default function DashboardPage() {
                       <button type="button" onClick={addTag} className="inline-flex h-9 items-center gap-1 rounded-xl border border-[#dbc4ad] bg-white px-3 text-xs font-semibold text-[#735039]"><Tags className="h-3.5 w-3.5" /> 添加</button>
                     </div>
                   </div>
-                  <button type="button" onClick={generateDrafts} className="mt-6 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#3d332b] text-xs font-semibold text-white transition hover:bg-[#55463b]"><Sparkles className="h-4 w-4" /> 生成两种平台草稿</button>
+                  <button type="button" onClick={generateDrafts} className="mt-6 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#3d332b] text-xs font-semibold text-white transition hover:bg-[#55463b]"><Sparkles className="h-4 w-4" /> 生成四种平台草稿</button>
                 </div>
 
                 <div className="rounded-3xl border border-[#e5d9ca] bg-[#f9f3ea] p-5 sm:p-6">
@@ -1368,23 +1725,28 @@ export default function DashboardPage() {
                       <p className="text-sm font-semibold text-[#453a31]">平台预览</p>
                       <p className="mt-1 text-xs leading-5 text-[#887b70]">不同平台用不同语言、长度和节奏，但都保留人的表达。</p>
                     </div>
-                    <div className="inline-flex rounded-xl border border-[#e5d8c9] bg-white p-1">
-                      <button type="button" onClick={() => setDraftPlatform('google')} className={draftPlatform === 'google' ? 'rounded-lg bg-[#e8f0fe] px-3 py-1.5 text-xs font-semibold text-[#3868c4]' : 'rounded-lg px-3 py-1.5 text-xs font-semibold text-[#88796c]'}>Google · EN</button>
-                      <button type="button" onClick={() => setDraftPlatform('xiaohongshu')} className={draftPlatform === 'xiaohongshu' ? 'rounded-lg bg-[#fff0f2] px-3 py-1.5 text-xs font-semibold text-[#ce5367]' : 'rounded-lg px-3 py-1.5 text-xs font-semibold text-[#88796c]'}>小红书 · 中文</button>
+                    <div className="flex max-w-full flex-wrap rounded-xl border border-[#e5d8c9] bg-white p-1">
+                      {PLATFORM_ORDER.map((platform) => {
+                        const meta = PLATFORM_META[platform];
+                        const active = draftPlatform === platform;
+                        return (
+                          <button key={platform} type="button" onClick={() => setDraftPlatform(platform)} className={active ? 'rounded-lg px-3 py-1.5 text-xs font-semibold ' + meta.surfaceClass + ' ' + meta.textClass : 'rounded-lg px-3 py-1.5 text-xs font-semibold text-[#88796c]'}>{DRAFT_PREVIEW_COPY[platform].tab}</button>
+                        );
+                      })}
                     </div>
                   </div>
                   <div className="mt-5 rounded-2xl border border-[#e8dfd4] bg-white p-4 sm:p-5">
                     <div className="flex items-center justify-between gap-3 border-b border-[#f0e8de] pb-3">
                       <div className="flex items-center gap-2">
-                        <div className={draftPlatform === 'google' ? 'flex h-7 w-7 items-center justify-center rounded-lg bg-[#e8f0fe] text-[11px] font-bold text-[#3868c4]' : 'flex h-7 w-7 items-center justify-center rounded-lg bg-[#fff0f2] text-[11px] font-bold text-[#ce5367]'}>{draftPlatform === 'google' ? 'G' : '红'}</div>
-                        <span className="text-xs font-semibold text-[#594c40]">{draftPlatform === 'google' ? 'Google review draft' : '小红书笔记草稿'}</span>
+                        <div className={'flex h-7 w-7 items-center justify-center rounded-lg text-[11px] font-bold ' + draftPlatformMeta.surfaceClass + ' ' + draftPlatformMeta.textClass}>{draftPlatformMeta.shortLabel}</div>
+                        <span className="text-xs font-semibold text-[#594c40]">{draftPreview.title}</span>
                       </div>
                       <Pill active={Boolean(drafts[draftPlatform])}>{drafts[draftPlatform] ? '已生成' : '等待输入'}</Pill>
                     </div>
-                    <textarea value={drafts[draftPlatform]} onChange={(event) => setDraftsByLocation((current) => ({ ...current, [location.id]: { ...drafts, [draftPlatform]: event.target.value } }))} rows={draftPlatform === 'google' ? 9 : 12} placeholder={draftPlatform === 'google' ? '填写体验并生成后，英文评价会出现在这里。' : '填写体验并生成后，中文笔记会出现在这里。'} className="mt-4 w-full resize-none border-0 bg-transparent p-0 text-sm leading-7 text-[#4e4339] outline-none placeholder:text-[#b2a69a]" />
+                    <textarea value={drafts[draftPlatform]} onChange={(event) => setDraftsByLocation((current) => ({ ...current, [location.id]: { ...drafts, [draftPlatform]: event.target.value } }))} rows={draftPreview.rows} placeholder={draftPreview.placeholder} className="mt-4 w-full resize-none border-0 bg-transparent p-0 text-sm leading-7 text-[#4e4339] outline-none placeholder:text-[#b2a69a]" />
                     <div className="mt-4 flex flex-col gap-2 border-t border-[#f0e8de] pt-4 sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-[11px] leading-5 text-[#97897c]">AI 可能出错，请以实际体验为准并在发布前核对。</p>
-                      <button type="button" disabled={!drafts[draftPlatform]} onClick={() => copy('draft-' + draftPlatform, drafts[draftPlatform])} className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#3d332b] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#55463b] disabled:cursor-not-allowed disabled:opacity-40">
+                      <button type="button" disabled={!drafts[draftPlatform]} onClick={() => copy('draft-' + draftPlatform, drafts[draftPlatform], draftPlatform)} className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#3d332b] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#55463b] disabled:cursor-not-allowed disabled:opacity-40">
                         {copied === 'draft-' + draftPlatform ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                         {copied === 'draft-' + draftPlatform ? '已复制' : '复制草稿'}
                       </button>
@@ -1403,10 +1765,10 @@ export default function DashboardPage() {
                   <div className="flex items-center justify-between"><p className="text-sm font-semibold text-[#443a31]">手工/演示评价流</p><span className="text-xs text-[#918477]">{String(reviewFeed.length)} 条</span></div>
                   <div className="mt-4 space-y-3">
                     {reviewFeed.map((review) => (
-                      <button key={review.id} type="button" onClick={() => { setReplySourceByLocation((current) => ({ ...current, [location.id]: review.text })); setReplyPlatformByLocation((current) => ({ ...current, [location.id]: review.platform === 'Google' ? 'google' : 'xiaohongshu' })); }} className="w-full rounded-2xl border border-[#eee5da] bg-[#fffdfa] p-4 text-left transition hover:border-[#d8c1aa] hover:bg-[#fdf8f1]">
+                      <button key={review.id} type="button" onClick={() => { setReplySourceByLocation((current) => ({ ...current, [location.id]: review.text })); setReplyPlatformByLocation((current) => ({ ...current, [location.id]: review.platform })); }} className="w-full rounded-2xl border border-[#eee5da] bg-[#fffdfa] p-4 text-left transition hover:border-[#d8c1aa] hover:bg-[#fdf8f1]">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="text-xs font-semibold text-[#4c4036]">{review.guest}</span>
-                          <span className={review.platform === 'Google' ? 'rounded-full bg-[#e9f0fe] px-2 py-0.5 text-[10px] font-semibold text-[#4a6fbc]' : 'rounded-full bg-[#fff0f2] px-2 py-0.5 text-[10px] font-semibold text-[#c55a69]'}>{review.platform}</span>
+                          <span className={'rounded-full px-2 py-0.5 text-[10px] font-semibold ' + PLATFORM_META[review.platform].surfaceClass + ' ' + PLATFORM_META[review.platform].textClass}>{PLATFORM_META[review.platform].label}</span>
                           <span className="text-[11px] text-[#bd863a]">{'★'.repeat(review.rating)}</span>
                         </div>
                         <p className="mt-2 text-xs leading-5 text-[#706459]">{review.text}</p>

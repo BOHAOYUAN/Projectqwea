@@ -4,13 +4,13 @@
  * clients never need a database dependency.
  */
 
-export const PLATFORM_KEYS = ['google', 'xiaohongshu'] as const;
+export const PLATFORM_KEYS = ['google', 'xiaohongshu', 'yelp', 'instagram'] as const;
 
 export type PlatformKey = (typeof PLATFORM_KEYS)[number];
-export type PersistencePlatform = 'GOOGLE' | 'XIAOHONGSHU';
+export type PersistencePlatform = 'GOOGLE' | 'XIAOHONGSHU' | 'YELP' | 'INSTAGRAM';
 export type MerchantStatus = 'draft' | 'active' | 'archived';
 export type MembershipRole = 'owner' | 'admin' | 'editor' | 'analyst' | 'viewer';
-export type GenerationProvider = 'local' | 'groq';
+export type GenerationProvider = 'local' | 'groq' | 'deepseek';
 export type ReplyDraftStatus = 'draft' | 'approved' | 'sent' | 'archived';
 export type ReviewSource = 'manual' | 'demo' | 'api';
 
@@ -200,11 +200,17 @@ export interface PublicReviewPage {
 }
 
 export function toPersistencePlatform(platform: PlatformKey): PersistencePlatform {
-  return platform === 'google' ? 'GOOGLE' : 'XIAOHONGSHU';
+  if (platform === 'google') return 'GOOGLE';
+  if (platform === 'xiaohongshu') return 'XIAOHONGSHU';
+  if (platform === 'yelp') return 'YELP';
+  return 'INSTAGRAM';
 }
 
 export function fromPersistencePlatform(platform: PersistencePlatform): PlatformKey {
-  return platform === 'GOOGLE' ? 'google' : 'xiaohongshu';
+  if (platform === 'GOOGLE') return 'google';
+  if (platform === 'XIAOHONGSHU') return 'xiaohongshu';
+  if (platform === 'YELP') return 'yelp';
+  return 'instagram';
 }
 
 export function isPlatformKey(value: unknown): value is PlatformKey {

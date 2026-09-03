@@ -12,7 +12,17 @@ type PublicReviewAgentPageProps = {
 };
 
 function toPlatform(value: string): PublicReviewPlatform | null {
-  return value === 'google' || value === 'xiaohongshu' ? value : null;
+  return value === 'google' || value === 'xiaohongshu' || value === 'yelp' || value === 'instagram'
+    ? value
+    : null;
+}
+
+function platformPageTitle(platform: PublicReviewPlatform | null) {
+  if (platform === 'google') return 'Google review';
+  if (platform === 'xiaohongshu') return '小红书体验分享';
+  if (platform === 'yelp') return 'Yelp review';
+  if (platform === 'instagram') return 'Instagram caption';
+  return 'Review';
 }
 
 export async function generateMetadata({ params }: PublicReviewAgentPageProps): Promise<Metadata> {
@@ -21,7 +31,7 @@ export async function generateMetadata({ params }: PublicReviewAgentPageProps): 
   const merchant = page ? merchantFromPublicReviewPage(page) : null;
   const platform = toPlatform(rawPlatform);
   return {
-    title: `${merchant?.name || 'Review'} | ${platform === 'google' ? 'Google review' : '小红书体验分享'}`,
+    title: `${merchant?.name || 'Review'} | ${platformPageTitle(platform)}`,
     description: merchant ? `Create an authentic review draft for ${merchant.name}.` : 'Create an authentic review draft.',
   };
 }

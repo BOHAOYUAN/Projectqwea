@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import {
   ChevronRight,
+  Camera,
   Globe2,
   Heart,
   MapPin,
@@ -21,6 +22,8 @@ type ReviewHubProps = {
 export function ReviewHub({ merchant }: ReviewHubProps) {
   const googleHref = publicReviewPlatformPath(merchant, 'google');
   const xiaohongshuHref = publicReviewPlatformPath(merchant, 'xiaohongshu');
+  const yelpHref = publicReviewPlatformPath(merchant, 'yelp');
+  const instagramHref = publicReviewPlatformPath(merchant, 'instagram');
   const brandWords = merchant.name
     .split(/\s+/)
     .filter(Boolean)
@@ -78,6 +81,24 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
             title="分享一篇小红书笔记"
             description="把真实感受整理成有温度的中文体验分享。"
             className="border-[#f2b8bd] from-white to-[#fff4f4] text-[#d64d59] hover:border-[#e77c85]"
+          />
+          <PlatformLink
+            href={yelpHref}
+            available={merchant.platforms.yelp.enabled}
+            icon={<span className="font-serif text-2xl font-bold leading-none">Y</span>}
+            eyebrow="Yelp"
+            title="Write a Yelp review"
+            description="Shape an honest English review, then decide what to post."
+            className="border-[#f1c0bd] from-white to-[#fff7f4] text-[#c74a40] hover:border-[#dd827b]"
+          />
+          <PlatformLink
+            href={instagramHref}
+            available={merchant.platforms.instagram.enabled}
+            icon={<Camera className="h-6 w-6" />}
+            eyebrow="Instagram"
+            title="Create an Instagram caption"
+            description="Turn the details you choose into a grounded caption for your own post."
+            className="border-[#e7bce2] from-white to-[#fff5fb] text-[#b84899] hover:border-[#d982c5]"
           />
         </div>
 

@@ -127,6 +127,45 @@ async function main() {
     },
   });
 
+  // These two channels are intentionally visible to the operator but remain
+  // disabled until MS BEAUTY supplies verified destination URLs. No fake Yelp
+  // or Instagram link is ever exposed on the public customer page.
+  await prisma.platformLink.upsert({
+    where: { locationId_platform: { locationId: location.id, platform: Platform.YELP } },
+    update: {
+      destinationUrl: null,
+      fallbackUrl: null,
+      ctaLabel: 'Write a Yelp review',
+      publishHint: 'Add the verified Yelp business-review link before enabling this channel.',
+      isEnabled: false,
+    },
+    create: {
+      locationId: location.id,
+      platform: Platform.YELP,
+      ctaLabel: 'Write a Yelp review',
+      publishHint: 'Add the verified Yelp business-review link before enabling this channel.',
+      isEnabled: false,
+    },
+  });
+
+  await prisma.platformLink.upsert({
+    where: { locationId_platform: { locationId: location.id, platform: Platform.INSTAGRAM } },
+    update: {
+      destinationUrl: null,
+      fallbackUrl: null,
+      ctaLabel: 'Create an Instagram caption',
+      publishHint: 'Add the verified Instagram profile or publishing destination before enabling this channel.',
+      isEnabled: false,
+    },
+    create: {
+      locationId: location.id,
+      platform: Platform.INSTAGRAM,
+      ctaLabel: 'Create an Instagram caption',
+      publishHint: 'Add the verified Instagram profile or publishing destination before enabling this channel.',
+      isEnabled: false,
+    },
+  });
+
   await prisma.platformLink.upsert({
     where: { locationId_platform: { locationId: location.id, platform: Platform.XIAOHONGSHU } },
     update: {

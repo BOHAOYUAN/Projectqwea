@@ -310,7 +310,7 @@ export async function recordAnonymousGenerationMetric(
           ? location.services.find((service) => service.slug === input.serviceSlug)?.id
           : undefined,
         platform: toPersistencePlatform(input.platform),
-        provider: input.provider === 'groq' ? 'GROQ' : 'LOCAL',
+        provider: input.provider === 'deepseek' ? 'DEEPSEEK' : input.provider === 'groq' ? 'GROQ' : 'LOCAL',
         selectedTags: input.selectedTags.slice(0, 8),
       },
       select: { id: true },

@@ -1,6 +1,14 @@
 import type { PublicReviewPage } from '@/lib/domain/types';
 
-export type PublicReviewPlatform = 'google' | 'xiaohongshu';
+/**
+ * These are deliberately UI-owned rather than a mirror of the current
+ * persistence enum. New channels can arrive in the public DTO gradually; an
+ * unconfigured channel simply stays visible-but-unavailable for a location.
+ */
+export const PUBLIC_REVIEW_PLATFORMS = ['google', 'xiaohongshu', 'yelp', 'instagram'] as const;
+
+export type PublicReviewPlatform = (typeof PUBLIC_REVIEW_PLATFORMS)[number];
+export type PublicReviewVoice = 'natural' | 'concise' | 'warm';
 
 export type PublicReviewService = {
   id: string;
@@ -20,6 +28,7 @@ export type PublicReviewTag = {
 export type PublicReviewPlatformSetup = {
   enabled: boolean;
   destinationUrl?: string;
+  fallbackUrl?: string;
   publishHint?: string;
 };
 
@@ -51,10 +60,13 @@ const DEFAULT_EXPERIENCE_TAGS: PublicReviewTag[] = [
 
 /** Converts the server's anonymous-safe page DTO into the compact UI model. */
 export function merchantFromPublicReviewPage(page: PublicReviewPage): PublicReviewMerchant {
-  const google = page.platforms.find((item) => item.platform === 'google');
-  const xiaohongshu = page.platforms.find((item) => item.platform === 'xiaohongshu');
-  const googleUrl = google?.destinationUrl || google?.fallbackUrl || undefined;
-  const xiaohongshuUrl = xiaohongshu?.destinationUrl || xiaohongshu?.fallbackUrl || undefined;
+  // A public page can expose any enabled channel. Keeping lookup optional
+  // means older locations simply show the newer cards as unavailable.
+  const publicPlatforms: Array<PublicPlatformSource & { platform: string }> = page.platforms;
+  const google = publicPlatforms.find((item) => item.platform === 'google');
+  const xiaohongshu = publicPlatforms.find((item) => item.platform === 'xiaohongshu');
+  const yelp = publicPlatforms.find((item) => item.platform === 'yelp');
+  const instagram = publicPlatforms.find((item) => item.platform === 'instagram');
   const address = [
     page.location.addressLine1,
     page.location.addressLine2,
@@ -76,17 +88,12 @@ export function merchantFromPublicReviewPage(page: PublicReviewPage): PublicRevi
     showAddress: page.config.showAddress,
     reviewDisclosure: page.config.reviewDisclosure || undefined,
     platforms: {
-      google: {
-        enabled: Boolean(googleUrl),
-        destinationUrl: googleUrl,
-        publishHint: google?.publishHint || undefined,
-      },
-      xiaohongshu: {
-        // A configured Xiaohongshu integration may deliberately use a web-search fallback.
-        enabled: Boolean(xiaohongshu),
-        destinationUrl: xiaohongshuUrl,
-        publishHint: xiaohongshu?.publishHint || undefined,
-      },
+      google: toPlatformSetup(google),
+      // A configured Xiaohongshu integration may deliberately use a deep-link
+      // or a web-search fallback, so its presence is sufficient to open it.
+      xiaohongshu: toPlatformSetup(xiaohongshu, { allowConfiguredFallback: true }),
+      yelp: toPlatformSetup(yelp),
+      instagram: toPlatformSetup(instagram),
     },
     services:
       page.services.length > 0
@@ -100,6 +107,28 @@ export function merchantFromPublicReviewPage(page: PublicReviewPage): PublicRevi
           }))
         : [],
     experienceTags: toPublicReviewTags(page.suggestedTags),
+  };
+}
+
+type PublicPlatformSource = {
+  destinationUrl: string | null;
+  fallbackUrl: string | null;
+  publishHint: string | null;
+};
+
+function toPlatformSetup(
+  source: PublicPlatformSource | undefined,
+  options: { allowConfiguredFallback?: boolean } = {},
+): PublicReviewPlatformSetup {
+  const destinationUrl = source?.destinationUrl || undefined;
+  const fallbackUrl = source?.fallbackUrl || undefined;
+  const hasDestination = Boolean(destinationUrl || fallbackUrl);
+
+  return {
+    enabled: Boolean(source && (hasDestination || options.allowConfiguredFallback)),
+    destinationUrl,
+    fallbackUrl,
+    publishHint: source?.publishHint || undefined,
   };
 }
 

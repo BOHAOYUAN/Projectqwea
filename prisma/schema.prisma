@@ -32,11 +32,14 @@ enum MembershipRole {
 enum Platform {
   GOOGLE
   XIAOHONGSHU
+  YELP
+  INSTAGRAM
 }
 
 enum GenerationProvider {
   LOCAL
   GROQ
+  DEEPSEEK
 }
 
 enum ReplyDraftStatus {
