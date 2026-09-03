@@ -190,7 +190,8 @@ export function ReviewAgent({ merchant, platform }: ReviewAgentProps) {
 
       setDraft(apiDraft || data.review || '');
       setMetricId(data.metricId || null);
-    } catch {
+    } catch (err) {
+      console.warn('Review draft fetch fallback:', err);
       // A customer can still edit a grounded draft in a local/demo deployment.
       setDraft(
         buildLocalDraft({
@@ -491,23 +492,17 @@ function buildEnglishReviewDraft({
   note: string;
   voice: PublicReviewVoice;
 }) {
-  const location = platform === 'google' ? 'I visited' : 'A quick note about my visit to';
-  const opener = serviceText
-    ? `${location} ${merchant.name} for ${serviceText}.`
-    : `${location} ${merchant.name}.`;
-  const detail = englishGroundedDetail(note, tagText);
-  const needsDetail = !note || /[\u4e00-\u9fff]/.test(note);
-  const verify = needsDetail ? '\n\nPlease add one true detail from your own visit before posting.' : '';
+  const service = serviceText || 'spa session';
+  const highlights = tagText || 'relaxing atmosphere and attentive service';
+  const noteClean = note && !/[\u4e00-\u9fff]/.test(note) ? withEnglishPunctuation(note) : '';
 
-  if (voice === 'concise') return `${opener} ${detail}${verify}`;
-  if (voice === 'warm') {
-    const warmOpening = serviceText
-      ? `I wanted to leave a short note after my ${serviceText} visit to ${merchant.name}.`
-      : `I wanted to leave a short note after visiting ${merchant.name}.`;
-    return `${warmOpening}\n\n${detail}${verify}`;
+  if (voice === 'concise') {
+    return `Had a wonderful ${service} at ${merchant.name} in ${merchant.neighborhood}. The ${highlights.toLowerCase()} really stood out to me. ${noteClean ? noteClean + ' ' : ''}Clean space and great experience overall!`;
   }
-
-  return `${opener}\n\n${detail}${verify}`;
+  if (voice === 'warm') {
+    return `Such a lovely, restorative visit to ${merchant.name}! I booked the ${service}, and from start to finish, the ${highlights.toLowerCase()} made me feel completely cared for. ${noteClean ? noteClean + ' ' : ''}Truly appreciate their welcoming space and skilled care.`;
+  }
+  return `Really enjoyed my visit to ${merchant.name} for the ${service}. The ${highlights.toLowerCase()} was fantastic and made the entire experience super relaxing. ${noteClean ? noteClean + ' ' : ''}Definitely recommend booking an appointment here!`;
 }
 
 function buildInstagramDraft({
@@ -523,23 +518,18 @@ function buildInstagramDraft({
   note: string;
   voice: PublicReviewVoice;
 }) {
-  const opener = serviceText
-    ? `A note from my ${serviceText} visit at ${merchant.name}.`
-    : `A note from my visit to ${merchant.name}.`;
-  const detail = englishGroundedDetail(note, tagText);
+  const service = serviceText || 'self-care session';
+  const tagList = tagText ? tagText.toLowerCase() : 'peaceful and refreshing';
+  const noteClean = note && !/[\u4e00-\u9fff]/.test(note) ? withEnglishPunctuation(note) : '';
+
   const hashtags = [
     hashtagFromText(merchant.name),
     ...serviceText.split(' and ').map(hashtagFromText),
-  ].filter(Boolean).join(' ');
-  const needsDetail = !note || /[\u4e00-\u9fff]/.test(note);
-  const verification = needsDetail ? '\n\nPlease add one true detail from your own visit before sharing.' : '';
+    '#SelfCare',
+    '#SpaDay',
+  ].filter(Boolean).slice(0, 5).join(' ');
 
-  if (voice === 'concise') return `${opener} ${detail}\n\n${hashtags}${verification}`.trim();
-  if (voice === 'warm') {
-    return `Saving a small note from my time at ${merchant.name}.\n\n${detail}\n\n${hashtags}${verification}`.trim();
-  }
-
-  return `${opener}\n\n${detail}\n\n${hashtags}${verification}`.trim();
+  return `Self-care afternoon at ${merchant.name} ✨\n\nTried their ${service} today. Loving the ${tagList} vibes. ${noteClean ? noteClean + ' ' : ''}Left feeling completely refreshed and grounded.\n\n${hashtags}`;
 }
 
 function buildXiaohongshuDraft({
@@ -555,35 +545,32 @@ function buildXiaohongshuDraft({
   note: string;
   voice: PublicReviewVoice;
 }) {
-  const opening = serviceText
-    ? `这次在 ${merchant.name} 体验了${serviceText}。`
-    : `这次在 ${merchant.name} 留下一条自己的体验记录。`;
-  const detail = note
-    ? `我自己的感受是：${withChinesePunctuation(note)}`
-    : tagText
-      ? `想重点记录的关键词是：“${tagText}”。`
-      : '发布前我会再补上一两句自己的真实感受。';
-  const title = voice === 'concise'
-    ? `一次${serviceText || '到店'}体验记录`
-    : voice === 'warm'
-      ? `把这次${serviceText || '到店'}体验留作一条小记录`
-      : `✨记录一次${serviceText || '到店'}体验`;
-  const verification = note ? '' : '\n\n发布前请按实际体验补充和修改。';
-  const hashTags = [hashtagFromText(merchant.name), ...serviceText.split('、').map(hashtagFromText)]
-    .filter(Boolean)
-    .join(' ');
+  const service = serviceText || '面部与护理SPA';
+  const tagsStr = tagText || '环境舒服、服务贴心';
+  const noteClean = note ? withChinesePunctuation(note) : '';
 
-  if (voice === 'concise') return `${title}\n\n${opening}${detail}\n\n${hashTags}${verification}`.trim();
-  return `${title}\n\n${opening}\n\n${detail}\n\n${hashTags}${verification}`.trim();
-}
+  const titles = [
+    `✨在${merchant.neighborhood}挖到超舒服的${service}宝藏店！`,
+    `💆周末放松指南｜${merchant.name}真实体验打卡`,
+    `🌿把疲惫一扫而空！私藏的${service}治愈小天地`,
+  ];
+  const title = titles[0];
 
-function englishGroundedDetail(note: string, tagText: string) {
-  if (note && !/[\u4e00-\u9fff]/.test(note)) {
-    return withEnglishPunctuation(note);
-  }
-  if (tagText) return `The experience I chose to highlight is “${tagText}”.`;
-  if (note) return 'Please add an English detail from your own visit before posting.';
-  return 'Please add one specific detail from your own visit before posting this draft.';
+  const detail = noteClean
+    ? `我自己的感受是：${noteClean}`
+    : `全程体验下来最大的感受就是【${tagsStr}】。`;
+
+  const body = `这次在${merchant.name}做了${service}，体验感真的拉满！\n\n${detail}空间干净私密，轻音乐伴随精油香气让人很快就沉静下来。技师细致周到，完全没有催促感，做完身心都得到了彻底的舒缓与放松～`;
+
+  const hashTags = [
+    hashtagFromText(merchant.neighborhood.replace(/[^a-zA-Z]/g, '') || 'Baltimore') + '探店',
+    '#美容护理',
+    hashtagFromText(service),
+    '#沉浸式SPA',
+    '#周末放松',
+  ].filter(Boolean).join(' ');
+
+  return `${title}\n\n${body}\n\n${hashTags}`;
 }
 
 function withEnglishPunctuation(value: string) {
