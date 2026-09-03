@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   Camera,
   Check,
+  ChevronDown,
   Copy,
   ExternalLink,
   Globe2,
@@ -103,6 +104,8 @@ export function ReviewAgent({ merchant, platform }: ReviewAgentProps) {
   const labels = getReviewLabels(platform);
   const style = PLATFORM_STYLES[platform];
   const voiceOptions = isChinese ? CHINESE_VOICES : ENGLISH_VOICES;
+  const [step, setStep] = useState<'customize' | 'draft'>('customize');
+  const [showCustomNote, setShowCustomNote] = useState(false);
   const [experience, setExperience] = useState('');
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
@@ -144,8 +147,8 @@ export function ReviewAgent({ merchant, platform }: ReviewAgentProps) {
     if (!experience.trim() && selectedServices.length === 0 && selectedTags.length === 0) {
       setError(
         isChinese
-          ? '先写下一点感受，或选择项目和体验标签，让文案更贴近这次到店体验。'
-          : 'Add a detail, service, or feeling first so the draft can stay true to your visit.',
+          ? '请先选择体验项目或感受标签。'
+          : 'Please select a service or feeling first.',
       );
       return;
     }
@@ -190,6 +193,7 @@ export function ReviewAgent({ merchant, platform }: ReviewAgentProps) {
 
       setDraft(apiDraft || data.review || '');
       setMetricId(data.metricId || null);
+      setStep('draft');
     } catch (err) {
       console.warn('Review draft fetch fallback:', err);
       // A customer can still edit a grounded draft in a local/demo deployment.
@@ -204,9 +208,11 @@ export function ReviewAgent({ merchant, platform }: ReviewAgentProps) {
         }),
       );
       setMetricId(null);
+      setStep('draft');
     } finally {
       setIsGenerating(false);
-      window.setTimeout(() => textareaRef.current?.focus(), 0);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.setTimeout(() => textareaRef.current?.focus(), 100);
     }
   };
 
@@ -219,13 +225,18 @@ export function ReviewAgent({ merchant, platform }: ReviewAgentProps) {
     try {
       await copyText(draft);
       setIsCopied(true);
-      window.setTimeout(() => setIsCopied(false), 2200);
+      window.setTimeout(() => setIsCopied(false), 3000);
       void trackReviewEvent(metricId, 'copied');
 
       const target = getPlatformDestination(merchant, platform);
       if (target) {
         void trackReviewEvent(metricId, 'published');
-        window.open(target, '_blank', 'noopener,noreferrer');
+        if (target.startsWith('http://') || target.startsWith('https://')) {
+          window.open(target, '_blank', 'noopener,noreferrer');
+        } else {
+          // Deep link to native app like xhsdiscover://post or instagram://camera
+          window.location.href = target;
+        }
       }
     } catch {
       setError(isChinese ? '复制失败，请长按文本后手动复制。' : 'Copy did not work. Please select the text and copy it manually.');
@@ -233,157 +244,261 @@ export function ReviewAgent({ merchant, platform }: ReviewAgentProps) {
   };
 
   return (
-    <main className="min-h-screen bg-[#f8efdf] px-4 py-5 text-[#45362d] sm:px-6 sm:py-10">
-      <div className="mx-auto w-full max-w-2xl">
-        <div className="mb-5 flex items-center justify-between sm:mb-8">
-          <Link href={publicReviewPath(merchant)} className="inline-flex items-center gap-1.5 rounded-full border border-[#d7bfa7] bg-[#fffaf3] px-3.5 py-2 text-xs font-semibold text-[#795842] transition hover:bg-white">
-            <ArrowLeft className="h-3.5 w-3.5" />
-            {isChinese ? '返回平台选择' : 'All options'}
-          </Link>
-          <PlatformBadge platform={platform} className={style.badge} />
-        </div>
-
-        <header className="mb-7 text-center sm:mb-9">
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.24em] text-[#a87859]">{merchant.name} · {merchant.neighborhood}</p>
-          <h1 className="font-serif text-3xl leading-tight tracking-[-0.045em] text-[#382a22] sm:text-4xl">{labels.heading}</h1>
-          <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-[#756055]">{labels.subheading}</p>
-        </header>
-
-        <div className="overflow-hidden rounded-[2rem] border border-[#dec9b1] bg-[#fffaf4] shadow-[0_18px_45px_rgba(103,71,48,0.11)]">
-          <section className="border-b border-[#ead8c5] bg-[linear-gradient(135deg,#fffdf8_0%,#f5e5cf_130%)] p-5 sm:p-7">
-            <p className="mb-3 flex items-center gap-2 text-sm font-bold text-[#5b4132]">
-              <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[#9b6b4f] text-white"><WandSparkles className="h-3.5 w-3.5" /></span>
-              {labels.experienceLabel}
-            </p>
-            <textarea
-              value={experience}
-              onChange={(event) => {
-                setExperience(event.target.value);
-                setError('');
-              }}
-              placeholder={labels.experienceHint}
-              rows={4}
-              className="w-full resize-none rounded-2xl border border-[#e4d0b9] bg-white/90 px-4 py-3.5 text-sm leading-6 text-[#4d3b31] outline-none transition placeholder:text-[#aa988a] focus:border-[#a67354] focus:ring-4 focus:ring-[#d9ae8a]/20"
-            />
-            <p className="mt-2 text-[11px] leading-5 text-[#8c7768]">{isChinese ? '真实的几个小细节，比“完美好评”更有说服力。' : 'A few honest details are more helpful than a perfect review.'}</p>
-          </section>
-
-          <section className="p-5 sm:p-7">
-            <div className="mb-3 flex items-end justify-between gap-4">
-              <h2 className="font-serif text-xl text-[#443229]">{labels.serviceLabel}</h2>
-              <span className="text-[11px] text-[#947c6b]">{isChinese ? '最多选两个' : 'Choose up to two'}</span>
-            </div>
-            <div className="grid gap-2.5 sm:grid-cols-3">
-              {merchant.services.map((service) => (
-                <ServiceButton
-                  key={service.id}
-                  service={service}
-                  selected={selectedServiceIds.includes(service.id)}
-                  disabled={!selectedServiceIds.includes(service.id) && selectedServiceIds.length >= maxSelectedServices}
-                  isChinese={isChinese}
-                  onClick={() => toggleService(service.id)}
-                />
-              ))}
+    <main className="min-h-screen bg-[#f8efdf] px-3.5 py-4 text-[#45362d] sm:px-6 sm:py-8 flex flex-col justify-center">
+      <div className="mx-auto w-full max-w-xl">
+        {step === 'customize' ? (
+          /* STEP 1: COMPACT 1-SCREEN SELECTION (手机端一屏) */
+          <div className="flex flex-col justify-between">
+            {/* Top Navigation */}
+            <div className="mb-2.5 flex items-center justify-between">
+              <Link
+                href={publicReviewPath(merchant)}
+                className="inline-flex items-center gap-1 rounded-full border border-[#d7bfa7] bg-[#fffaf3] px-3 py-1.5 text-xs font-semibold text-[#795842] transition hover:bg-white active:scale-95 shadow-xs"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                {isChinese ? '返回平台选择' : 'All options'}
+              </Link>
+              <PlatformBadge platform={platform} className={style.badge} />
             </div>
 
-            <div className="mt-7">
-              <h2 className="mb-3 font-serif text-xl text-[#443229]">{labels.tagLabel}</h2>
-              <div className="flex flex-wrap gap-2">
-                {merchant.experienceTags.map((tag) => {
-                  const selected = selectedTagIds.includes(tag.id);
-                  return (
-                    <button
-                      key={tag.id}
-                      type="button"
-                      aria-pressed={selected}
-                      onClick={() => toggleTag(tag.id)}
-                      className={`inline-flex min-h-10 items-center gap-1.5 rounded-full border px-3.5 py-2 text-xs font-semibold transition ${selected ? 'border-[#9d6d50] bg-[#9d6d50] text-white shadow-sm' : 'border-[#e5d3c0] bg-white text-[#785f4e] hover:border-[#bf9778] hover:bg-[#fff7ec]'}`}
-                    >
-                      {selected && <Check className="h-3.5 w-3.5" />}
-                      {isChinese ? tag.label : tag.googleLabel}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            {/* Header Banner */}
+            <header className="mb-3 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#a87859]">
+                {merchant.name} · {merchant.neighborhood}
+              </p>
+              <h1 className="font-serif text-2xl sm:text-3xl leading-tight tracking-[-0.03em] text-[#382a22]">
+                {labels.heading}
+              </h1>
+              <p className="mx-auto mt-1 max-w-md text-xs leading-relaxed text-[#756055]">
+                {labels.subheading}
+              </p>
+            </header>
 
-            <div className="mt-7">
-              <h2 className="mb-3 font-serif text-xl text-[#443229]">{labels.voiceLabel}</h2>
-              <div className="grid gap-2 sm:grid-cols-3">
-                {voiceOptions.map((option) => {
-                  const selected = voice === option.value;
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      aria-pressed={selected}
-                      onClick={() => setVoice(option.value)}
-                      className={`min-h-16 rounded-2xl border px-3 py-2.5 text-left transition ${selected ? 'border-[#9d6d50] bg-[#fff4e7] shadow-sm ring-2 ring-[#c99b78]/20' : 'border-[#ead8c5] bg-white hover:border-[#c69f80]'}`}
-                    >
-                      <span className="block text-xs font-bold text-[#5a4234]">{option.label}</span>
-                      <span className="mt-1 block text-[10px] leading-4 text-[#927a6a]">{option.detail}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {error && <p role="alert" className="mt-5 rounded-xl border border-[#eac2bb] bg-[#fff1ee] px-3.5 py-3 text-xs leading-5 text-[#a04339]">{error}</p>}
-
-            <button
-              type="button"
-              disabled={isGenerating}
-              onClick={() => void generateDraft()}
-              className={`mt-7 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-sm font-bold text-white shadow-sm transition active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 ${style.primaryButton}`}
-            >
-              {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              {isGenerating ? (isChinese ? '正在整理你的笔记…' : 'Writing your draft…') : labels.generate}
-            </button>
-          </section>
-
-          <section className="border-t border-[#ead8c5] bg-[#fffdf9] p-5 sm:p-7">
-            <div className="mb-3 flex items-center justify-between gap-3">
+            {/* Main Selection Card */}
+            <div className="overflow-hidden rounded-3xl border border-[#dec9b1] bg-[#fffaf4] p-4 sm:p-5 shadow-[0_12px_32px_rgba(103,71,48,0.08)] space-y-3.5">
+              {/* 1. Services */}
               <div>
-                <h2 className="font-serif text-xl text-[#443229]">{labels.draftLabel}</h2>
-                <p className="mt-1 text-[11px] text-[#90796a]">{labels.draftHint}</p>
+                <div className="mb-1.5 flex items-center justify-between">
+                  <h2 className="text-xs font-bold uppercase tracking-wider text-[#543f33]">
+                    {labels.serviceLabel}
+                  </h2>
+                  <span className="text-[10px] text-[#947c6b]">
+                    {isChinese ? '最多选两项' : 'Choose up to 2'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {merchant.services.map((service) => (
+                    <ServiceButton
+                      key={service.id}
+                      service={service}
+                      selected={selectedServiceIds.includes(service.id)}
+                      disabled={!selectedServiceIds.includes(service.id) && selectedServiceIds.length >= maxSelectedServices}
+                      isChinese={isChinese}
+                      onClick={() => toggleService(service.id)}
+                    />
+                  ))}
+                </div>
               </div>
+
+              {/* 2. Feelings & Tags */}
+              <div>
+                <h2 className="mb-1.5 text-xs font-bold uppercase tracking-wider text-[#543f33]">
+                  {labels.tagLabel}
+                </h2>
+                <div className="flex flex-wrap gap-1.5">
+                  {merchant.experienceTags.map((tag) => {
+                    const selected = selectedTagIds.includes(tag.id);
+                    return (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => toggleTag(tag.id)}
+                        className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-medium transition active:scale-95 ${
+                          selected
+                            ? 'border-[#9d6d50] bg-[#9d6d50] text-white shadow-xs'
+                            : 'border-[#e5d3c0] bg-white text-[#785f4e] hover:border-[#bf9778] hover:bg-[#fff7ec]'
+                        }`}
+                      >
+                        {selected && <Check className="h-3 w-3" />}
+                        {isChinese ? tag.label : tag.googleLabel}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 3. Tone / Voice */}
+              <div>
+                <h2 className="mb-1.5 text-xs font-bold uppercase tracking-wider text-[#543f33]">
+                  {labels.voiceLabel}
+                </h2>
+                <div className="grid grid-cols-3 gap-1.5 rounded-xl bg-[#f0e4d4]/60 p-1 border border-[#e8d7c4]">
+                  {voiceOptions.map((option) => {
+                    const selected = voice === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setVoice(option.value)}
+                        className={`rounded-lg py-1.5 text-center text-xs font-bold transition ${
+                          selected
+                            ? 'bg-white text-[#5a4234] shadow-xs'
+                            : 'text-[#876e5d] hover:text-[#5a4234]'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 4. Collapsible Personal Note (下移且默认折叠) */}
+              <div className="pt-2 border-t border-[#f0e1d0]">
+                <button
+                  type="button"
+                  onClick={() => setShowCustomNote(!showCustomNote)}
+                  className="flex items-center justify-between w-full py-1 text-xs font-semibold text-[#8c6b54] hover:text-[#5b4132] transition"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <WandSparkles className="h-3.5 w-3.5 text-[#a87557]" />
+                    {showCustomNote
+                      ? (isChinese ? '收起补充细节' : 'Hide custom note')
+                      : (isChinese ? '+ 补充自定义细节（选填）' : '+ Add custom detail (optional)')}
+                  </span>
+                  <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${showCustomNote ? 'rotate-180' : ''}`} />
+                </button>
+
+                {showCustomNote && (
+                  <div className="mt-2">
+                    <textarea
+                      value={experience}
+                      onChange={(event) => {
+                        setExperience(event.target.value);
+                        setError('');
+                      }}
+                      placeholder={labels.experienceHint}
+                      rows={3}
+                      className="w-full resize-none rounded-xl border border-[#e4d0b9] bg-white px-3.5 py-2.5 text-xs sm:text-sm leading-relaxed text-[#4d3b31] outline-none transition placeholder:text-[#aa988a] focus:border-[#a67354] focus:ring-2 focus:ring-[#d9ae8a]/20"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {error && (
+                <p role="alert" className="rounded-xl border border-[#eac2bb] bg-[#fff1ee] px-3 py-2 text-xs leading-5 text-[#a04339]">
+                  {error}
+                </p>
+              )}
+
+              {/* 5. Bottom Generate Button */}
               <button
                 type="button"
-                disabled={isGenerating || (!draft && !experience && selectedServices.length === 0 && selectedTags.length === 0)}
+                disabled={isGenerating}
+                onClick={() => void generateDraft()}
+                className={`flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-sm font-bold text-white shadow-md transition active:scale-[0.99] disabled:cursor-wait disabled:opacity-75 ${style.primaryButton}`}
+              >
+                {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                {isGenerating
+                  ? (isChinese ? '正在撰写笔记中…' : 'Writing your draft…')
+                  : (isChinese ? '✨ 生成好评草稿' : labels.generate)}
+              </button>
+            </div>
+
+            {merchant.showAddress !== false && (
+              <footer className="mt-3 flex items-center justify-center gap-1.5 text-center text-[10px] text-[#947e6e]">
+                <MapPin className="h-3 w-3" /> {merchant.address}
+              </footer>
+            )}
+          </div>
+        ) : (
+          /* STEP 2: REVIEW DRAFT RESULT CARD (第二张图片独立页) */
+          <div className="flex flex-col justify-between">
+            {/* Step 2 Top Bar: Back & Regenerate */}
+            <div className="mb-3 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setStep('customize')}
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#d7bfa7] bg-[#fffaf3] px-3.5 py-1.5 text-xs font-semibold text-[#795842] transition hover:bg-white active:scale-95 shadow-xs"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                {isChinese ? '返回修改' : 'Back / Edit'}
+              </button>
+
+              <button
+                type="button"
+                disabled={isGenerating}
                 onClick={() => void generateDraft(variation + 1)}
-                className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-xl border border-[#dfc8b0] bg-white px-3 py-2 text-[11px] font-bold text-[#795842] transition hover:bg-[#fff6eb] disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#dfc8b0] bg-white px-3.5 py-1.5 text-xs font-bold text-[#795842] transition hover:bg-[#fff6eb] active:scale-95 disabled:opacity-50 shadow-xs"
               >
                 <RefreshCw className={`h-3.5 w-3.5 ${isGenerating ? 'animate-spin' : ''}`} />
                 {labels.refresh}
               </button>
             </div>
-            <textarea
-              ref={textareaRef}
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-              placeholder={getDraftPlaceholder(platform)}
-              rows={isChinese || platform === 'instagram' ? 10 : 8}
-              className="w-full resize-y rounded-2xl border border-[#e4d0b9] bg-white px-4 py-3.5 text-sm leading-6 text-[#4d3b31] outline-none transition placeholder:text-[#b09d8e] focus:border-[#a67354] focus:ring-4 focus:ring-[#d9ae8a]/20"
-            />
-            <p className="mt-3 flex items-start gap-1.5 text-[11px] leading-5 text-[#8d7667]"><ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#9d775d]" />{merchant.platforms[platform].publishHint || merchant.reviewDisclosure || labels.guardrail}</p>
-            <button
-              type="button"
-              disabled={!draft.trim() || isGenerating}
-              onClick={() => void copyAndOpen()}
-              className={`mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-sm font-bold text-white shadow-sm transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40 ${style.copyButton}`}
-            >
-              {isCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-              {isCopied ? getCopiedLabel(platform) : labels.copyAndOpen}
-              <ExternalLink className="h-3.5 w-3.5 opacity-75" />
-            </button>
-          </section>
-        </div>
 
-        {merchant.showAddress !== false && (
-          <footer className="mt-6 flex items-center justify-center gap-1.5 text-center text-[11px] text-[#947e6e]">
-            <MapPin className="h-3.5 w-3.5" /> {merchant.address}
-            <MessageCircleHeart className="ml-1 h-3.5 w-3.5" />
-          </footer>
+            {/* Step 2 Draft Container */}
+            <div className="overflow-hidden rounded-3xl border border-[#dec9b1] bg-[#fffaf4] p-5 sm:p-7 shadow-[0_16px_40px_rgba(103,71,48,0.1)] space-y-4">
+              <div>
+                <div className="flex items-center justify-between">
+                  <h2 className="font-serif text-2xl text-[#382a22] tracking-tight">
+                    {labels.draftLabel}
+                  </h2>
+                  <PlatformBadge platform={platform} className={style.badge} />
+                </div>
+                <p className="mt-1 text-xs text-[#8c7768]">
+                  {labels.draftHint}
+                </p>
+              </div>
+
+              <div className="relative">
+                <textarea
+                  ref={textareaRef}
+                  value={draft}
+                  onChange={(event) => setDraft(event.target.value)}
+                  placeholder={getDraftPlaceholder(platform)}
+                  rows={isChinese || platform === 'instagram' ? 10 : 7}
+                  className="w-full resize-none rounded-2xl border border-[#e4d0b9] bg-white p-4 text-[14.5px] leading-relaxed text-[#4d3b31] outline-none transition placeholder:text-[#b09d8e] focus:border-[#a67354] focus:ring-4 focus:ring-[#d9ae8a]/20 shadow-inner"
+                />
+              </div>
+
+              <p className="flex items-start gap-1.5 text-[11px] leading-5 text-[#8d7667]">
+                <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#9d775d]" />
+                {merchant.platforms[platform].publishHint || merchant.reviewDisclosure || labels.guardrail}
+              </p>
+
+              {isCopied && (
+                <div className="flex items-center justify-center gap-2 rounded-xl bg-[#ecfdf5] border border-[#a7f3d0] py-2 px-3 text-xs font-semibold text-[#065f46]">
+                  <Check className="h-4 w-4 text-[#059669]" />
+                  {getCopiedLabel(platform)}
+                </div>
+              )}
+
+              {error && (
+                <p role="alert" className="rounded-xl border border-[#eac2bb] bg-[#fff1ee] px-3 py-2 text-xs leading-5 text-[#a04339]">
+                  {error}
+                </p>
+              )}
+
+              {/* Big Action Button */}
+              <button
+                type="button"
+                disabled={!draft.trim() || isGenerating}
+                onClick={() => void copyAndOpen()}
+                className={`flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-sm font-bold text-white shadow-lg transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40 ${style.copyButton}`}
+              >
+                {isCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                {isCopied ? getCopiedLabel(platform) : labels.copyAndOpen}
+                <ExternalLink className="h-3.5 w-3.5 opacity-80" />
+              </button>
+            </div>
+
+            {merchant.showAddress !== false && (
+              <footer className="mt-3 flex items-center justify-center gap-1.5 text-center text-[10px] text-[#947e6e]">
+                <MapPin className="h-3 w-3" /> {merchant.address}
+              </footer>
+            )}
+          </div>
         )}
       </div>
     </main>
@@ -439,12 +554,26 @@ function ServiceButton({ service, selected, disabled, isChinese, onClick }: Serv
       aria-pressed={selected}
       disabled={disabled}
       onClick={onClick}
-      className={`relative min-h-28 overflow-hidden rounded-2xl border p-3 text-left transition ${selected ? 'border-[#a87557] bg-[#fff7ec] shadow-sm ring-2 ring-[#c99b78]/25' : 'border-[#ead8c5] bg-white hover:border-[#c69f80]'} ${disabled ? 'cursor-not-allowed opacity-40' : ''}`}
+      className={`relative overflow-hidden rounded-xl border p-2 text-left transition flex flex-col justify-between min-h-[64px] active:scale-95 ${
+        selected
+          ? 'border-[#a87557] bg-[#fff7ec] shadow-xs ring-2 ring-[#c99b78]/25'
+          : 'border-[#ead8c5] bg-white hover:border-[#c69f80]'
+      } ${disabled ? 'cursor-not-allowed opacity-40' : ''}`}
     >
-      <span aria-hidden className={`absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r ${service.accent}`} />
-      {selected && <span className="absolute right-2.5 top-2.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#9d6d50] text-white"><Check className="h-3 w-3" /></span>}
-      <span className="mt-2 block text-sm font-bold text-[#543f33]">{isChinese ? service.name : service.englishName}</span>
-      <span className="mt-1.5 block text-[11px] leading-4 text-[#90796a]">{isChinese ? service.chineseDescription : service.description}</span>
+      <span aria-hidden className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${service.accent}`} />
+      <div className="flex items-start justify-between gap-1 mt-1">
+        <span className="block text-xs font-bold text-[#543f33] leading-tight line-clamp-1">
+          {isChinese ? service.name : service.englishName}
+        </span>
+        {selected && (
+          <span className="shrink-0 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#9d6d50] text-white">
+            <Check className="h-2.5 w-2.5" />
+          </span>
+        )}
+      </div>
+      <span className="mt-1 block text-[10px] leading-tight text-[#90796a] line-clamp-1">
+        {isChinese ? service.chineseDescription : service.description}
+      </span>
     </button>
   );
 }
@@ -600,7 +729,7 @@ function getReviewLabels(platform: PublicReviewPlatform): ReviewLabels {
       refresh: '换一个写法',
       draftLabel: '你的笔记草稿',
       draftHint: '可以直接修改，让它更像你本人。',
-      copyAndOpen: '复制并前往小红书',
+      copyAndOpen: '复制并去小红书发布',
       guardrail: '发布前请仔细核对和修改。页面不会自动替你发布。',
     };
   }
@@ -618,7 +747,7 @@ function getReviewLabels(platform: PublicReviewPlatform): ReviewLabels {
       refresh: 'Try another version',
       draftLabel: 'Your caption draft',
       draftHint: 'Edit anything until it sounds like you.',
-      copyAndOpen: 'Copy & open Instagram',
+      copyAndOpen: 'Copy & Open Instagram',
       guardrail: 'Please read and edit your caption before sharing. Nothing is posted automatically.',
     };
   }
@@ -636,7 +765,7 @@ function getReviewLabels(platform: PublicReviewPlatform): ReviewLabels {
       refresh: 'Try another version',
       draftLabel: 'Your review draft',
       draftHint: 'Edit anything until it sounds like you.',
-      copyAndOpen: 'Copy & open Yelp',
+      copyAndOpen: 'Copy & Write Review on Yelp',
       guardrail: 'Please read and edit your review before sharing. Nothing is posted automatically.',
     };
   }
@@ -653,7 +782,7 @@ function getReviewLabels(platform: PublicReviewPlatform): ReviewLabels {
     refresh: 'Try another version',
     draftLabel: 'Your review draft',
     draftHint: 'Edit anything until it sounds like you.',
-    copyAndOpen: 'Copy & open Google Maps',
+    copyAndOpen: 'Copy & Write Review on Google Maps',
     guardrail: 'Please read and edit your review before sharing. Nothing is posted automatically.',
   };
 }
@@ -672,8 +801,10 @@ function getDraftPlaceholder(platform: PublicReviewPlatform) {
 }
 
 function getCopiedLabel(platform: PublicReviewPlatform) {
-  if (platform === 'xiaohongshu') return '已复制，正在打开小红书';
-  return `Copied — opening ${getPlatformName(platform)}`;
+  if (platform === 'xiaohongshu') return '已复制！正在跳转小红书发布…';
+  if (platform === 'google') return 'Copied! Opening Google review form…';
+  if (platform === 'yelp') return 'Copied! Opening Yelp review form…';
+  return `Copied! Opening ${getPlatformName(platform)}…`;
 }
 
 function getUnavailableCopy(platform: PublicReviewPlatform) {
@@ -707,24 +838,23 @@ function getUnavailableCopy(platform: PublicReviewPlatform) {
 
 function getPlatformDestination(merchant: PublicReviewMerchant, platform: PublicReviewPlatform) {
   const configured = merchant.platforms[platform];
-  const destination = safeHttpUrl(configured.destinationUrl) || safeHttpUrl(configured.fallbackUrl);
+  const destination = configured?.destinationUrl || configured?.fallbackUrl;
   if (destination) return destination;
 
+  if (platform === 'google') {
+    return 'https://search.google.com/local/writereview?placeid=0x89c8035d1afafeff:0x47a57effa39720a7';
+  }
   if (platform === 'xiaohongshu') {
-    return `https://www.xiaohongshu.com/search_result?keyword=${encodeURIComponent(`${merchant.name} ${merchant.neighborhood}`)}`;
+    return 'xhsdiscover://post';
+  }
+  if (platform === 'yelp') {
+    return 'https://www.yelp.com/writeareview/biz/ms-beauty-baltimore';
+  }
+  if (platform === 'instagram') {
+    return 'instagram://camera';
   }
 
   return undefined;
-}
-
-function safeHttpUrl(value: string | undefined) {
-  if (!value) return undefined;
-  try {
-    const url = new URL(value);
-    return url.protocol === 'https:' || url.protocol === 'http:' ? url.toString() : undefined;
-  } catch {
-    return undefined;
-  }
 }
 
 async function copyText(value: string) {

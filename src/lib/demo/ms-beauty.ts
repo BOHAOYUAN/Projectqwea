@@ -8,6 +8,9 @@ export const MS_BEAUTY_MERCHANT_SLUG = 'ms-beauty';
 export const MS_BEAUTY_LOCATION_SLUG = 'baltimore';
 export const MS_BEAUTY_PUBLIC_PATH = `/r/${MS_BEAUTY_MERCHANT_SLUG}/${MS_BEAUTY_LOCATION_SLUG}`;
 
+export const MS_BEAUTY_GOOGLE_WRITE_REVIEW_URL =
+  'https://search.google.com/local/writereview?placeid=0x89c8035d1afafeff:0x47a57effa39720a7';
+
 export const MS_BEAUTY_GOOGLE_MAPS_URL =
   'https://www.google.com/maps/place/MS+BEAUTY/@39.2853978,-76.600104,17z/data=!3m1!4b1!4m6!3m5!1s0x89c8035d1afafeff:0x47a57effa39720a7!8m2!3d39.2853978!4d-76.600104!16s%2Fg%2F11x6njxmfg!18m1!1e1?entry=ttu';
 
@@ -41,17 +44,31 @@ export const MS_BEAUTY_SERVICES: PublicService[] = [
 export const MS_BEAUTY_PLATFORM_LINKS: PublicPlatformLink[] = [
   {
     platform: 'google',
-    destinationUrl: MS_BEAUTY_GOOGLE_MAPS_URL,
-    fallbackUrl: null,
+    destinationUrl: MS_BEAUTY_GOOGLE_WRITE_REVIEW_URL,
+    fallbackUrl: MS_BEAUTY_GOOGLE_MAPS_URL,
     ctaLabel: 'Write a Google review',
-    publishHint: 'Copy your draft, then review it before posting to Google.',
+    publishHint: 'Copy your draft, then paste directly into the Google review form.',
   },
   {
     platform: 'xiaohongshu',
-    destinationUrl: null,
-    fallbackUrl: 'xhsdiscover://search/result?keyword=MS%20BEAUTY%20Baltimore',
-    ctaLabel: '生成小红书笔记',
-    publishHint: '发布前请核对内容，并在小红书中补充真实图片和体验。',
+    destinationUrl: 'xhsdiscover://post',
+    fallbackUrl: 'https://www.xiaohongshu.com',
+    ctaLabel: '去小红书发布',
+    publishHint: '文案已复制，进入小红书直接粘贴发布即可。',
+  },
+  {
+    platform: 'yelp',
+    destinationUrl: 'https://www.yelp.com/writeareview/biz/ms-beauty-baltimore',
+    fallbackUrl: 'https://www.yelp.com',
+    ctaLabel: 'Write a Yelp review',
+    publishHint: 'Copy your draft, then review it before posting to Yelp.',
+  },
+  {
+    platform: 'instagram',
+    destinationUrl: 'instagram://camera',
+    fallbackUrl: 'https://www.instagram.com',
+    ctaLabel: 'Post on Instagram',
+    publishHint: 'Copy your caption and paste into your Instagram post.',
   },
 ];
 
