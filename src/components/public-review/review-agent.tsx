@@ -32,6 +32,8 @@ type ReviewAgentProps = {
   initialServiceId?: string;
 };
 
+type FlowStep = 'customize' | 'draft' | 'handoff';
+
 type ApiDraft = {
   content?: string;
 };
@@ -104,7 +106,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
   const labels = getReviewLabels(platform);
   const style = PLATFORM_STYLES[platform];
   const voiceOptions = isChinese ? CHINESE_VOICES : ENGLISH_VOICES;
-  const [step, setStep] = useState<'customize' | 'draft'>('customize');
+  const [step, setStep] = useState<FlowStep>('customize');
   const [showCustomNote, setShowCustomNote] = useState(false);
   const [experience, setExperience] = useState('');
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>(
@@ -231,15 +233,21 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
       void trackReviewEvent(metricId, 'copied');
 
       const target = getPlatformDestination(merchant, platform);
-      if (target) {
-        void trackReviewEvent(metricId, 'published');
-        if (target.startsWith('http://') || target.startsWith('https://')) {
-          window.open(target, '_blank', 'noopener,noreferrer');
-        } else {
-          // Deep link to native app like xhsdiscover://post or instagram://camera
-          window.location.href = target;
-        }
+      if (!target) {
+        setError(getMissingDestinationCopy(platform));
+        return;
       }
+
+      if (requiresMobileHandoff(platform, target)) {
+        // Mobile browsers are much more likely to allow an app deep-link that
+        // follows a deliberate tap. The handoff view also keeps a web fallback
+        // visible if the native app cannot be opened.
+        setStep('handoff');
+        return;
+      }
+
+      void trackReviewEvent(metricId, 'published');
+      window.open(target, '_blank', 'noopener,noreferrer');
     } catch {
       setError(isChinese ? '复制失败，请长按文本后手动复制。' : 'Copy did not work. Please select the text and copy it manually.');
     }
@@ -414,6 +422,13 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
               </footer>
             )}
           </div>
+        ) : step === 'handoff' ? (
+          <PublishHandoff
+            merchant={merchant}
+            platform={platform}
+            metricId={metricId}
+            onBack={() => setStep('draft')}
+          />
         ) : (
           /* STEP 2: REVIEW DRAFT RESULT CARD (第二张图片独立页) */
           <div className="flex flex-col justify-between">
@@ -797,7 +812,7 @@ function getDraftPlaceholder(platform: PublicReviewPlatform) {
 }
 
 function getCopiedLabel(platform: PublicReviewPlatform) {
-  if (platform === 'xiaohongshu') return '已复制！正在跳转小红书发布…';
+  if (platform === 'xiaohongshu') return '文案已复制，可前往小红书发布。';
   if (platform === 'google') return 'Copied! Opening Google review form…';
   if (platform === 'yelp') return 'Copied! Opening Yelp review form…';
   return `Copied! Opening ${getPlatformName(platform)}…`;
@@ -834,23 +849,80 @@ function getUnavailableCopy(platform: PublicReviewPlatform) {
 
 function getPlatformDestination(merchant: PublicReviewMerchant, platform: PublicReviewPlatform) {
   const configured = merchant.platforms[platform];
-  const destination = configured?.destinationUrl || configured?.fallbackUrl;
-  if (destination) return destination;
+  return configured?.destinationUrl || configured?.fallbackUrl;
+}
 
-  if (platform === 'google') {
-    return 'https://search.google.com/local/writereview?placeid=0x89c8035d1afafeff:0x47a57effa39720a7';
-  }
+function requiresMobileHandoff(platform: PublicReviewPlatform, destination: string) {
+  return (platform === 'xiaohongshu' || platform === 'instagram') && !destination.startsWith('http');
+}
+
+function getMissingDestinationCopy(platform: PublicReviewPlatform) {
+  if (platform === 'xiaohongshu') return '小红书发布入口暂未配置，请稍后再试。';
+  if (platform === 'yelp') return 'Yelp 评价链接暂未配置，请稍后再试。';
+  if (platform === 'instagram') return 'Instagram 发布入口暂未配置，请稍后再试。';
+  return 'Google 评价链接暂未配置，请稍后再试。';
+}
+
+function getWebFallback(merchant: PublicReviewMerchant, platform: PublicReviewPlatform) {
+  const configuredFallback = merchant.platforms[platform]?.fallbackUrl;
+  if (configuredFallback?.startsWith('http')) return configuredFallback;
   if (platform === 'xiaohongshu') {
-    return 'xhsdiscover://post';
+    return `https://www.xiaohongshu.com/search_result?keyword=${encodeURIComponent(merchant.name)}`;
   }
-  if (platform === 'yelp') {
-    return 'https://www.yelp.com/writeareview/biz/ms-beauty-baltimore';
-  }
-  if (platform === 'instagram') {
-    return 'instagram://camera';
-  }
+  return 'https://www.instagram.com/';
+}
 
-  return undefined;
+function PublishHandoff({
+  merchant,
+  platform,
+  metricId,
+  onBack,
+}: {
+  merchant: PublicReviewMerchant;
+  platform: PublicReviewPlatform;
+  metricId: string | null;
+  onBack: () => void;
+}) {
+  const destination = getPlatformDestination(merchant, platform);
+  const webFallback = getWebFallback(merchant, platform);
+  const isXiaohongshu = platform === 'xiaohongshu';
+  return (
+    <div className="flex flex-col justify-between">
+      <div className="mb-3 flex items-center justify-between">
+        <button type="button" onClick={onBack} className="inline-flex items-center gap-1.5 rounded-full border border-[#d7bfa7] bg-[#fffaf3] px-3.5 py-1.5 text-xs font-semibold text-[#795842] transition hover:bg-white active:scale-95 shadow-xs">
+          <ArrowLeft className="h-3.5 w-3.5" /> {isXiaohongshu ? '返回文案修改' : 'Back to caption'}
+        </button>
+        <PlatformBadge platform={platform} className={PLATFORM_STYLES[platform].badge} />
+      </div>
+      <section className="rounded-3xl border border-[#dec9b1] bg-[#fffaf4] p-6 text-center shadow-[0_16px_40px_rgba(103,71,48,0.1)] sm:p-8">
+        <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#ecfdf5] text-[#059669]"><Check className="h-6 w-6" /></span>
+        <h1 className="mt-5 font-serif text-3xl text-[#382a22]">{isXiaohongshu ? '文案已经复制好了' : 'Your caption is copied'}</h1>
+        <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-[#766154]">
+          {isXiaohongshu
+            ? '请点击下方按钮打开小红书，再粘贴、补充真实图片后发布。'
+            : 'Tap the button below to open Instagram and paste your caption when you are ready.'}
+        </p>
+        {destination && (
+          <a
+            href={destination}
+            onClick={() => void trackReviewEvent(metricId, 'published')}
+            className={`mt-7 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-sm font-bold text-white shadow-lg transition active:scale-[0.99] ${PLATFORM_STYLES[platform].copyButton}`}
+          >
+            {isXiaohongshu ? '打开小红书去发布' : 'Open Instagram'} <ExternalLink className="h-4 w-4" />
+          </a>
+        )}
+        <div className="mt-5 rounded-2xl border border-[#eadbc9] bg-white p-4 text-left">
+          <p className="text-xs font-semibold text-[#5b4738]">{isXiaohongshu ? '如果 App 没有打开' : 'If Instagram does not open'}</p>
+          <p className="mt-1 text-xs leading-5 text-[#8b7566]">
+            {isXiaohongshu ? '文案仍在剪贴板中。你可以手动打开 App 粘贴，或先进入网页搜索页。' : 'Your caption remains copied. Open the app manually, or continue to the web site.'}
+          </p>
+          <a href={webFallback} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-[#8b5f44] hover:text-[#5d3e2c]">
+            {isXiaohongshu ? '打开小红书网页搜索' : 'Open Instagram on the web'} <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        </div>
+      </section>
+    </div>
+  );
 }
 
 async function copyText(value: string) {

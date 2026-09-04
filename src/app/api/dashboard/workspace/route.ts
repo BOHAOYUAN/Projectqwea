@@ -547,6 +547,12 @@ async function updatePlatformLink(client: PrismaClient, locationId: string, data
   const platform = platformValue(data.platform);
   if (!platform) return NextResponse.json({ error: 'Choose a supported platform.' }, { status: 400 });
   const existing = await client.platformLink.findUnique({ where: { locationId_platform: { locationId, platform } } });
+  if (has(data, 'destinationUrl') && text(data.destinationUrl) && !safePlatformUrl(data.destinationUrl, platform)) {
+    return NextResponse.json({ error: directLinkHelp(platform) }, { status: 400 });
+  }
+  if (has(data, 'fallbackUrl') && text(data.fallbackUrl) && !safePlatformUrl(data.fallbackUrl, platform)) {
+    return NextResponse.json({ error: directLinkHelp(platform) }, { status: 400 });
+  }
   const destinationUrl = has(data, 'destinationUrl') ? safePlatformUrl(data.destinationUrl, platform) : existing?.destinationUrl ?? null;
   const fallbackUrl = has(data, 'fallbackUrl') ? safePlatformUrl(data.fallbackUrl, platform) : existing?.fallbackUrl ?? null;
   const isEnabled = has(data, 'isEnabled') && typeof data.isEnabled === 'boolean' ? data.isEnabled : existing?.isEnabled ?? false;
@@ -773,11 +779,39 @@ function safePlatformUrl(value: unknown, platform: Platform): string | null {
   if (!candidate) return null;
   try {
     const parsed = new URL(candidate);
-    const accepted = parsed.protocol === 'https:' || parsed.protocol === 'http:' || (platform === Platform.XIAOHONGSHU && parsed.protocol === 'xhsdiscover:');
-    return accepted ? candidate : null;
+    const isHttp = parsed.protocol === 'https:' || parsed.protocol === 'http:';
+    const host = parsed.hostname.toLowerCase();
+    if (platform === Platform.XIAOHONGSHU) {
+      return isHttp || parsed.protocol === 'xhsdiscover:' ? candidate : null;
+    }
+    if (platform === Platform.INSTAGRAM) return isHttp ? candidate : null;
+    if (!isHttp) return null;
+    if (platform === Platform.GOOGLE) {
+      const isGoogleReviewLink =
+        (host === 'search.google.com' && parsed.pathname.startsWith('/local/writereview')) ||
+        (host === 'g.page' && parsed.pathname.includes('/review'));
+      return isGoogleReviewLink ? candidate : null;
+    }
+    const isYelpReviewOrBusinessPage =
+      (host === 'yelp.com' || host.endsWith('.yelp.com')) &&
+      (parsed.pathname.startsWith('/writeareview/') || parsed.pathname.startsWith('/biz/'));
+    return isYelpReviewOrBusinessPage ? candidate : null;
   } catch {
     return null;
   }
+}
+
+function directLinkHelp(platform: Platform): string {
+  if (platform === Platform.GOOGLE) {
+    return 'Use the Google Business Profile “Get more reviews” link, not a Google Maps place URL.';
+  }
+  if (platform === Platform.YELP) {
+    return 'Use a verified Yelp business page or Write a Review link.';
+  }
+  if (platform === Platform.XIAOHONGSHU) {
+    return 'Use an https URL or an xhsdiscover:// deep link for Xiaohongshu.';
+  }
+  return 'Use a verified https Instagram destination.';
 }
 
 function slugify(value: string, fallback: string): string {

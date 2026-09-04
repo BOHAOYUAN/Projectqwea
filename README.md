@@ -9,7 +9,7 @@
 - 顾客先选择服务、可多选体验标签、输入自己的感受，再选择三种口吻：**自然口吻 / 简洁一点 / 温暖叙事**。
 - 文案只取材于顾客提供的事实、服务和标签，不补写价格、疗效、技师姓名、到店细节或虚构人物。生成后始终可编辑、换一版、复制，再由顾客自己打开目标平台发布。
 - 商家后台可维护多商家、多门店、服务、公开页、平台跳转链接、内容偏好和匿名转化漏斗（Generated → Copied → Platform opened）。
-- Yelp 和 Instagram 已是完整的配置与内容生成通道，但 **MS BEAUTY 默认保持未启用**，直到运营者填入已验证的真实去向；不会生成或暴露假链接。
+- Google、Yelp 和 Instagram 已是完整的配置与内容生成通道，但 **MS BEAUTY 默认保持未启用**，直到运营者填入已验证的真实去向；不会生成或暴露假链接。
 - 没有 AI Key 也可完整演示：服务端会使用带轮换的本地模板；配置 DeepSeek 后使用 DeepSeek V4 Flash，未配置 DeepSeek 时可使用 Groq 兼容模式，密钥不会出现在浏览器中。
 
 ## 当前入口
@@ -17,7 +17,7 @@
 | 场景 | 地址 |
 | --- | --- |
 | 顾客公开页 | `/r/ms-beauty/baltimore` |
-| Google 英文评价助手 | `/r/ms-beauty/baltimore/review/google` |
+| Google 英文评价助手 | `/r/ms-beauty/baltimore/review/google`（配置商家生成的评价链接后开放） |
 | 小红书中文笔记助手 | `/r/ms-beauty/baltimore/review/xiaohongshu` |
 | Yelp 英文评价助手 | `/r/ms-beauty/baltimore/review/yelp`（配置链接后开放） |
 | Instagram caption 助手 | `/r/ms-beauty/baltimore/review/instagram`（配置链接后开放） |
@@ -30,16 +30,16 @@
 - 地址：1006 Eastern Ave, Baltimore, MD 21202
 - 行业：美容 / 头疗
 - 服务：面部 SPA、头疗 SPA、背部 SPA
-- Google Maps：已配置真实的 MS BEAUTY Maps 评价链接
-- 小红书：已配置可替换的发现/搜索兜底去向；运营者可在后台换成自己的主页或发布链接
+- Google：已建好后台配置位，等待商家从 Google Business Profile 复制“Get more reviews”链接
+- 小红书：复制文案后由顾客点击唤起 App；唤起失败时提供网页搜索兜底
 - Yelp / Instagram：已建好后台配置位和顾客端体验，默认关闭，等待真实商家链接
 
 ## 平台与文案策略
 
 | 平台 | 顾客端产物 | 默认语言 | 发布方式 |
 | --- | --- | --- |
-| Google Maps | 简洁、自然的评价草稿 | English | 复制后打开 Google Maps |
-| 小红书 | 标题、分段正文、自然话题标签 | 中文 | 复制后打开已配置链接或发现页 |
+| Google Maps | 简洁、自然的评价草稿 | English | 复制后打开商家已验证的评价链接 |
+| 小红书 | 标题、分段正文、自然话题标签 | 中文 | 复制后由顾客点击唤起 App；失败时打开网页搜索兜底 |
 | Yelp | 清晰、具体的评价草稿 | English | 复制后打开已验证的 Yelp 商家链接 |
 | Instagram | 基于真实体验的 caption 与话题标签 | English | 复制后打开已配置的 Instagram 去向 |
 
@@ -129,8 +129,8 @@ npm run build
 
 发布前还应手工确认：
 
-1. 打开 MS BEAUTY 的公开链接，Google 和小红书入口可进入对应页面。
-2. 未配置 URL 的 Yelp / Instagram 卡和直达页显示不可用状态，不会跳到伪造地址。
+1. 打开 MS BEAUTY 的公开链接，小红书入口可进入对应页面；Google 配置真实评价链接后才开放。
+2. 未配置 URL 的 Google、Yelp / Instagram 卡和直达页显示不可用状态，不会跳到伪造地址。
 3. 选择服务、多个体验标签和不同口吻后，生成、编辑、复制、跳转流程均可用。
 4. 无 `DEEPSEEK_API_KEY` / `GROQ_API_KEY` 时可以正常生成；配置任一 Key 后仍不会将 Key 传给浏览器。
 5. 以不同成员或不同商家测试后台，确认商家、门店、服务、链接和运营数据彼此隔离。

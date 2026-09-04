@@ -439,9 +439,6 @@ function mapRemoteWorkspace(remote: RemoteMerchant): { merchant: Merchant; revie
   };
 }
 
-const GOOGLE_MS_BEAUTY =
-  'https://www.google.com/maps/place/MS+BEAUTY/@39.2853978,-76.600104,17z/data=!3m1!4b1!4m6!3m5!1s0x89c8035d1afafeff:0x47a57effa39720a7!8m2!3d39.2853978!4d-76.600104!16s%2Fg%2F11x6njxmfg!18m1!1e1?entry=ttu';
-
 const INITIAL_MERCHANTS: Merchant[] = [
   {
     id: 'ms-beauty',
@@ -486,14 +483,14 @@ const INITIAL_MERCHANTS: Merchant[] = [
         tags: ['安静放松', '手法细致', '环境干净', '不催促', '头皮清爽', '贴心沟通'],
         platforms: {
           google: {
-            enabled: true,
-            url: GOOGLE_MS_BEAUTY,
-            hint: 'Copy your review, then paste it into the Google review sheet.',
+            enabled: false,
+            url: '',
+            hint: 'Add the verified Google “Get more reviews” link before enabling.',
           },
           xiaohongshu: {
             enabled: true,
-            url: '',
-            hint: 'Copy the note first. A team-managed Xiaohongshu publishing link can be added here.',
+            url: 'xhsdiscover://post',
+            hint: 'Copy the note, then use the customer’s tap to open Xiaohongshu. A web fallback is shown if the app does not open.',
           },
           yelp: {
             enabled: false,

@@ -2,9 +2,6 @@ import { MerchantStatus, Platform, PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const googleMapsUrl =
-  'https://www.google.com/maps/place/MS+BEAUTY/@39.2853978,-76.600104,17z/data=!3m1!4b1!4m6!3m5!1s0x89c8035d1afafeff:0x47a57effa39720a7!8m2!3d39.2853978!4d-76.600104!16s%2Fg%2F11x6njxmfg!18m1!1e1?entry=ttu';
-
 const services = [
   {
     slug: 'facial-spa',
@@ -111,19 +108,19 @@ async function main() {
   await prisma.platformLink.upsert({
     where: { locationId_platform: { locationId: location.id, platform: Platform.GOOGLE } },
     update: {
-      destinationUrl: googleMapsUrl,
+      destinationUrl: null,
       fallbackUrl: null,
       ctaLabel: 'Write a Google review',
-      publishHint: 'Copy your draft, then review it before posting to Google.',
-      isEnabled: true,
+      publishHint: 'Add the verified Google “Get more reviews” link before enabling this channel.',
+      isEnabled: false,
     },
     create: {
       locationId: location.id,
       platform: Platform.GOOGLE,
-      destinationUrl: googleMapsUrl,
+      destinationUrl: null,
       ctaLabel: 'Write a Google review',
-      publishHint: 'Copy your draft, then review it before posting to Google.',
-      isEnabled: true,
+      publishHint: 'Add the verified Google “Get more reviews” link before enabling this channel.',
+      isEnabled: false,
     },
   });
 
@@ -169,8 +166,8 @@ async function main() {
   await prisma.platformLink.upsert({
     where: { locationId_platform: { locationId: location.id, platform: Platform.XIAOHONGSHU } },
     update: {
-      destinationUrl: null,
-      fallbackUrl: 'xhsdiscover://search/result?keyword=MS%20BEAUTY%20Baltimore',
+      destinationUrl: 'xhsdiscover://post',
+      fallbackUrl: 'https://www.xiaohongshu.com/search_result?keyword=MS%20BEAUTY%20Baltimore',
       ctaLabel: '生成小红书笔记',
       publishHint: '发布前请核对内容，并在小红书中补充真实图片和体验。',
       isEnabled: true,
@@ -178,7 +175,8 @@ async function main() {
     create: {
       locationId: location.id,
       platform: Platform.XIAOHONGSHU,
-      fallbackUrl: 'xhsdiscover://search/result?keyword=MS%20BEAUTY%20Baltimore',
+      destinationUrl: 'xhsdiscover://post',
+      fallbackUrl: 'https://www.xiaohongshu.com/search_result?keyword=MS%20BEAUTY%20Baltimore',
       ctaLabel: '生成小红书笔记',
       publishHint: '发布前请核对内容，并在小红书中补充真实图片和体验。',
       isEnabled: true,

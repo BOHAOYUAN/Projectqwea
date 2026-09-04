@@ -88,12 +88,12 @@ export function merchantFromPublicReviewPage(page: PublicReviewPage): PublicRevi
     showAddress: page.config.showAddress,
     reviewDisclosure: page.config.reviewDisclosure || undefined,
     platforms: {
-      google: toPlatformSetup(google),
+      google: toPlatformSetup(google, 'google'),
       // A configured Xiaohongshu integration may deliberately use a deep-link
       // or a web-search fallback, so its presence is sufficient to open it.
-      xiaohongshu: toPlatformSetup(xiaohongshu, { allowConfiguredFallback: true }),
-      yelp: toPlatformSetup(yelp),
-      instagram: toPlatformSetup(instagram),
+      xiaohongshu: toPlatformSetup(xiaohongshu, 'xiaohongshu', { allowConfiguredFallback: true }),
+      yelp: toPlatformSetup(yelp, 'yelp'),
+      instagram: toPlatformSetup(instagram, 'instagram'),
     },
     services:
       page.services.length > 0
@@ -118,10 +118,11 @@ type PublicPlatformSource = {
 
 function toPlatformSetup(
   source: PublicPlatformSource | undefined,
+  platform: PublicReviewPlatform,
   options: { allowConfiguredFallback?: boolean } = {},
 ): PublicReviewPlatformSetup {
-  const destinationUrl = source?.destinationUrl || undefined;
-  const fallbackUrl = source?.fallbackUrl || undefined;
+  const destinationUrl = isPublicPlatformUrl(source?.destinationUrl, platform) ? source?.destinationUrl || undefined : undefined;
+  const fallbackUrl = isPublicPlatformUrl(source?.fallbackUrl, platform) ? source?.fallbackUrl || undefined : undefined;
   const hasDestination = Boolean(destinationUrl || fallbackUrl);
 
   return {
@@ -130,6 +131,28 @@ function toPlatformSetup(
     fallbackUrl,
     publishHint: source?.publishHint || undefined,
   };
+}
+
+/** Client-side guard for old persisted records created before direct-review
+ * validation existed. Server-side validation remains the source of truth. */
+function isPublicPlatformUrl(value: string | null | undefined, platform: PublicReviewPlatform) {
+  if (!value) return false;
+  try {
+    const parsed = new URL(value);
+    const host = parsed.hostname.toLowerCase();
+    const isHttp = parsed.protocol === 'https:' || parsed.protocol === 'http:';
+    if (platform === 'xiaohongshu') return isHttp || parsed.protocol === 'xhsdiscover:';
+    if (platform === 'instagram') return isHttp;
+    if (!isHttp) return false;
+    if (platform === 'google') {
+      return (host === 'search.google.com' && parsed.pathname.startsWith('/local/writereview')) ||
+        (host === 'g.page' && parsed.pathname.includes('/review'));
+    }
+    return (host === 'yelp.com' || host.endsWith('.yelp.com')) &&
+      (parsed.pathname.startsWith('/writeareview/') || parsed.pathname.startsWith('/biz/'));
+  } catch {
+    return false;
+  }
 }
 
 const TAG_COPY: Record<string, PublicReviewTag> = {
