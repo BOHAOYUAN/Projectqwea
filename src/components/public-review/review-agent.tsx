@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
   Camera,
@@ -107,12 +107,15 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
   const style = PLATFORM_STYLES[platform];
   const voiceOptions = isChinese ? CHINESE_VOICES : ENGLISH_VOICES;
   const [step, setStep] = useState<FlowStep>('customize');
-  const [showCustomNote, setShowCustomNote] = useState(false);
   const [experience, setExperience] = useState('');
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>(
-    initialServiceId && merchant.services.some((service) => service.id === initialServiceId) ? [initialServiceId] : [],
+    initialServiceId && merchant.services.some((service) => service.id === initialServiceId)
+      ? [initialServiceId]
+      : merchant.services.slice(0, 1).map((s) => s.id),
   );
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([
+    merchant.experienceTags[0]?.id || 'calm',
+  ]);
   const [voice, setVoice] = useState<PublicReviewVoice>('natural');
   const [draft, setDraft] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -131,32 +134,85 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
     [merchant.experienceTags, selectedTagIds],
   );
 
+  // Initialize a baseline draft on first load
+  useEffect(() => {
+    if (!draft) {
+      setDraft(
+        buildLocalDraft({
+          platform,
+          merchant,
+          services: selectedServices,
+          tags: selectedTags.map((tag) => (isChinese ? tag.label : tag.googleLabel)),
+          experience,
+          voice,
+        }),
+      );
+    }
+  }, []);
+
   const toggleService = (serviceId: string) => {
     setError('');
     setSelectedServiceIds((current) => {
-      if (current.includes(serviceId)) return current.filter((id) => id !== serviceId);
-      if (current.length >= maxSelectedServices) return current;
-      return [...current, serviceId];
+      const updated = current.includes(serviceId)
+        ? current.filter((id) => id !== serviceId)
+        : current.length >= maxSelectedServices
+        ? current
+        : [...current, serviceId];
+
+      const newServices = merchant.services.filter((s) => updated.includes(s.id));
+      setDraft(
+        buildLocalDraft({
+          platform,
+          merchant,
+          services: newServices,
+          tags: selectedTags.map((tag) => (isChinese ? tag.label : tag.googleLabel)),
+          experience,
+          voice,
+        }),
+      );
+      return updated;
     });
   };
 
   const toggleTag = (tagId: string) => {
     setError('');
-    setSelectedTagIds((current) =>
-      current.includes(tagId) ? current.filter((id) => id !== tagId) : [...current, tagId],
+    setSelectedTagIds((current) => {
+      const updated = current.includes(tagId) ? current.filter((id) => id !== tagId) : [...current, tagId];
+      const newTags = merchant.experienceTags.filter((t) => updated.includes(t.id));
+      setDraft(
+        buildLocalDraft({
+          platform,
+          merchant,
+          services: selectedServices,
+          tags: newTags.map((tag) => (isChinese ? tag.label : tag.googleLabel)),
+          experience,
+          voice,
+        }),
+      );
+      return updated;
+    });
+  };
+
+  const handleVoiceChange = (newVoice: PublicReviewVoice) => {
+    setVoice(newVoice);
+    setDraft(
+      buildLocalDraft({
+        platform,
+        merchant,
+        services: selectedServices,
+        tags: selectedTags.map((tag) => (isChinese ? tag.label : tag.googleLabel)),
+        experience,
+        voice: newVoice,
+      }),
     );
   };
 
-  const generateDraft = async (nextVariation = variation + 1) => {
-    if (!experience.trim() && selectedServices.length === 0 && selectedTags.length === 0) {
-      setError(
-        isChinese
-          ? '请先选择体验项目或感受标签。'
-          : 'Please select a service or feeling first.',
-      );
-      return;
-    }
+  const handleExperienceChange = (value: string) => {
+    setExperience(value);
+    setError('');
+  };
 
+  const generateDraft = async (nextVariation = variation + 1) => {
     setIsGenerating(true);
     setError('');
     setIsCopied(false);
@@ -197,10 +253,8 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
 
       setDraft(apiDraft || data.review || '');
       setMetricId(data.metricId || null);
-      setStep('draft');
     } catch (err) {
       console.warn('Review draft fetch fallback:', err);
-      // A customer can still edit a grounded draft in a local/demo deployment.
       setDraft(
         buildLocalDraft({
           platform,
@@ -212,17 +266,14 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
         }),
       );
       setMetricId(null);
-      setStep('draft');
     } finally {
       setIsGenerating(false);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      window.setTimeout(() => textareaRef.current?.focus(), 100);
     }
   };
 
   const copyAndOpen = async () => {
     if (!draft.trim()) {
-      setError(isChinese ? '请先生成笔记草稿。' : 'Create a draft before copying it.');
+      setError(isChinese ? '请先生成评价草稿。' : 'Create a draft before copying it.');
       return;
     }
 
@@ -239,9 +290,6 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
       }
 
       if (requiresMobileHandoff(platform, target)) {
-        // Mobile browsers are much more likely to allow an app deep-link that
-        // follows a deliberate tap. The handoff view also keeps a web fallback
-        // visible if the native app cannot be opened.
         setStep('handoff');
         return;
       }
@@ -253,270 +301,205 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
     }
   };
 
-  return (
-    <main className="min-h-screen bg-[#f8efdf] px-3.5 py-4 text-[#45362d] sm:px-6 sm:py-8 flex flex-col justify-center">
-      <div className="mx-auto w-full max-w-xl">
-        {step === 'customize' ? (
-          /* STEP 1: COMPACT 1-SCREEN SELECTION (手机端一屏) */
-          <div className="flex flex-col justify-between">
-            {/* Top Navigation */}
-            <div className="mb-2.5 flex items-center justify-between">
-              <Link
-                href={publicReviewPath(merchant)}
-                className="inline-flex items-center gap-1 rounded-full border border-[#d7bfa7] bg-[#fffaf3] px-3 py-1.5 text-xs font-semibold text-[#795842] transition hover:bg-white active:scale-95 shadow-xs"
-              >
-                <ArrowLeft className="h-3.5 w-3.5" />
-                {isChinese ? '返回平台选择' : 'All options'}
-              </Link>
-              <PlatformBadge platform={platform} className={style.badge} />
-            </div>
-
-            {/* Header Banner */}
-            <header className="mb-3 text-center">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#a87859]">
-                02 · {merchant.name} · {merchant.neighborhood}
-              </p>
-              <h1 className="font-serif text-2xl sm:text-3xl leading-tight tracking-[-0.03em] text-[#382a22]">
-                {labels.heading}
-              </h1>
-              <p className="mx-auto mt-1 max-w-md text-xs leading-relaxed text-[#756055]">
-                {labels.subheading}
-              </p>
-            </header>
-
-            {/* Main Selection Card */}
-            <div className="overflow-hidden rounded-3xl border border-[#dec9b1] bg-[#fffaf4] p-4 sm:p-5 shadow-[0_12px_32px_rgba(103,71,48,0.08)] space-y-3.5">
-              {/* 1. Services */}
-              <div>
-                <div className="mb-1.5 flex items-center justify-between">
-                  <h2 className="text-xs font-bold uppercase tracking-wider text-[#543f33]">
-                    {labels.serviceLabel}
-                  </h2>
-                  <span className="text-[10px] text-[#947c6b]">
-                    {isChinese ? '最多选两项' : 'Choose up to 2'}
-                  </span>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  {merchant.services.map((service) => (
-                    <ServiceButton
-                      key={service.id}
-                      service={service}
-                      selected={selectedServiceIds.includes(service.id)}
-                      disabled={!selectedServiceIds.includes(service.id) && selectedServiceIds.length >= maxSelectedServices}
-                      isChinese={isChinese}
-                      onClick={() => toggleService(service.id)}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* 2. Feelings & Tags */}
-              <div>
-                <h2 className="mb-1.5 text-xs font-bold uppercase tracking-wider text-[#543f33]">
-                  {labels.tagLabel}
-                </h2>
-                <div className="flex flex-wrap gap-1.5">
-                  {merchant.experienceTags.map((tag) => {
-                    const selected = selectedTagIds.includes(tag.id);
-                    return (
-                      <button
-                        key={tag.id}
-                        type="button"
-                        aria-pressed={selected}
-                        onClick={() => toggleTag(tag.id)}
-                        className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-medium transition active:scale-95 ${
-                          selected
-                            ? 'border-[#9d6d50] bg-[#9d6d50] text-white shadow-xs'
-                            : 'border-[#e5d3c0] bg-white text-[#785f4e] hover:border-[#bf9778] hover:bg-[#fff7ec]'
-                        }`}
-                      >
-                        {selected && <Check className="h-3 w-3" />}
-                        {isChinese ? tag.label : tag.googleLabel}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* 3. Tone / Voice */}
-              <div>
-                <h2 className="mb-1.5 text-xs font-bold uppercase tracking-wider text-[#543f33]">
-                  {labels.voiceLabel}
-                </h2>
-                <div className="grid grid-cols-3 gap-1.5 rounded-xl bg-[#f0e4d4]/60 p-1 border border-[#e8d7c4]">
-                  {voiceOptions.map((option) => {
-                    const selected = voice === option.value;
-                    return (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => setVoice(option.value)}
-                        className={`rounded-lg py-1.5 text-center text-xs font-bold transition ${
-                          selected
-                            ? 'bg-white text-[#5a4234] shadow-xs'
-                            : 'text-[#876e5d] hover:text-[#5a4234]'
-                        }`}
-                      >
-                        {option.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* 4. Collapsible Personal Note (下移且默认折叠) */}
-              <div className="pt-2 border-t border-[#f0e1d0]">
-                <button
-                  type="button"
-                  onClick={() => setShowCustomNote(!showCustomNote)}
-                  className="flex items-center justify-between w-full py-1 text-xs font-semibold text-[#8c6b54] hover:text-[#5b4132] transition"
-                >
-                  <span className="flex items-center gap-1.5">
-                    <WandSparkles className="h-3.5 w-3.5 text-[#a87557]" />
-                    {showCustomNote
-                      ? (isChinese ? '收起补充细节' : 'Hide custom note')
-                      : (isChinese ? '+ 补充自定义细节（选填）' : '+ Add custom detail (optional)')}
-                  </span>
-                  <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${showCustomNote ? 'rotate-180' : ''}`} />
-                </button>
-
-                {showCustomNote && (
-                  <div className="mt-2">
-                    <textarea
-                      value={experience}
-                      onChange={(event) => {
-                        setExperience(event.target.value);
-                        setError('');
-                      }}
-                      placeholder={labels.experienceHint}
-                      rows={3}
-                      className="w-full resize-none rounded-xl border border-[#e4d0b9] bg-white px-3.5 py-2.5 text-xs sm:text-sm leading-relaxed text-[#4d3b31] outline-none transition placeholder:text-[#aa988a] focus:border-[#a67354] focus:ring-2 focus:ring-[#d9ae8a]/20"
-                    />
-                  </div>
-                )}
-              </div>
-
-              {error && (
-                <p role="alert" className="rounded-xl border border-[#eac2bb] bg-[#fff1ee] px-3 py-2 text-xs leading-5 text-[#a04339]">
-                  {error}
-                </p>
-              )}
-
-              {/* 5. Bottom Generate Button */}
-              <button
-                type="button"
-                disabled={isGenerating}
-                onClick={() => void generateDraft()}
-                className={`flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-sm font-bold text-white shadow-md transition active:scale-[0.99] disabled:cursor-wait disabled:opacity-75 ${style.primaryButton}`}
-              >
-                {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                {isGenerating
-                  ? (isChinese ? '正在撰写笔记中…' : 'Writing your draft…')
-                  : (isChinese ? '✨ 生成好评草稿' : labels.generate)}
-              </button>
-            </div>
-
-            {merchant.showAddress !== false && (
-              <footer className="mt-3 flex items-center justify-center gap-1.5 text-center text-[10px] text-[#947e6e]">
-                <MapPin className="h-3 w-3" /> {merchant.address}
-              </footer>
-            )}
-          </div>
-        ) : step === 'handoff' ? (
+  if (step === 'handoff') {
+    return (
+      <main className="min-h-screen bg-[#ece5dc] px-3.5 py-6 sm:py-10 flex flex-col items-center justify-center font-sans text-[#3c342f]">
+        <div className="w-full max-w-[440px]">
           <PublishHandoff
             merchant={merchant}
             platform={platform}
             metricId={metricId}
-            onBack={() => setStep('draft')}
+            onBack={() => setStep('customize')}
           />
-        ) : (
-          /* STEP 2: REVIEW DRAFT RESULT CARD (第二张图片独立页) */
-          <div className="flex flex-col justify-between">
-            {/* Step 2 Top Bar: Back & Regenerate */}
-            <div className="mb-3 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => setStep('customize')}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[#d7bfa7] bg-[#fffaf3] px-3.5 py-1.5 text-xs font-semibold text-[#795842] transition hover:bg-white active:scale-95 shadow-xs"
-              >
-                <ArrowLeft className="h-3.5 w-3.5" />
-                {isChinese ? '返回修改' : 'Back / Edit'}
-              </button>
+        </div>
+      </main>
+    );
+  }
 
+  return (
+    <main className="min-h-screen bg-[#ece5dc] px-3.5 py-6 sm:py-10 flex flex-col items-center justify-center font-sans text-[#3c342f]">
+      <div className="w-full max-w-[440px] flex flex-col space-y-3.5">
+        {/* TOP BAR: 返回平台选择 */}
+        <div className="flex items-center justify-between px-1">
+          <Link
+            href={publicReviewPath(merchant)}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#735846] hover:text-[#422e22] transition"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>返回平台选择</span>
+          </Link>
+          <PlatformBadge platform={platform} className={style.badge} />
+        </div>
+
+        {/* HEADER: AI 文案助手 */}
+        <div className="px-1 pt-0.5">
+          <h1 className="text-xl font-bold text-[#35271f] tracking-tight">AI 文案助手</h1>
+          <p className="mt-0.5 text-xs text-[#8c7465]">只根据顾客填写的真实感受生成</p>
+        </div>
+
+        {/* MAIN CONTAINER (卡片包裹 4 步表单) */}
+        <div className="rounded-3xl border border-[#d9ccbe] bg-[#fbf6ef] p-4 sm:p-5 shadow-[0_8px_25px_rgba(80,60,40,0.06)] space-y-4">
+          {/* ① 真实体验 */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-[#4a362b] flex items-center gap-1.5">
+                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#8c674e] text-[10px] text-white font-bold">
+                  1
+                </span>
+                <span>真实体验</span>
+              </label>
               <button
                 type="button"
-                disabled={isGenerating}
                 onClick={() => void generateDraft(variation + 1)}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[#dfc8b0] bg-white px-3.5 py-1.5 text-xs font-bold text-[#795842] transition hover:bg-[#fff6eb] active:scale-95 disabled:opacity-50 shadow-xs"
+                disabled={isGenerating}
+                className="text-[11px] font-semibold text-[#8b6147] hover:text-[#5e3c27] flex items-center gap-1 transition"
               >
-                <RefreshCw className={`h-3.5 w-3.5 ${isGenerating ? 'animate-spin' : ''}`} />
-                {labels.refresh}
+                <RefreshCw className={`h-3 w-3 ${isGenerating ? 'animate-spin' : ''}`} />
+                <span>换一个写法</span>
               </button>
             </div>
-
-            {/* Step 2 Draft Container */}
-            <div className="overflow-hidden rounded-3xl border border-[#dec9b1] bg-[#fffaf4] p-5 sm:p-7 shadow-[0_16px_40px_rgba(103,71,48,0.1)] space-y-4">
-              <div>
-                <div className="flex items-center justify-between">
-                  <h2 className="font-serif text-2xl text-[#382a22] tracking-tight">
-                    {labels.draftLabel}
-                  </h2>
-                  <PlatformBadge platform={platform} className={style.badge} />
-                </div>
-                <p className="mt-1 text-xs text-[#8c7768]">
-                  {labels.draftHint}
-                </p>
-              </div>
-
-              <div className="relative">
-                <textarea
-                  ref={textareaRef}
-                  value={draft}
-                  onChange={(event) => setDraft(event.target.value)}
-                  placeholder={getDraftPlaceholder(platform)}
-                  rows={isChinese || platform === 'instagram' ? 10 : 7}
-                  className="w-full resize-none rounded-2xl border border-[#e4d0b9] bg-white p-4 text-[14.5px] leading-relaxed text-[#4d3b31] outline-none transition placeholder:text-[#b09d8e] focus:border-[#a67354] focus:ring-4 focus:ring-[#d9ae8a]/20 shadow-inner"
-                />
-              </div>
-
-              <p className="flex items-start gap-1.5 text-[11px] leading-5 text-[#8d7667]">
-                <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#9d775d]" />
-                {merchant.platforms[platform].publishHint || merchant.reviewDisclosure || labels.guardrail}
-              </p>
-
-              {isCopied && (
-                <div className="flex items-center justify-center gap-2 rounded-xl bg-[#ecfdf5] border border-[#a7f3d0] py-2 px-3 text-xs font-semibold text-[#065f46]">
-                  <Check className="h-4 w-4 text-[#059669]" />
-                  {getCopiedLabel(platform)}
-                </div>
-              )}
-
-              {error && (
-                <p role="alert" className="rounded-xl border border-[#eac2bb] bg-[#fff1ee] px-3 py-2 text-xs leading-5 text-[#a04339]">
-                  {error}
-                </p>
-              )}
-
-              {/* Big Action Button */}
-              <button
-                type="button"
-                disabled={!draft.trim() || isGenerating}
-                onClick={() => void copyAndOpen()}
-                className={`flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-sm font-bold text-white shadow-lg transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40 ${style.copyButton}`}
-              >
-                {isCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                {isCopied ? getCopiedLabel(platform) : labels.copyAndOpen}
-                <ExternalLink className="h-3.5 w-3.5 opacity-80" />
-              </button>
-            </div>
-
-            {merchant.showAddress !== false && (
-              <footer className="mt-3 flex items-center justify-center gap-1.5 text-center text-[10px] text-[#947e6e]">
-                <MapPin className="h-3 w-3" /> {merchant.address}
-              </footer>
-            )}
+            <textarea
+              value={experience}
+              onChange={(e) => handleExperienceChange(e.target.value)}
+              placeholder="例如：过程不赶，每一步都会先说明，我没有做得很催促，很放松。"
+              rows={3}
+              className="w-full resize-none rounded-xl border border-[#dec9b5] bg-white p-3 text-xs sm:text-sm text-[#46352a] placeholder:text-[#b49f8f] outline-none transition focus:border-[#986a4c] focus:ring-2 focus:ring-[#986a4c]/15"
+            />
           </div>
-        )}
+
+          {/* ② 服务与标签（可多选） */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-[#4a362b] flex items-center gap-1.5">
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#8c674e] text-[10px] text-white font-bold">
+                2
+              </span>
+              <span>服务与标签（可多选）</span>
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {merchant.services.map((service) => {
+                const isSelected = selectedServiceIds.includes(service.id);
+                return (
+                  <button
+                    key={service.id}
+                    type="button"
+                    onClick={() => toggleService(service.id)}
+                    className={`rounded-xl px-2.5 py-1 text-xs font-medium transition active:scale-95 flex items-center gap-1 border ${
+                      isSelected
+                        ? 'border-[#996d51] bg-[#996d51] text-white shadow-xs'
+                        : 'border-[#dfd0bf] bg-white text-[#6b5444] hover:bg-[#faf4ee]'
+                    }`}
+                  >
+                    {isSelected && <Check className="h-3 w-3 shrink-0" />}
+                    <span>{isChinese ? service.name : service.englishName}</span>
+                  </button>
+                );
+              })}
+              {merchant.experienceTags.map((tag) => {
+                const isSelected = selectedTagIds.includes(tag.id);
+                return (
+                  <button
+                    key={tag.id}
+                    type="button"
+                    onClick={() => toggleTag(tag.id)}
+                    className={`rounded-xl px-2.5 py-1 text-xs font-medium transition active:scale-95 flex items-center gap-1 border ${
+                      isSelected
+                        ? 'border-[#996d51] bg-[#996d51] text-white shadow-xs'
+                        : 'border-[#dfd0bf] bg-white text-[#6b5444] hover:bg-[#faf4ee]'
+                    }`}
+                  >
+                    {isSelected && <Check className="h-3 w-3 shrink-0" />}
+                    <span>{isChinese ? tag.label : tag.googleLabel}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ③ 平台与口吻 */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-[#4a362b] flex items-center gap-1.5">
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#8c674e] text-[10px] text-white font-bold">
+                3
+              </span>
+              <span>平台与口吻</span>
+            </label>
+            <div className="flex items-center gap-2">
+              <span className="rounded-lg bg-[#efe5d7] border border-[#dccbb9] px-2.5 py-1 text-xs font-bold text-[#624b3c]">
+                {getPlatformName(platform)}
+              </span>
+              <div className="flex flex-1 items-center gap-1 rounded-xl bg-[#eee3d5]/70 p-1 border border-[#dfcebc]">
+                {voiceOptions.map((opt) => {
+                  const isSelected = voice === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => handleVoiceChange(opt.value)}
+                      className={`flex-1 rounded-lg py-1 text-center text-xs font-bold transition ${
+                        isSelected
+                          ? 'bg-white text-[#523d30] shadow-xs'
+                          : 'text-[#8c7464] hover:text-[#523d30]'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* ④ 可编辑草稿 */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-[#4a362b] flex items-center gap-1.5">
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#8c674e] text-[10px] text-white font-bold">
+                4
+              </span>
+              <span>可编辑草稿</span>
+            </label>
+            <div className="relative">
+              <textarea
+                ref={textareaRef}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder="此处显示生成的草稿，可直接点击修改。"
+                rows={platform === 'xiaohongshu' || platform === 'instagram' ? 7 : 5}
+                className="w-full resize-none rounded-xl border border-[#dec9b5] bg-white p-3 text-xs sm:text-sm leading-relaxed text-[#3d2d24] outline-none transition focus:border-[#986a4c] focus:ring-2 focus:ring-[#986a4c]/15 shadow-inner"
+              />
+            </div>
+            <p className="flex items-center gap-1 text-[10.5px] text-[#91796a]">
+              <ShieldCheck className="h-3.5 w-3.5 text-[#a1795c] shrink-0" />
+              <span>顾客填写的体验原话会保留在草稿中，发布前可自由编辑。</span>
+            </p>
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <p role="alert" className="rounded-xl border border-[#eac2bb] bg-[#fff1ee] px-3 py-2 text-xs leading-5 text-[#a04339]">
+              {error}
+            </p>
+          )}
+
+          {/* Copied Success Notice */}
+          {isCopied && (
+            <div className="flex items-center justify-center gap-1.5 rounded-xl bg-[#ecfdf5] border border-[#a7f3d0] py-2 px-3 text-xs font-semibold text-[#065f46]">
+              <Check className="h-3.5 w-3.5 text-[#059669]" />
+              <span>{getCopiedLabel(platform)}</span>
+            </div>
+          )}
+
+          {/* 复制并前往平台 (BOTTOM CTA BUTTON) */}
+          <button
+            type="button"
+            disabled={!draft.trim() || isGenerating}
+            onClick={() => void copyAndOpen()}
+            className={`w-full rounded-2xl py-3.5 px-4 text-center text-sm font-bold text-white shadow-md transition flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed ${style.copyButton}`}
+          >
+            {isCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+            <span>复制并前往平台</span>
+            <ExternalLink className="h-3.5 w-3.5 opacity-80" />
+          </button>
+        </div>
       </div>
     </main>
   );
