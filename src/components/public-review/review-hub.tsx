@@ -30,7 +30,7 @@ const PLATFORMS: PlatformCardInfo[] = [
   {
     key: 'google',
     name: 'Google',
-    sublabel: '英文评价 →',
+    sublabel: 'Write a Review →',
     iconBg: 'bg-[#4285F4]',
     iconColor: 'text-white',
     iconText: 'G',
@@ -46,7 +46,7 @@ const PLATFORMS: PlatformCardInfo[] = [
   {
     key: 'yelp',
     name: 'Yelp',
-    sublabel: '评价草稿 →',
+    sublabel: 'Write a Review →',
     iconBg: 'bg-[#D32323]',
     iconColor: 'text-white',
     iconText: 'Y',
@@ -54,7 +54,7 @@ const PLATFORMS: PlatformCardInfo[] = [
   {
     key: 'instagram',
     name: 'Instagram',
-    sublabel: '内容文案 →',
+    sublabel: 'Create Caption →',
     iconBg: 'bg-gradient-to-tr from-[#FD1D1D] to-[#833AB4]',
     iconColor: 'text-white',
     iconText: 'IG',
