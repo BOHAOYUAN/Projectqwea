@@ -326,15 +326,21 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#735846] hover:text-[#422e22] transition"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            <span>返回平台选择</span>
+            <span>{isChinese ? '返回平台选择' : 'All platforms'}</span>
           </Link>
           <PlatformBadge platform={platform} className={style.badge} />
         </div>
 
         {/* HEADER: AI 文案助手 */}
         <div className="px-1 pt-0.5">
-          <h1 className="text-xl font-bold text-[#35271f] tracking-tight">AI 文案助手</h1>
-          <p className="mt-0.5 text-xs text-[#8c7465]">只根据顾客填写的真实感受生成</p>
+          <h1 className="text-xl font-bold text-[#35271f] tracking-tight">
+            {isChinese ? 'AI 文案助手' : 'AI Review Assistant'}
+          </h1>
+          <p className="mt-0.5 text-xs text-[#8c7465]">
+            {isChinese
+              ? '只根据顾客填写的真实感受生成'
+              : 'Grounded in your real visit and honest thoughts'}
+          </p>
         </div>
 
         {/* MAIN CONTAINER (卡片包裹 4 步表单) */}
@@ -346,7 +352,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
                 <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#8c674e] text-[10px] text-white font-bold">
                   1
                 </span>
-                <span>真实体验</span>
+                <span>{isChinese ? '真实体验' : 'Your experience'}</span>
               </label>
               <button
                 type="button"
@@ -355,13 +361,17 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
                 className="text-[11px] font-semibold text-[#8b6147] hover:text-[#5e3c27] flex items-center gap-1 transition"
               >
                 <RefreshCw className={`h-3 w-3 ${isGenerating ? 'animate-spin' : ''}`} />
-                <span>换一个写法</span>
+                <span>{isChinese ? '换一个写法' : 'Try another'}</span>
               </button>
             </div>
             <textarea
               value={experience}
               onChange={(e) => handleExperienceChange(e.target.value)}
-              placeholder="例如：过程不赶，每一步都会先说明，我没有做得很催促，很放松。"
+              placeholder={
+                isChinese
+                  ? '例如：过程不赶，每一步都会先说明，我没有做得很催促，很放松。'
+                  : 'For example: calm atmosphere, unhurried pace, attentive care throughout.'
+              }
               rows={3}
               className="w-full resize-none rounded-xl border border-[#dec9b5] bg-white p-3 text-xs sm:text-sm text-[#46352a] placeholder:text-[#b49f8f] outline-none transition focus:border-[#986a4c] focus:ring-2 focus:ring-[#986a4c]/15"
             />
@@ -373,7 +383,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
               <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#8c674e] text-[10px] text-white font-bold">
                 2
               </span>
-              <span>服务与标签（可多选）</span>
+              <span>{isChinese ? '服务与标签（可多选）' : 'Service & Highlights (multiple)'}</span>
             </label>
             <div className="flex flex-wrap gap-1.5">
               {merchant.services.map((service) => {
@@ -421,7 +431,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
               <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#8c674e] text-[10px] text-white font-bold">
                 3
               </span>
-              <span>平台与口吻</span>
+              <span>{isChinese ? '平台与口吻' : 'Platform & Tone'}</span>
             </label>
             <div className="flex items-center gap-2">
               <span className="rounded-lg bg-[#efe5d7] border border-[#dccbb9] px-2.5 py-1 text-xs font-bold text-[#624b3c]">
@@ -455,21 +465,25 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
               <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#8c674e] text-[10px] text-white font-bold">
                 4
               </span>
-              <span>可编辑草稿</span>
+              <span>{isChinese ? '可编辑草稿' : 'Editable draft'}</span>
             </label>
             <div className="relative">
               <textarea
                 ref={textareaRef}
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
-                placeholder="此处显示生成的草稿，可直接点击修改。"
+                placeholder={getDraftPlaceholder(platform)}
                 rows={platform === 'xiaohongshu' || platform === 'instagram' ? 7 : 5}
                 className="w-full resize-none rounded-xl border border-[#dec9b5] bg-white p-3 text-xs sm:text-sm leading-relaxed text-[#3d2d24] outline-none transition focus:border-[#986a4c] focus:ring-2 focus:ring-[#986a4c]/15 shadow-inner"
               />
             </div>
             <p className="flex items-center gap-1 text-[10.5px] text-[#91796a]">
               <ShieldCheck className="h-3.5 w-3.5 text-[#a1795c] shrink-0" />
-              <span>顾客填写的体验原话会保留在草稿中，发布前可自由编辑。</span>
+              <span>
+                {isChinese
+                  ? '顾客填写的体验原话会保留在草稿中，发布前可自由编辑。'
+                  : 'Your experience is kept authentic. You can edit everything before publishing.'}
+              </span>
             </p>
           </div>
 
@@ -496,7 +510,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
             className={`w-full rounded-2xl py-3.5 px-4 text-center text-sm font-bold text-white shadow-md transition flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed ${style.copyButton}`}
           >
             {isCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-            <span>复制并前往平台</span>
+            <span>{isChinese ? '复制并前往平台' : `Copy & Open ${getPlatformName(platform)}`}</span>
             <ExternalLink className="h-3.5 w-3.5 opacity-80" />
           </button>
         </div>
@@ -529,12 +543,12 @@ function PlatformBadge({ platform, className }: { platform: PublicReviewPlatform
       ? <Camera className="h-3.5 w-3.5" />
       : platform === 'yelp'
         ? <Star className="h-3.5 w-3.5 fill-current" />
-        : <span className="text-[10px]">小红书</span>;
+        : null;
 
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-[11px] font-bold ${className}`}>
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold ${className}`}>
       {icon}
-      {getPlatformName(platform)}
+      <span>{getPlatformName(platform)}</span>
     </span>
   );
 }
