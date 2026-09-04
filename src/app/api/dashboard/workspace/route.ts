@@ -789,12 +789,13 @@ function safePlatformUrl(value: unknown, platform: Platform): string | null {
     if (platform === Platform.GOOGLE) {
       const isGoogleReviewLink =
         (host === 'search.google.com' && parsed.pathname.startsWith('/local/writereview')) ||
-        (host === 'g.page' && parsed.pathname.includes('/review'));
+        (host === 'g.page' && parsed.pathname.includes('/review')) ||
+        (host.includes('google.') && (parsed.pathname === '/search' || parsed.hash.includes('lrd=')));
       return isGoogleReviewLink ? candidate : null;
     }
     const isYelpReviewOrBusinessPage =
       (host === 'yelp.com' || host.endsWith('.yelp.com')) &&
-      (parsed.pathname.startsWith('/writeareview/') || parsed.pathname.startsWith('/biz/'));
+      (parsed.pathname.startsWith('/writeareview') || parsed.pathname.startsWith('/biz') || parsed.pathname.startsWith('/search'));
     return isYelpReviewOrBusinessPage ? candidate : null;
   } catch {
     return null;

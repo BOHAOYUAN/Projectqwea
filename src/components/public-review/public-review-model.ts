@@ -121,7 +121,8 @@ const DEFAULT_PLATFORM_CONFIGS: Record<
   { destinationUrl: string; fallbackUrl: string; publishHint: string }
 > = {
   google: {
-    destinationUrl: 'https://search.google.com/local/writereview?placeid=0x89c8035d1afafeff:0x47a57effa39720a7',
+    destinationUrl:
+      'https://www.google.com/search?q=MS+BEAUTY+1006+Eastern+Ave+Baltimore#lrd=0x89c8035d1afafeff:0x47a57effa39720a7,3',
     fallbackUrl: 'https://maps.google.com/?cid=5162608466650407079',
     publishHint: 'Draft copied! Opening Google Maps to write your review.',
   },
@@ -131,8 +132,8 @@ const DEFAULT_PLATFORM_CONFIGS: Record<
     publishHint: '文案已复制，进入小红书直接粘贴发布即可。',
   },
   yelp: {
-    destinationUrl: 'https://www.yelp.com/writeareview/biz/ms-beauty-baltimore',
-    fallbackUrl: 'https://www.yelp.com/biz/ms-beauty-baltimore',
+    destinationUrl: 'https://www.yelp.com/writeareview/search?q=MS+BEAUTY+Baltimore',
+    fallbackUrl: 'https://www.yelp.com/search?find_desc=MS+BEAUTY&find_loc=Baltimore%2C+MD',
     publishHint: 'Draft copied! Opening Yelp to write your review.',
   },
   instagram: {
@@ -181,7 +182,7 @@ function isPublicPlatformUrl(value: string | null | undefined, platform: PublicR
     }
     return (
       (host === 'yelp.com' || host.endsWith('.yelp.com')) &&
-      (parsed.pathname.startsWith('/writeareview/') || parsed.pathname.startsWith('/biz/'))
+      (parsed.pathname.startsWith('/writeareview') || parsed.pathname.startsWith('/biz') || parsed.pathname.startsWith('/search'))
     );
   } catch {
     return false;
