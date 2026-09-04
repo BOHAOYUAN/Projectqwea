@@ -63,7 +63,9 @@ const PLATFORMS: PlatformCardInfo[] = [
 
 export function ReviewHub({ merchant }: ReviewHubProps) {
   const router = useRouter();
-  const [selectedServiceId, setSelectedServiceId] = useState(merchant.services[0]?.id ?? '');
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>(
+    merchant.services.slice(0, 1).map((s) => s.id),
+  );
   const [selectedPlatform, setSelectedPlatform] = useState<PublicReviewPlatform>('google');
 
   const brandWords = merchant.name.split(/\s+/).filter(Boolean);
@@ -74,9 +76,20 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
       .slice(0, 2)
       .toUpperCase() || 'M';
 
+  const toggleService = (serviceId: string) => {
+    setSelectedServiceIds((current) =>
+      current.includes(serviceId)
+        ? current.length > 1
+          ? current.filter((id) => id !== serviceId)
+          : current
+        : [...current, serviceId],
+    );
+  };
+
   const handleContinue = () => {
     const base = publicReviewPlatformPath(merchant, selectedPlatform);
-    const target = selectedServiceId ? `${base}?service=${encodeURIComponent(selectedServiceId)}` : base;
+    const serviceParam = selectedServiceIds.join(',');
+    const target = serviceParam ? `${base}?service=${encodeURIComponent(serviceParam)}` : base;
     router.push(target);
   };
 
@@ -94,7 +107,7 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
             {/* Merchant Details */}
             <div className="flex-1 min-w-0">
               <span className="inline-block text-[10px] font-semibold text-[#a58169] tracking-wider uppercase">
-                品牌 / 门店直连
+                Brand & Store Verified
               </span>
               <h1 className="text-xl font-bold text-[#35271f] tracking-tight leading-snug truncate">
                 {merchant.name}
@@ -114,21 +127,21 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
           </h2>
         </div>
 
-        {/* SERVICE SELECTION CARD (本次服务) */}
+        {/* SERVICE SELECTION CARD (本次服务 - 多选) */}
         {merchant.services.length > 0 && (
           <section className="rounded-2xl border border-[#dec9b5] bg-[#fffaf5] p-3.5 shadow-xs space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-[#564236]">本次服务</span>
+              <span className="text-xs font-bold text-[#564236]">本次服务（可多选）</span>
               <span className="text-[10px] text-[#9c8475]">点击切换</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
               {merchant.services.map((service) => {
-                const isSelected = selectedServiceId === service.id;
+                const isSelected = selectedServiceIds.includes(service.id);
                 return (
                   <button
                     key={service.id}
                     type="button"
-                    onClick={() => setSelectedServiceId(service.id)}
+                    onClick={() => toggleService(service.id)}
                     className={`rounded-xl px-3 py-1.5 text-xs font-medium transition active:scale-95 flex items-center gap-1.5 border ${
                       isSelected
                         ? 'border-[#996d51] bg-[#996d51] text-white shadow-xs'
@@ -164,7 +177,8 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
                   onClick={() => {
                     setSelectedPlatform(p.key);
                     const base = publicReviewPlatformPath(merchant, p.key);
-                    const target = selectedServiceId ? `${base}?service=${encodeURIComponent(selectedServiceId)}` : base;
+                    const serviceParam = selectedServiceIds.join(',');
+                    const target = serviceParam ? `${base}?service=${encodeURIComponent(serviceParam)}` : base;
                     router.push(target);
                   }}
                   className={`rounded-2xl border p-3.5 text-left transition flex items-center justify-between active:scale-[0.98] ${

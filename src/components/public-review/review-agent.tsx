@@ -60,7 +60,7 @@ type VoiceOption = {
   detail: string;
 };
 
-const maxSelectedServices = 2;
+const maxSelectedServices = 10;
 
 const ENGLISH_VOICES: VoiceOption[] = [
   { value: 'natural', label: 'Natural', detail: 'Everyday phrasing' },
@@ -108,11 +108,15 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
   const voiceOptions = isChinese ? CHINESE_VOICES : ENGLISH_VOICES;
   const [step, setStep] = useState<FlowStep>('customize');
   const [experience, setExperience] = useState('');
-  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>(
-    initialServiceId && merchant.services.some((service) => service.id === initialServiceId)
-      ? [initialServiceId]
-      : merchant.services.slice(0, 1).map((s) => s.id),
-  );
+
+  const parsedInitialIds = useMemo(() => {
+    if (!initialServiceId) return merchant.services.slice(0, 1).map((s) => s.id);
+    const ids = initialServiceId.split(',').map((id) => id.trim()).filter(Boolean);
+    const validIds = ids.filter((id) => merchant.services.some((s) => s.id === id));
+    return validIds.length > 0 ? validIds : merchant.services.slice(0, 1).map((s) => s.id);
+  }, [initialServiceId, merchant.services]);
+
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>(parsedInitialIds);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([
     merchant.experienceTags[0]?.id || 'calm',
   ]);
