@@ -12,7 +12,6 @@ import {
   Globe2,
   Loader2,
   MapPin,
-  MessageCircleHeart,
   RefreshCw,
   ShieldCheck,
   Sparkles,
@@ -30,6 +29,7 @@ import {
 type ReviewAgentProps = {
   merchant: PublicReviewMerchant;
   platform: PublicReviewPlatform;
+  initialServiceId?: string;
 };
 
 type ApiDraft = {
@@ -99,7 +99,7 @@ const PLATFORM_STYLES: Record<PublicReviewPlatform, {
   },
 };
 
-export function ReviewAgent({ merchant, platform }: ReviewAgentProps) {
+export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgentProps) {
   const isChinese = platform === 'xiaohongshu';
   const labels = getReviewLabels(platform);
   const style = PLATFORM_STYLES[platform];
@@ -107,7 +107,9 @@ export function ReviewAgent({ merchant, platform }: ReviewAgentProps) {
   const [step, setStep] = useState<'customize' | 'draft'>('customize');
   const [showCustomNote, setShowCustomNote] = useState(false);
   const [experience, setExperience] = useState('');
-  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>(
+    initialServiceId && merchant.services.some((service) => service.id === initialServiceId) ? [initialServiceId] : [],
+  );
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [voice, setVoice] = useState<PublicReviewVoice>('natural');
   const [draft, setDraft] = useState('');
@@ -264,7 +266,7 @@ export function ReviewAgent({ merchant, platform }: ReviewAgentProps) {
             {/* Header Banner */}
             <header className="mb-3 text-center">
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#a87859]">
-                {merchant.name} · {merchant.neighborhood}
+                02 · {merchant.name} · {merchant.neighborhood}
               </p>
               <h1 className="font-serif text-2xl sm:text-3xl leading-tight tracking-[-0.03em] text-[#382a22]">
                 {labels.heading}
@@ -596,25 +598,23 @@ function buildLocalDraft({ platform, merchant, services, tags, experience, voice
   const note = experience.trim().replace(/\s+/g, ' ');
 
   if (platform === 'xiaohongshu') {
-    return buildXiaohongshuDraft({ merchant, serviceText, tagText, note, voice });
+    return buildXiaohongshuDraft({ merchant, serviceText, tagText, note });
   }
 
   if (platform === 'instagram') {
-    return buildInstagramDraft({ merchant, serviceText, tagText, note, voice });
+    return buildInstagramDraft({ merchant, serviceText, tagText, note });
   }
 
-  return buildEnglishReviewDraft({ platform, merchant, serviceText, tagText, note, voice });
+  return buildEnglishReviewDraft({ merchant, serviceText, tagText, note, voice });
 }
 
 function buildEnglishReviewDraft({
-  platform,
   merchant,
   serviceText,
   tagText,
   note,
   voice,
 }: {
-  platform: 'google' | 'yelp';
   merchant: PublicReviewMerchant;
   serviceText: string;
   tagText: string;
@@ -639,13 +639,11 @@ function buildInstagramDraft({
   serviceText,
   tagText,
   note,
-  voice,
 }: {
   merchant: PublicReviewMerchant;
   serviceText: string;
   tagText: string;
   note: string;
-  voice: PublicReviewVoice;
 }) {
   const service = serviceText || 'self-care session';
   const tagList = tagText ? tagText.toLowerCase() : 'peaceful and refreshing';
@@ -666,13 +664,11 @@ function buildXiaohongshuDraft({
   serviceText,
   tagText,
   note,
-  voice,
 }: {
   merchant: PublicReviewMerchant;
   serviceText: string;
   tagText: string;
   note: string;
-  voice: PublicReviewVoice;
 }) {
   const service = serviceText || '面部与护理SPA';
   const tagsStr = tagText || '环境舒服、服务贴心';

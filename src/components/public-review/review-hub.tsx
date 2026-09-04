@@ -1,4 +1,7 @@
+"use client";
+
 import Link from 'next/link';
+import { useState } from 'react';
 import {
   ChevronRight,
   Camera,
@@ -20,10 +23,15 @@ type ReviewHubProps = {
 };
 
 export function ReviewHub({ merchant }: ReviewHubProps) {
-  const googleHref = publicReviewPlatformPath(merchant, 'google');
-  const xiaohongshuHref = publicReviewPlatformPath(merchant, 'xiaohongshu');
-  const yelpHref = publicReviewPlatformPath(merchant, 'yelp');
-  const instagramHref = publicReviewPlatformPath(merchant, 'instagram');
+  const [selectedServiceId, setSelectedServiceId] = useState(merchant.services[0]?.id ?? '');
+  const withService = (platform: 'google' | 'xiaohongshu' | 'yelp' | 'instagram') => {
+    const base = publicReviewPlatformPath(merchant, platform);
+    return selectedServiceId ? `${base}?service=${encodeURIComponent(selectedServiceId)}` : base;
+  };
+  const googleHref = withService('google');
+  const xiaohongshuHref = withService('xiaohongshu');
+  const yelpHref = withService('yelp');
+  const instagramHref = withService('instagram');
   const brandWords = merchant.name
     .split(/\s+/)
     .filter(Boolean)
@@ -34,7 +42,7 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
     .toUpperCase() || 'RV';
 
   return (
-    <main className="relative isolate min-h-screen overflow-hidden bg-[#f8efdf] px-4 py-8 text-[#44362d] sm:px-6 sm:py-12">
+    <main className="relative isolate min-h-screen overflow-hidden bg-[#f7f3eb] px-4 py-8 text-[#44362d] sm:px-6 sm:py-12">
       <div aria-hidden className="absolute inset-0 -z-10 opacity-70">
         <div className="absolute -left-24 top-14 h-72 w-72 rounded-full bg-[#eed7b4] blur-3xl" />
         <div className="absolute -right-20 bottom-0 h-96 w-96 rounded-full bg-[#e9cbb5]/70 blur-3xl" />
@@ -63,7 +71,44 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
           )}
         </header>
 
-        <div className="mt-10 grid w-full max-w-2xl gap-4 sm:mt-12 sm:grid-cols-2">
+        {merchant.services.length > 0 && (
+          <section className="mt-10 w-full max-w-2xl rounded-[1.75rem] border border-[#e5d8c8] bg-[#fffaf4]/90 p-5 shadow-[0_12px_28px_rgba(103,71,48,0.06)] sm:mt-12 sm:p-6">
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#a47658]">01 · Your visit</p>
+                <h2 className="mt-1 font-serif text-2xl text-[#382a22]">What did you experience?</h2>
+              </div>
+              <p className="text-xs text-[#806a5c]">Choose one to guide your draft</p>
+            </div>
+            <div className="mt-4 grid gap-2 sm:grid-cols-3">
+              {merchant.services.map((service) => {
+                const selected = selectedServiceId === service.id;
+                return (
+                  <button
+                    key={service.id}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setSelectedServiceId(service.id)}
+                    className={`rounded-2xl border p-3 text-left transition ${selected ? 'border-[#9d6d50] bg-[#f3e4d2] shadow-sm' : 'border-[#eadbcb] bg-white hover:border-[#c9a789] hover:bg-[#fffdf9]'}`}
+                  >
+                    <span className="block text-sm font-semibold text-[#4a382d]">{service.name}</span>
+                    <span className="mt-1 block text-[11px] leading-4 text-[#877365]">{service.englishName}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        <div className="mt-6 w-full max-w-2xl sm:mt-8">
+          <div className="mb-4 flex items-center gap-3">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#9d765d] text-[11px] font-bold text-white">02</span>
+            <div>
+              <p className="text-sm font-semibold text-[#4a382d]">Choose where to share</p>
+              <p className="text-xs text-[#806a5c]">We will only turn the details you choose into a draft.</p>
+            </div>
+          </div>
+          <div className="grid w-full gap-4 sm:grid-cols-2">
           <PlatformLink
             href={googleHref}
             available={merchant.platforms.google.enabled}
@@ -100,6 +145,7 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
             description="Turn the details you choose into a grounded caption for your own post."
             className="border-[#e7bce2] from-white to-[#fff5fb] text-[#b84899] hover:border-[#d982c5]"
           />
+          </div>
         </div>
 
         <div className="mt-7 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-[#806a5c]">

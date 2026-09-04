@@ -9,6 +9,7 @@ import { getPublicReviewPage } from '@/lib/server/merchant-repository';
 
 type PublicReviewAgentPageProps = {
   params: Promise<{ merchantSlug: string; locationSlug: string; platform: string }>;
+  searchParams: Promise<{ service?: string | string[] }>;
 };
 
 function toPlatform(value: string): PublicReviewPlatform | null {
@@ -36,8 +37,9 @@ export async function generateMetadata({ params }: PublicReviewAgentPageProps): 
   };
 }
 
-export default async function PublicReviewAgentPage({ params }: PublicReviewAgentPageProps) {
+export default async function PublicReviewAgentPage({ params, searchParams }: PublicReviewAgentPageProps) {
   const { merchantSlug, locationSlug, platform: rawPlatform } = await params;
+  const query = await searchParams;
   const platform = toPlatform(rawPlatform);
   if (!platform) notFound();
   const page = await getPublicReviewPage(merchantSlug, locationSlug);
@@ -47,5 +49,6 @@ export default async function PublicReviewAgentPage({ params }: PublicReviewAgen
     return <ReviewPlatformUnavailable merchant={merchant} platform={platform} />;
   }
 
-  return <ReviewAgent merchant={merchant} platform={platform} />;
+  const initialServiceId = typeof query.service === 'string' ? query.service : undefined;
+  return <ReviewAgent merchant={merchant} platform={platform} initialServiceId={initialServiceId} />;
 }

@@ -1266,15 +1266,15 @@ export default function DashboardPage() {
       )}
 
       <header className="border-b border-[#e5dccf] bg-[#fcfaf6]/95 backdrop-blur">
-        <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+          <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
             <Link href="/" aria-label="返回顾客页面" className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#e7ded3] bg-white text-[#6d6258] transition hover:border-[#c9b49d] hover:text-[#382e27] sm:inline-flex">
               <ArrowLeft className="h-4 w-4" />
             </Link>
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#3d332b] text-sm font-semibold tracking-wide text-[#fffaf2] shadow-[0_8px_18px_rgba(61,51,43,0.18)]">RV</div>
             <div className="min-w-0">
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#a17654]">Review room</p>
-              <p className="truncate text-sm font-semibold text-[#372e28]">多商家评价运营中台</p>
+              <p className="font-serif text-xl font-semibold tracking-[-0.03em] text-[#372e28]">ReviewFlow</p>
+              <p className="truncate text-[11px] font-medium text-[#8c7a6c]">多商家评价运营平台 · 可复用运营骨架</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -1810,7 +1810,7 @@ export default function DashboardPage() {
       </main>
 
       <footer className="mx-auto flex max-w-[1440px] items-center justify-between px-4 pb-7 text-[11px] text-[#94887c] sm:px-6 lg:px-8">
-        <span>Review Room · local operations experience</span>
+        <span>ReviewFlow · merchant operations workspace</span>
         <span className="inline-flex items-center gap-1"><Globe2 className="h-3 w-3" /> {merchant.name}</span>
       </footer>
     </div>

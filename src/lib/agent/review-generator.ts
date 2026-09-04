@@ -35,45 +35,8 @@ function formatList(items: string[], conjunction: 'and' | '和'): string {
   return `${cleanItems.slice(0, -1).join(', ')}, ${conjunction} ${cleanItems.at(-1)}`;
 }
 
-function quote(value: string): string {
-  return `“${value.replace(/[“”]/g, '').trim()}”`;
-}
-
 function isChinesePlatform(platform: ReviewPlatform): boolean {
   return platform === 'xiaohongshu';
-}
-
-function voiceLabel(voice: ContentVoice | undefined): string {
-  if (voice === 'concise') return 'Favor fewer, direct sentences; do not remove or add any factual detail.';
-  if (voice === 'warm') return 'Use a gentle rhythm only through sentence order and punctuation; do not add sentiment that was not supplied.';
-  return 'Use plain first-person sentence order; do not add descriptive wording.';
-}
-
-function englishOpening(input: ReviewDraftInput, seedOffset = 0): string {
-  const services = formatList(input.serviceNames, 'and');
-  const place = services
-    ? `${input.merchantName} for ${services}`
-    : `${input.merchantName} in ${input.location}`;
-  const voice = input.voice ?? 'natural';
-  if (voice === 'concise') return `I went to ${place}.`;
-  if (voice === 'warm') return `A small note from my visit to ${place}.`;
-  // Never turn a selected service into an invented appointment, timing, or
-  // staff interaction. The variation lives in the customer detail, not in a
-  // made-up visit wrapper.
-  return pick([`I visited ${place}.`, `A note from my visit to ${place}.`], (input.seed ?? Date.now()) + seedOffset);
-}
-
-function approvedEnglishOpener(input: ReviewDraftInput): string {
-  const services = formatList(input.serviceNames, 'and');
-  return services
-    ? `I visited ${input.merchantName} for ${services}.`
-    : `I visited ${input.merchantName} in ${input.location}.`;
-}
-
-function englishDetailLead(voice: ContentVoice | undefined, seed: number): string {
-  if (voice === 'concise') return 'I noticed';
-  if (voice === 'warm') return 'One thing I wanted to remember was';
-  return pick(['One detail from my visit was', 'What I wanted to mention was', 'One thing I wrote down was'], seed);
 }
 
 function localGoogleDraft(input: ReviewDraftInput): string {
@@ -132,8 +95,6 @@ function localInstagramDraft(input: ReviewDraftInput): string {
   const typedExperience = sentenceCase(input.experience);
   const service = formatList(input.serviceNames, 'and') || 'spa treatment';
   const tagList = input.tags.length > 0 ? input.tags.join(', ') : 'self-care vibes';
-  const seed = input.seed ?? Date.now();
-
   const note = typedExperience && !/[\u4e00-\u9fff]/.test(typedExperience)
     ? typedExperience
     : tagList
