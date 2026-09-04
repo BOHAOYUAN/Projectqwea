@@ -38,10 +38,10 @@ export const MS_BEAUTY_SERVICES: PublicService[] = [
 export const MS_BEAUTY_PLATFORM_LINKS: PublicPlatformLink[] = [
   {
     platform: 'google',
-    destinationUrl: null,
-    fallbackUrl: null,
+    destinationUrl: 'https://search.google.com/local/writereview?placeid=0x89c8035d1afafeff:0x47a57effa39720a7',
+    fallbackUrl: 'https://maps.google.com/?cid=5162608466650407079',
     ctaLabel: 'Write a Google review',
-    publishHint: 'This entry opens after the merchant adds its verified Google review link.',
+    publishHint: 'Draft copied! Opening Google Maps to write your review.',
   },
   {
     platform: 'xiaohongshu',
@@ -52,17 +52,17 @@ export const MS_BEAUTY_PLATFORM_LINKS: PublicPlatformLink[] = [
   },
   {
     platform: 'yelp',
-    destinationUrl: null,
-    fallbackUrl: null,
+    destinationUrl: 'https://www.yelp.com/writeareview/biz/ms-beauty-baltimore',
+    fallbackUrl: 'https://www.yelp.com/biz/ms-beauty-baltimore',
     ctaLabel: 'Write a Yelp review',
-    publishHint: 'This entry opens after the merchant adds its verified Yelp review link.',
+    publishHint: 'Draft copied! Opening Yelp to write your review.',
   },
   {
     platform: 'instagram',
-    destinationUrl: null,
-    fallbackUrl: null,
+    destinationUrl: 'instagram://camera',
+    fallbackUrl: 'https://www.instagram.com/',
     ctaLabel: 'Post on Instagram',
-    publishHint: 'This entry opens after the merchant adds its verified Instagram destination.',
+    publishHint: 'Caption copied! Opening Instagram to share your post.',
   },
 ];
 

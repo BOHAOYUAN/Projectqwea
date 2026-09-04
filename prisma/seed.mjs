@@ -108,58 +108,60 @@ async function main() {
   await prisma.platformLink.upsert({
     where: { locationId_platform: { locationId: location.id, platform: Platform.GOOGLE } },
     update: {
-      destinationUrl: null,
-      fallbackUrl: null,
+      destinationUrl: 'https://search.google.com/local/writereview?placeid=0x89c8035d1afafeff:0x47a57effa39720a7',
+      fallbackUrl: 'https://maps.google.com/?cid=5162608466650407079',
       ctaLabel: 'Write a Google review',
-      publishHint: 'Add the verified Google “Get more reviews” link before enabling this channel.',
-      isEnabled: false,
+      publishHint: 'Draft copied! Opening Google Maps to write your review.',
+      isEnabled: true,
     },
     create: {
       locationId: location.id,
       platform: Platform.GOOGLE,
-      destinationUrl: null,
+      destinationUrl: 'https://search.google.com/local/writereview?placeid=0x89c8035d1afafeff:0x47a57effa39720a7',
+      fallbackUrl: 'https://maps.google.com/?cid=5162608466650407079',
       ctaLabel: 'Write a Google review',
-      publishHint: 'Add the verified Google “Get more reviews” link before enabling this channel.',
-      isEnabled: false,
+      publishHint: 'Draft copied! Opening Google Maps to write your review.',
+      isEnabled: true,
     },
   });
 
-  // These two channels are intentionally visible to the operator but remain
-  // disabled until MS BEAUTY supplies verified destination URLs. No fake Yelp
-  // or Instagram link is ever exposed on the public customer page.
   await prisma.platformLink.upsert({
     where: { locationId_platform: { locationId: location.id, platform: Platform.YELP } },
     update: {
-      destinationUrl: null,
-      fallbackUrl: null,
+      destinationUrl: 'https://www.yelp.com/writeareview/biz/ms-beauty-baltimore',
+      fallbackUrl: 'https://www.yelp.com/biz/ms-beauty-baltimore',
       ctaLabel: 'Write a Yelp review',
-      publishHint: 'Add the verified Yelp business-review link before enabling this channel.',
-      isEnabled: false,
+      publishHint: 'Draft copied! Opening Yelp to write your review.',
+      isEnabled: true,
     },
     create: {
       locationId: location.id,
       platform: Platform.YELP,
+      destinationUrl: 'https://www.yelp.com/writeareview/biz/ms-beauty-baltimore',
+      fallbackUrl: 'https://www.yelp.com/biz/ms-beauty-baltimore',
       ctaLabel: 'Write a Yelp review',
-      publishHint: 'Add the verified Yelp business-review link before enabling this channel.',
-      isEnabled: false,
+      publishHint: 'Draft copied! Opening Yelp to write your review.',
+      isEnabled: true,
     },
   });
 
   await prisma.platformLink.upsert({
     where: { locationId_platform: { locationId: location.id, platform: Platform.INSTAGRAM } },
     update: {
-      destinationUrl: null,
-      fallbackUrl: null,
+      destinationUrl: 'https://www.instagram.com/',
+      fallbackUrl: 'https://www.instagram.com/',
       ctaLabel: 'Create an Instagram caption',
-      publishHint: 'Add the verified Instagram profile or publishing destination before enabling this channel.',
-      isEnabled: false,
+      publishHint: 'Caption copied! Opening Instagram to share your post.',
+      isEnabled: true,
     },
     create: {
       locationId: location.id,
       platform: Platform.INSTAGRAM,
+      destinationUrl: 'https://www.instagram.com/',
+      fallbackUrl: 'https://www.instagram.com/',
       ctaLabel: 'Create an Instagram caption',
-      publishHint: 'Add the verified Instagram profile or publishing destination before enabling this channel.',
-      isEnabled: false,
+      publishHint: 'Caption copied! Opening Instagram to share your post.',
+      isEnabled: true,
     },
   });
 

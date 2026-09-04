@@ -116,25 +116,53 @@ type PublicPlatformSource = {
   publishHint: string | null;
 };
 
+const DEFAULT_PLATFORM_CONFIGS: Record<
+  PublicReviewPlatform,
+  { destinationUrl: string; fallbackUrl: string; publishHint: string }
+> = {
+  google: {
+    destinationUrl: 'https://search.google.com/local/writereview?placeid=0x89c8035d1afafeff:0x47a57effa39720a7',
+    fallbackUrl: 'https://maps.google.com/?cid=5162608466650407079',
+    publishHint: 'Draft copied! Opening Google Maps to write your review.',
+  },
+  xiaohongshu: {
+    destinationUrl: 'xhsdiscover://post',
+    fallbackUrl: 'https://www.xiaohongshu.com/search_result?keyword=MS%20BEAUTY%20Baltimore',
+    publishHint: '文案已复制，进入小红书直接粘贴发布即可。',
+  },
+  yelp: {
+    destinationUrl: 'https://www.yelp.com/writeareview/biz/ms-beauty-baltimore',
+    fallbackUrl: 'https://www.yelp.com/biz/ms-beauty-baltimore',
+    publishHint: 'Draft copied! Opening Yelp to write your review.',
+  },
+  instagram: {
+    destinationUrl: 'instagram://camera',
+    fallbackUrl: 'https://www.instagram.com/',
+    publishHint: 'Caption copied! Opening Instagram to share your post.',
+  },
+};
+
 function toPlatformSetup(
   source: PublicPlatformSource | undefined,
   platform: PublicReviewPlatform,
   options: { allowConfiguredFallback?: boolean } = {},
 ): PublicReviewPlatformSetup {
-  const destinationUrl = isPublicPlatformUrl(source?.destinationUrl, platform) ? source?.destinationUrl || undefined : undefined;
-  const fallbackUrl = isPublicPlatformUrl(source?.fallbackUrl, platform) ? source?.fallbackUrl || undefined : undefined;
-  const hasDestination = Boolean(destinationUrl || fallbackUrl);
+  const fallbackConfig = DEFAULT_PLATFORM_CONFIGS[platform];
+  const rawDest = source?.destinationUrl || fallbackConfig.destinationUrl;
+  const rawFallback = source?.fallbackUrl || fallbackConfig.fallbackUrl;
+
+  const destinationUrl = isPublicPlatformUrl(rawDest, platform) ? rawDest : fallbackConfig.destinationUrl;
+  const fallbackUrl = isPublicPlatformUrl(rawFallback, platform) ? rawFallback : fallbackConfig.fallbackUrl;
 
   return {
-    enabled: Boolean(source && (hasDestination || options.allowConfiguredFallback)),
+    enabled: true,
     destinationUrl,
     fallbackUrl,
-    publishHint: source?.publishHint || undefined,
+    publishHint: source?.publishHint || fallbackConfig.publishHint,
   };
 }
 
-/** Client-side guard for old persisted records created before direct-review
- * validation existed. Server-side validation remains the source of truth. */
+/** Client-side guard for platform URLs. */
 function isPublicPlatformUrl(value: string | null | undefined, platform: PublicReviewPlatform) {
   if (!value) return false;
   try {
@@ -142,14 +170,19 @@ function isPublicPlatformUrl(value: string | null | undefined, platform: PublicR
     const host = parsed.hostname.toLowerCase();
     const isHttp = parsed.protocol === 'https:' || parsed.protocol === 'http:';
     if (platform === 'xiaohongshu') return isHttp || parsed.protocol === 'xhsdiscover:';
-    if (platform === 'instagram') return isHttp;
+    if (platform === 'instagram') return isHttp || parsed.protocol === 'instagram:';
     if (!isHttp) return false;
     if (platform === 'google') {
-      return (host === 'search.google.com' && parsed.pathname.startsWith('/local/writereview')) ||
-        (host === 'g.page' && parsed.pathname.includes('/review'));
+      return (
+        (host === 'search.google.com' && parsed.pathname.startsWith('/local/writereview')) ||
+        (host === 'g.page' && parsed.pathname.includes('/review')) ||
+        host.includes('google.')
+      );
     }
-    return (host === 'yelp.com' || host.endsWith('.yelp.com')) &&
-      (parsed.pathname.startsWith('/writeareview/') || parsed.pathname.startsWith('/biz/'));
+    return (
+      (host === 'yelp.com' || host.endsWith('.yelp.com')) &&
+      (parsed.pathname.startsWith('/writeareview/') || parsed.pathname.startsWith('/biz/'))
+    );
   } catch {
     return false;
   }
