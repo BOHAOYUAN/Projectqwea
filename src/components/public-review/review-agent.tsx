@@ -859,9 +859,9 @@ function requiresMobileHandoff(platform: PublicReviewPlatform, destination: stri
 
 function getMissingDestinationCopy(platform: PublicReviewPlatform) {
   if (platform === 'xiaohongshu') return '小红书发布入口暂未配置，请稍后再试。';
-  if (platform === 'yelp') return 'Yelp 评价链接暂未配置，请稍后再试。';
-  if (platform === 'instagram') return 'Instagram 发布入口暂未配置，请稍后再试。';
-  return 'Google 评价链接暂未配置，请稍后再试。';
+  if (platform === 'yelp') return 'Yelp review link is not configured yet. Please try again later.';
+  if (platform === 'instagram') return 'Instagram destination is not configured yet. Please try again later.';
+  return 'Google Maps review link is not configured yet. Please try again later.';
 }
 
 function getWebFallback(merchant: PublicReviewMerchant, platform: PublicReviewPlatform) {
