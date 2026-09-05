@@ -120,10 +120,10 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
           </div>
         </section>
 
-        {/* SECTION TITLE: 留下你的真实体验 */}
+        {/* SECTION TITLE: 留下你的真实体验 -> Share your experience */}
         <div className="pt-1 px-1">
           <h2 className="text-sm font-bold text-[#443329] tracking-tight">
-            留下你的真实体验
+            Share your experience
           </h2>
         </div>
 
@@ -131,8 +131,8 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
         {merchant.services.length > 0 && (
           <section className="rounded-2xl border border-[#dec9b5] bg-[#fffaf5] p-3.5 shadow-xs space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-[#564236]">本次服务（可多选）</span>
-              <span className="text-[10px] text-[#9c8475]">点击切换</span>
+              <span className="text-xs font-bold text-[#564236]">Services (Multiple)</span>
+              <span className="text-[10px] text-[#9c8475]">Tap to select</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
               {merchant.services.map((service) => {
@@ -149,7 +149,7 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
                     }`}
                   >
                     {isSelected && <Check className="h-3 w-3 shrink-0" />}
-                    <span>{service.name}</span>
+                    <span>{service.englishName || service.name}</span>
                   </button>
                 );
               })}
@@ -160,8 +160,8 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
         {/* PLATFORM SELECTION (选择发布平台 2x2) */}
         <section className="space-y-2">
           <div className="flex items-center justify-between px-1">
-            <h3 className="text-xs font-bold text-[#564236]">选择发布平台</h3>
-            <span className="text-[10px] text-[#9c8475]">点击选中直接前往</span>
+            <h3 className="text-xs font-bold text-[#564236]">Choose a platform</h3>
+            <span className="text-[10px] text-[#9c8475]">Tap to open</span>
           </div>
 
           <div className="grid grid-cols-2 gap-2.5">
@@ -212,7 +212,7 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
 
         {/* BOTTOM HELPER NOTICE */}
         <p className="text-center text-[10px] text-[#988273] pt-1 leading-normal">
-          统一布局：Logo、色彩、文案、服务和链接可配置
+          Consistent layout · Brand, colors, copy, and destinations are configurable
         </p>
 
         {/* BOTTOM PRIMARY BUTTON: 选择平台继续 */}
@@ -222,7 +222,7 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
             onClick={handleContinue}
             className="w-full rounded-2xl bg-[#7c563e] hover:bg-[#684732] active:scale-[0.99] py-3.5 px-4 text-center text-sm font-bold text-white shadow-md transition flex items-center justify-center gap-2"
           >
-            <span>选择平台继续</span>
+            <span>Continue to Review</span>
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
