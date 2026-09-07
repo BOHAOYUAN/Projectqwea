@@ -197,6 +197,19 @@ export interface PublicReviewPage {
   suggestedTags: string[];
   services: PublicService[];
   platforms: PublicPlatformLink[];
+  theme?: 'dark' | 'light';
+  bannerUrl?: string | null;
+  socialLinks?: Array<{
+    platform: 'xiaohongshu' | 'instagram' | 'tiktok';
+    handle: string;
+    url: string;
+    label?: string;
+  }>;
+  galleryImages?: string[];
+  socialHandles?: {
+    instagram?: string;
+    xiaohongshu?: string;
+  };
 }
 
 export function toPersistencePlatform(platform: PlatformKey): PersistencePlatform {

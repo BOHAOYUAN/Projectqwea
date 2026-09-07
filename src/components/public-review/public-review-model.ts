@@ -32,6 +32,13 @@ export type PublicReviewPlatformSetup = {
   publishHint?: string;
 };
 
+export type PublicReviewSocialLink = {
+  platform: 'xiaohongshu' | 'instagram' | 'tiktok';
+  handle: string;
+  url: string;
+  label?: string;
+};
+
 export type PublicReviewMerchant = {
   name: string;
   merchantSlug: string;
@@ -44,6 +51,15 @@ export type PublicReviewMerchant = {
   subheadline?: string;
   showAddress?: boolean;
   reviewDisclosure?: string;
+  bannerUrl?: string;
+  logoUrl?: string;
+  theme?: 'dark' | 'light';
+  socialLinks?: PublicReviewSocialLink[];
+  galleryImages?: string[];
+  socialHandles?: {
+    instagram?: string;
+    xiaohongshu?: string;
+  };
   platforms: Record<PublicReviewPlatform, PublicReviewPlatformSetup>;
   services: PublicReviewService[];
   experienceTags: PublicReviewTag[];
@@ -87,10 +103,14 @@ export function merchantFromPublicReviewPage(page: PublicReviewPage): PublicRevi
     subheadline: page.config.subheadline || undefined,
     showAddress: page.config.showAddress,
     reviewDisclosure: page.config.reviewDisclosure || undefined,
+    bannerUrl: page.bannerUrl || page.config.heroImageUrl || undefined,
+    logoUrl: page.merchant.logoUrl || undefined,
+    theme: page.theme || 'dark',
+    socialLinks: page.socialLinks || [],
+    galleryImages: page.galleryImages || [],
+    socialHandles: page.socialHandles || {},
     platforms: {
       google: toPlatformSetup(google, 'google'),
-      // A configured Xiaohongshu integration may deliberately use a deep-link
-      // or a web-search fallback, so its presence is sufficient to open it.
       xiaohongshu: toPlatformSetup(xiaohongshu, 'xiaohongshu', { allowConfiguredFallback: true }),
       yelp: toPlatformSetup(yelp, 'yelp'),
       instagram: toPlatformSetup(instagram, 'instagram'),
@@ -156,7 +176,7 @@ function toPlatformSetup(
   const fallbackUrl = isPublicPlatformUrl(rawFallback, platform) ? rawFallback : fallbackConfig.fallbackUrl;
 
   return {
-    enabled: true,
+    enabled: source !== undefined,
     destinationUrl,
     fallbackUrl,
     publishHint: source?.publishHint || fallbackConfig.publishHint,

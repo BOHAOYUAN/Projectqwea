@@ -98,7 +98,7 @@ export const MS_BEAUTY_PUBLIC_PAGE: PublicReviewPage = {
   config: {
     headline: 'Share your MS BEAUTY experience',
     subheadline: 'Choose a platform and make your review your own.',
-    heroImageUrl: null,
+    heroImageUrl: 'https://images.unsplash.com/photo-1560750588-73207b1ef5b8?q=80&w=1200&auto=format&fit=crop',
     backgroundImageUrl: null,
     accentColor: '#9A6758',
     showAddress: true,
@@ -106,7 +106,153 @@ export const MS_BEAUTY_PUBLIC_PAGE: PublicReviewPage = {
     reviewDisclosure: 'Please review and edit the draft so it reflects your real experience before publishing.',
     xiaohongshuQuery: 'MS BEAUTY Baltimore',
   },
+  theme: 'dark',
+  bannerUrl: 'https://images.unsplash.com/photo-1560750588-73207b1ef5b8?q=80&w=1200&auto=format&fit=crop',
+  socialLinks: [
+    {
+      platform: 'xiaohongshu',
+      handle: 'MSBEAUTY_BALTIMORE',
+      url: 'https://www.xiaohongshu.com/search_result?keyword=MS%20BEAUTY%20Baltimore',
+    },
+    {
+      platform: 'instagram',
+      handle: '@msbeauty_baltimore',
+      url: 'https://www.instagram.com/',
+    },
+    {
+      platform: 'tiktok',
+      handle: '@msbeauty.us',
+      url: 'https://www.tiktok.com/',
+    },
+  ],
+  galleryImages: [
+    'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?q=80&w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=80&w=800&auto=format&fit=crop',
+  ],
+  socialHandles: {
+    instagram: '@msbeauty_baltimore',
+    xiaohongshu: 'MSBEAUTY_BALTIMORE',
+  },
   suggestedTags: ['Relaxing atmosphere', 'Thoughtful service', 'Clean space', 'Unhurried visit'],
   services: MS_BEAUTY_SERVICES,
   platforms: MS_BEAUTY_PLATFORM_LINKS,
+};
+
+export const SUNNY_TEA_MERCHANT_SLUG = 'sunny-tea';
+export const SUNNY_TEA_LOCATION_SLUG = 'rockville';
+
+export const SUNNY_TEA_SERVICES: PublicService[] = [
+  {
+    slug: 'brown-sugar-boba',
+    nameEn: 'Brown Sugar Boba Milk',
+    nameZh: '黑糖波霸鲜奶',
+    description: 'Fresh organic milk with slow-cooked warm brown sugar pearls.',
+    imageUrl: null,
+    displayOrder: 0,
+  },
+  {
+    slug: 'matcha-cloud-latte',
+    nameEn: 'Matcha Cloud Latte',
+    nameZh: '宇治抹茶芝士',
+    description: 'Ceremonial grade Uji matcha topped with rich sea salt cream.',
+    imageUrl: null,
+    displayOrder: 1,
+  },
+  {
+    slug: 'taro-crepe-cake',
+    nameEn: 'Fresh Taro Mille Crêpe',
+    nameZh: '手作香芋千层',
+    description: 'Handcrafted layers of delicate crepes with fresh taro purée.',
+    imageUrl: null,
+    displayOrder: 2,
+  },
+];
+
+export const SUNNY_TEA_PUBLIC_PAGE: PublicReviewPage = {
+  merchant: {
+    slug: SUNNY_TEA_MERCHANT_SLUG,
+    name: 'Sunny Tea & Bakery',
+    description: 'Artisanal bubble tea and fresh Asian pastries crafted with premium ingredients.',
+    industryTags: ['茶饮', '烘焙'],
+    logoUrl: null,
+    websiteUrl: 'https://sunnyteahouse.com/',
+    phone: '+1 301-555-0199',
+    brandColor: '#F5A623',
+  },
+  location: {
+    slug: SUNNY_TEA_LOCATION_SLUG,
+    name: 'Sunny Tea · Rockville',
+    addressLine1: '200 Rockville Pike, Suite 102',
+    addressLine2: null,
+    city: 'Rockville',
+    region: 'MD',
+    postalCode: '20850',
+    countryCode: 'US',
+    openingHours: 'Monday–Sunday, 11:00 AM–9:30 PM',
+    phone: '+1 301-555-0199',
+  },
+  config: {
+    headline: 'Share your Sunny Tea experience',
+    subheadline: 'Select a platform to share your tea moment with us.',
+    heroImageUrl: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?q=80&w=1200&auto=format&fit=crop',
+    backgroundImageUrl: null,
+    accentColor: '#F5A623',
+    showAddress: true,
+    showServices: true,
+    reviewDisclosure: 'Please review and edit the draft so it reflects your real experience before publishing.',
+    xiaohongshuQuery: 'Sunny Tea Rockville',
+  },
+  theme: 'light',
+  bannerUrl: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?q=80&w=1200&auto=format&fit=crop',
+  socialLinks: [
+    {
+      platform: 'xiaohongshu',
+      handle: 'SunnyTea_MD',
+      url: 'https://www.xiaohongshu.com',
+    },
+    {
+      platform: 'instagram',
+      handle: '@sunnytea.md',
+      url: 'https://www.instagram.com',
+    },
+    {
+      platform: 'tiktok',
+      handle: '@sunnyteahouse',
+      url: 'https://www.tiktok.com',
+    },
+  ],
+  galleryImages: [
+    'https://images.unsplash.com/photo-1554118811-1e0d58224f24?q=80&w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1576092768241-dec231879fc3?q=80&w=800&auto=format&fit=crop',
+  ],
+  socialHandles: {
+    instagram: '@sunnytea.md',
+    xiaohongshu: 'SunnyTea_MD',
+  },
+  suggestedTags: ['Tasty drinks', 'Fresh ingredients', 'Cozy seating', 'Friendly staff'],
+  services: SUNNY_TEA_SERVICES,
+  platforms: [
+    // Note: Instagram intentionally omitted to test Acceptance #5: Only show enabled platforms!
+    {
+      platform: 'google',
+      destinationUrl: 'https://www.google.com/search?q=Sunny+Tea+Rockville#lrd=0x0:0x0,3',
+      fallbackUrl: 'https://maps.google.com',
+      ctaLabel: 'Write a Google review',
+      publishHint: 'Draft copied! Opening Google Maps to write your review.',
+    },
+    {
+      platform: 'xiaohongshu',
+      destinationUrl: 'xhsdiscover://post',
+      fallbackUrl: 'https://www.xiaohongshu.com/search_result?keyword=Sunny%20Tea%20Rockville',
+      ctaLabel: '去小红书发布',
+      publishHint: '文案已复制，进入小红书直接粘贴发布即可。',
+    },
+    {
+      platform: 'yelp',
+      destinationUrl: 'https://www.yelp.com/writeareview/search?q=Sunny+Tea+Rockville',
+      fallbackUrl: 'https://www.yelp.com/search?find_desc=Sunny+Tea&find_loc=Rockville%2C+MD',
+      ctaLabel: 'Write a Yelp review',
+      publishHint: 'Draft copied! Opening Yelp to write your review.',
+    },
+  ],
 };

@@ -60,7 +60,7 @@ type VoiceOption = {
   detail: string;
 };
 
-const maxSelectedServices = 10;
+const maxSelectedServices = 2;
 
 const ENGLISH_VOICES: VoiceOption[] = [
   { value: 'natural', label: 'Natural', detail: 'Everyday phrasing' },
@@ -108,12 +108,13 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
   const voiceOptions = isChinese ? CHINESE_VOICES : ENGLISH_VOICES;
   const [step, setStep] = useState<FlowStep>('customize');
   const [experience, setExperience] = useState('');
+  const [isExperienceOpen, setIsExperienceOpen] = useState(false);
 
   const parsedInitialIds = useMemo(() => {
     if (!initialServiceId) return merchant.services.slice(0, 1).map((s) => s.id);
     const ids = initialServiceId.split(',').map((id) => id.trim()).filter(Boolean);
     const validIds = ids.filter((id) => merchant.services.some((s) => s.id === id));
-    return validIds.length > 0 ? validIds : merchant.services.slice(0, 1).map((s) => s.id);
+    return validIds.length > 0 ? validIds.slice(0, 2) : merchant.services.slice(0, 1).map((s) => s.id);
   }, [initialServiceId, merchant.services]);
 
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>(parsedInitialIds);
@@ -156,11 +157,13 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
 
   const toggleService = (serviceId: string) => {
     setError('');
+    if (!selectedServiceIds.includes(serviceId) && selectedServiceIds.length >= maxSelectedServices) {
+      setError(isChinese ? '服务最多选择两项' : 'You can select up to 2 services.');
+      return;
+    }
     setSelectedServiceIds((current) => {
       const updated = current.includes(serviceId)
         ? current.filter((id) => id !== serviceId)
-        : current.length >= maxSelectedServices
-        ? current
         : [...current, serviceId];
 
       const newServices = merchant.services.filter((s) => updated.includes(s.id));
@@ -347,48 +350,22 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
           </p>
         </div>
 
-        {/* MAIN CONTAINER (卡片包裹 4 步表单) */}
+        {/* MAIN CONTAINER (卡片包裹表单) */}
         <div className="rounded-3xl border border-[#d9ccbe] bg-[#fbf6ef] p-4 sm:p-5 shadow-[0_8px_25px_rgba(80,60,40,0.06)] space-y-4">
-          {/* ① 真实体验 */}
+          
+          {/* ① 服务与标签（服务限2项，标签可多选，验收 #17） */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-[#4a362b] flex items-center gap-1.5">
                 <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#8c674e] text-[10px] text-white font-bold">
                   1
                 </span>
-                <span>{isChinese ? '真实体验' : 'Your experience'}</span>
+                <span>{isChinese ? '服务与体验（服务限2项，标签可多选）' : 'Service & Highlights (max 2)'}</span>
               </label>
-              <button
-                type="button"
-                onClick={() => void generateDraft(variation + 1)}
-                disabled={isGenerating}
-                className="text-[11px] font-semibold text-[#8b6147] hover:text-[#5e3c27] flex items-center gap-1 transition"
-              >
-                <RefreshCw className={`h-3 w-3 ${isGenerating ? 'animate-spin' : ''}`} />
-                <span>{isChinese ? '换一个写法' : 'Try another'}</span>
-              </button>
-            </div>
-            <textarea
-              value={experience}
-              onChange={(e) => handleExperienceChange(e.target.value)}
-              placeholder={
-                isChinese
-                  ? '例如：过程不赶，每一步都会先说明，我没有做得很催促，很放松。'
-                  : 'For example: calm atmosphere, unhurried pace, attentive care throughout.'
-              }
-              rows={3}
-              className="w-full resize-none rounded-xl border border-[#dec9b5] bg-white p-3 text-xs sm:text-sm text-[#46352a] placeholder:text-[#b49f8f] outline-none transition focus:border-[#986a4c] focus:ring-2 focus:ring-[#986a4c]/15"
-            />
-          </div>
-
-          {/* ② 服务与标签（可多选） */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-[#4a362b] flex items-center gap-1.5">
-              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#8c674e] text-[10px] text-white font-bold">
-                2
+              <span className="text-[10.5px] text-[#9c8475]">
+                {selectedServiceIds.length}/2
               </span>
-              <span>{isChinese ? '服务与标签（可多选）' : 'Service & Highlights (multiple)'}</span>
-            </label>
+            </div>
             <div className="flex flex-wrap gap-1.5">
               {merchant.services.map((service) => {
                 const isSelected = selectedServiceIds.includes(service.id);
@@ -429,11 +406,11 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
             </div>
           </div>
 
-          {/* ③ 平台与口吻 */}
+          {/* ② 平台与口吻 */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-[#4a362b] flex items-center gap-1.5">
               <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#8c674e] text-[10px] text-white font-bold">
-                3
+                2
               </span>
               <span>{isChinese ? '平台与口吻' : 'Platform & Tone'}</span>
             </label>
@@ -463,14 +440,65 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
             </div>
           </div>
 
+          {/* ③ 自定义输入（默认折叠在下方，展开可填，500 字上限有计数，验收 #18） */}
+          <div className="space-y-1.5">
+            <button
+              type="button"
+              onClick={() => setIsExperienceOpen(!isExperienceOpen)}
+              className="w-full flex items-center justify-between rounded-xl border border-[#dec9b5] bg-white/70 px-3 py-2 text-xs font-bold text-[#4a362b] hover:bg-white transition"
+            >
+              <span className="flex items-center gap-1.5">
+                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#8c674e] text-[10px] text-white font-bold">
+                  3
+                </span>
+                <span>{isChinese ? '添加自定义细节（选填）' : 'Add custom details (optional)'}</span>
+              </span>
+              <span className="text-[11px] font-semibold text-[#8b6147]">
+                {isExperienceOpen ? (isChinese ? '收起 ▲' : 'Collapse ▲') : (isChinese ? '展开输入 ▼' : 'Expand ▼')}
+              </span>
+            </button>
+
+            {isExperienceOpen && (
+              <div className="space-y-1 pt-1">
+                <textarea
+                  value={experience}
+                  maxLength={500}
+                  onChange={(e) => handleExperienceChange(e.target.value)}
+                  placeholder={
+                    isChinese
+                      ? '例如：过程不赶，每一步都会先说明，我没有做得很催促，很放松。'
+                      : 'For example: calm atmosphere, unhurried pace, attentive care throughout.'
+                  }
+                  rows={3}
+                  className="w-full resize-none rounded-xl border border-[#dec9b5] bg-white p-3 text-xs sm:text-sm text-[#46352a] placeholder:text-[#b49f8f] outline-none transition focus:border-[#986a4c] focus:ring-2 focus:ring-[#986a4c]/15 shadow-inner"
+                />
+                <div className="flex justify-between items-center text-[10.5px] text-[#9c8475] px-1">
+                  <span>{isChinese ? '仅作为生成参考，不会泄露隐私' : 'Used only for generating your draft'}</span>
+                  <span className="font-mono">{experience.length}/500</span>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* ④ 可编辑草稿 */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-[#4a362b] flex items-center gap-1.5">
-              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#8c674e] text-[10px] text-white font-bold">
-                4
-              </span>
-              <span>{isChinese ? '可编辑草稿' : 'Editable draft'}</span>
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-[#4a362b] flex items-center gap-1.5">
+                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#8c674e] text-[10px] text-white font-bold">
+                  4
+                </span>
+                <span>{isChinese ? '可编辑草稿' : 'Editable draft'}</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => void generateDraft(variation + 1)}
+                disabled={isGenerating}
+                className="text-[11px] font-semibold text-[#8b6147] hover:text-[#5e3c27] flex items-center gap-1 transition"
+              >
+                <RefreshCw className={`h-3 w-3 ${isGenerating ? 'animate-spin' : ''}`} />
+                <span>{isChinese ? '换一版' : 'Try another'}</span>
+              </button>
+            </div>
             <div className="relative">
               <textarea
                 ref={textareaRef}
@@ -481,12 +509,14 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
                 className="w-full resize-none rounded-xl border border-[#dec9b5] bg-white p-3 text-xs sm:text-sm leading-relaxed text-[#3d2d24] outline-none transition focus:border-[#986a4c] focus:ring-2 focus:ring-[#986a4c]/15 shadow-inner"
               />
             </div>
+            
+            {/* COMPLIANCE NOTICE (验收 #30 & #31: 内容可编辑、请自行核对、系统不会自动发布) */}
             <p className="flex items-center gap-1 text-[10.5px] text-[#91796a]">
               <ShieldCheck className="h-3.5 w-3.5 text-[#a1795c] shrink-0" />
               <span>
                 {isChinese
-                  ? '顾客填写的体验原话会保留在草稿中，发布前可自由编辑。'
-                  : 'Your experience is kept authentic. You can edit everything before publishing.'}
+                  ? '内容可编辑 · 请自行核对 · 系统不会自动发布'
+                  : 'You can edit anytime. Please review before posting. System will never publish automatically.'}
               </span>
             </p>
           </div>
@@ -621,6 +651,10 @@ function buildLocalDraft({ platform, merchant, services, tags, experience, voice
     return buildInstagramDraft({ merchant, serviceText, tagText, note });
   }
 
+  if (platform === 'yelp') {
+    return buildYelpReviewDraft({ merchant, serviceText, tagText, note, voice });
+  }
+
   return buildEnglishReviewDraft({ merchant, serviceText, tagText, note, voice });
 }
 
@@ -637,17 +671,40 @@ function buildEnglishReviewDraft({
   note: string;
   voice: PublicReviewVoice;
 }) {
-  const service = serviceText || 'spa session';
-  const highlights = tagText || 'relaxing atmosphere and attentive service';
+  const service = serviceText || 'appointment';
+  const highlights = tagText || 'calm atmosphere and attentive service';
   const noteClean = note && !/[\u4e00-\u9fff]/.test(note) ? withEnglishPunctuation(note) : '';
 
   if (voice === 'concise') {
-    return `Had a wonderful ${service} at ${merchant.name} in ${merchant.neighborhood}. The ${highlights.toLowerCase()} really stood out to me. ${noteClean ? noteClean + ' ' : ''}Clean space and great experience overall!`;
+    return `Had a truly wonderful visit to ${merchant.name} in ${merchant.neighborhood} for their ${service}. ${highlights} really stood out to me from the start. ${noteClean ? noteClean + ' ' : ''}The space was spotless, unhurried, and comfortable throughout. The team took genuine care with every step of the appointment. A very enjoyable and relaxing experience overall, and I look forward to coming back again soon!`;
   }
   if (voice === 'warm') {
-    return `Such a lovely, restorative visit to ${merchant.name}! I booked the ${service}, and from start to finish, the ${highlights.toLowerCase()} made me feel completely cared for. ${noteClean ? noteClean + ' ' : ''}Truly appreciate their welcoming space and skilled care.`;
+    return `Such a lovely, restorative visit to ${merchant.name} in ${merchant.neighborhood}! I booked an appointment for their ${service}, and from the moment I arrived, ${highlights.toLowerCase()} made me feel completely at ease. ${noteClean ? noteClean + ' ' : ''}The environment felt so calm, clean, and genuinely welcoming. Every single detail showed skilled care and attention. Left feeling completely refreshed, and I would gladly recommend them to anyone in the area.`;
   }
-  return `Really enjoyed my visit to ${merchant.name} for the ${service}. The ${highlights.toLowerCase()} was fantastic and made the entire experience super relaxing. ${noteClean ? noteClean + ' ' : ''}Definitely recommend booking an appointment here!`;
+  return `Really enjoyed my visit to ${merchant.name} in ${merchant.neighborhood} for the ${service}. ${highlights} was fantastic and made the entire experience super relaxing. ${noteClean ? noteClean + ' ' : ''}Everything felt immaculate, comfortable, and very thoughtfully handled without any feeling of being rushed. The staff was attentive and professional the whole time. A fantastic local spot that I definitely look forward to visiting again.`;
+}
+
+function buildYelpReviewDraft({
+  merchant,
+  serviceText,
+  tagText,
+  note,
+  voice,
+}: {
+  merchant: PublicReviewMerchant;
+  serviceText: string;
+  tagText: string;
+  note: string;
+  voice: PublicReviewVoice;
+}) {
+  const service = serviceText || 'service';
+  const highlights = tagText || 'peaceful space, skilled care, and thoughtful staff';
+  const noteClean = note && !/[\u4e00-\u9fff]/.test(note) ? withEnglishPunctuation(note) : '';
+
+  if (voice === 'concise') {
+    return `Came to ${merchant.name} in ${merchant.neighborhood} and had a fantastic appointment. Booked their ${service}, and the overall quality was evident right away. What stood out most was the ${highlights.toLowerCase()}. ${noteClean ? noteClean + ' ' : ''}The facility is spotless, quiet, and well-managed, and the staff took the time to explain everything clearly without any pressure. Highly recommend them for anyone looking for consistent, professional care in the area. Will definitely be returning for another appointment.`;
+  }
+  return `I booked a visit to ${merchant.name} in ${merchant.neighborhood} for their ${service}, and it exceeded my expectations. Check-in was smooth, and the entire space felt peaceful and exceptionally clean. What stood out most was the ${highlights.toLowerCase()}. ${noteClean ? noteClean + ' ' : ''}The staff was patient, knowledgeable, and genuinely attentive from beginning to end. It is rare to find a business that balances technical skill with such a welcoming environment. A standout spot that I will happily revisit and recommend to friends.`;
 }
 
 function buildInstagramDraft({
@@ -662,17 +719,24 @@ function buildInstagramDraft({
   note: string;
 }) {
   const service = serviceText || 'self-care session';
-  const tagList = tagText ? tagText.toLowerCase() : 'peaceful and refreshing';
+  const tagList = tagText ? tagText.toLowerCase() : 'peaceful and refreshing vibes';
   const noteClean = note && !/[\u4e00-\u9fff]/.test(note) ? withEnglishPunctuation(note) : '';
+
+  const mention = merchant.socialHandles?.instagram
+    ? ` @${merchant.socialHandles.instagram.replace(/^@/, '')}`
+    : '';
 
   const hashtags = [
     hashtagFromText(merchant.name),
     ...serviceText.split(' and ').map(hashtagFromText),
     '#SelfCare',
     '#SpaDay',
-  ].filter(Boolean).slice(0, 5).join(' ');
+    '#WeekendVibes',
+    '#WellnessJourney',
+    '#CleanSpace',
+  ].filter(Boolean).slice(0, 8).join(' ');
 
-  return `Self-care afternoon at ${merchant.name} ✨\n\nTried their ${service} today. Loving the ${tagList} vibes. ${noteClean ? noteClean + ' ' : ''}Left feeling completely refreshed and grounded.\n\n${hashtags}`;
+  return `Self-care afternoon at ${merchant.name}${mention} ✨\n\nTried their ${service} today. Loving the ${tagList}. ${noteClean ? noteClean + ' ' : ''}The entire atmosphere felt so calming, clean, and restorative.\n\nLeft feeling completely refreshed and grounded 🤍\n\n${hashtags}`;
 }
 
 function buildXiaohongshuDraft({
@@ -690,10 +754,14 @@ function buildXiaohongshuDraft({
   const tagsStr = tagText || '环境舒服、服务贴心';
   const noteClean = note ? withChinesePunctuation(note) : '';
 
+  const mention = merchant.socialHandles?.xiaohongshu
+    ? ` @${merchant.socialHandles.xiaohongshu.replace(/^@/, '')}`
+    : '';
+
   const titles = [
-    `✨在${merchant.neighborhood}挖到超舒服的${service}宝藏店！`,
-    `💆周末放松指南｜${merchant.name}真实体验打卡`,
-    `🌿把疲惫一扫而空！私藏的${service}治愈小天地`,
+    `✨在${merchant.neighborhood}挖到超治愈的${service}！`,
+    `💆周末放松指南｜${merchant.name}打卡`,
+    `🌿私藏的${service}治愈小天地分享`,
   ];
   const title = titles[0];
 
@@ -701,7 +769,7 @@ function buildXiaohongshuDraft({
     ? `我自己的感受是：${noteClean}`
     : `全程体验下来最大的感受就是【${tagsStr}】。`;
 
-  const body = `这次在${merchant.name}做了${service}，体验感真的拉满！\n\n${detail}空间干净私密，轻音乐伴随精油香气让人很快就沉静下来。技师细致周到，完全没有催促感，做完身心都得到了彻底的舒缓与放松～`;
+  const body = `这次在${merchant.name}${mention}做了${service}，体验感真的拉满！\n\n${detail}空间干净私密，轻音乐伴随精油香气让人很快就沉静下来。技师细致周到，完全没有催促感，做完身心都得到了彻底的舒缓与放松～`;
 
   const hashTags = [
     hashtagFromText(merchant.neighborhood.replace(/[^a-zA-Z]/g, '') || 'Baltimore') + '探店',
@@ -709,7 +777,7 @@ function buildXiaohongshuDraft({
     hashtagFromText(service),
     '#沉浸式SPA',
     '#周末放松',
-  ].filter(Boolean).join(' ');
+  ].filter(Boolean).slice(0, 5).join(' ');
 
   return `${title}\n\n${body}\n\n${hashTags}`;
 }
@@ -912,7 +980,13 @@ function PublishHandoff({
             {isXiaohongshu ? '打开小红书去发布' : 'Open Instagram'} <ExternalLink className="h-4 w-4" />
           </a>
         )}
-        <div className="mt-5 rounded-2xl border border-[#eadbc9] bg-white p-4 text-left">
+        {isXiaohongshu && (
+          <div className="mt-4 rounded-xl bg-amber-50 border border-amber-200/80 p-3 text-left text-xs text-amber-900 flex items-start gap-2">
+            <span className="shrink-0 text-base leading-none">💡</span>
+            <span><strong>发布提示：</strong>小红书暂不支持剪贴板自动 @，粘贴文案后请在编辑页手动输入 @ 提及门店。</span>
+          </div>
+        )}
+        <div className="mt-4 rounded-2xl border border-[#eadbc9] bg-white p-4 text-left">
           <p className="text-xs font-semibold text-[#5b4738]">{isXiaohongshu ? '如果 App 没有打开' : 'If Instagram does not open'}</p>
           <p className="mt-1 text-xs leading-5 text-[#8b7566]">
             {isXiaohongshu ? '文案仍在剪贴板中。你可以手动打开 App 粘贴，或先进入网页搜索页。' : 'Your caption remains copied. Open the app manually, or continue to the web site.'}
@@ -921,6 +995,9 @@ function PublishHandoff({
             {isXiaohongshu ? '打开小红书网页搜索' : 'Open Instagram on the web'} <ExternalLink className="h-3.5 w-3.5" />
           </a>
         </div>
+        <p className="mt-4 text-[10.5px] text-[#91796a] text-center">
+          {isXiaohongshu ? '内容可编辑 · 请自行核对 · 系统不会自动发布' : 'You can edit anytime. Please review before posting. System will never publish automatically.'}
+        </p>
       </section>
     </div>
   );

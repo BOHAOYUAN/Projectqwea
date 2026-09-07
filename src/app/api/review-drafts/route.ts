@@ -101,6 +101,7 @@ export async function POST(request: NextRequest) {
       experience,
       voice,
       seed,
+      socialHandles: publicPage.socialHandles,
     });
 
     const metricId = await recordAnonymousGenerationMetric({

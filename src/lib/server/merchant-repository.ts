@@ -11,6 +11,9 @@ import {
   MS_BEAUTY_LOCATION_SLUG,
   MS_BEAUTY_MERCHANT_SLUG,
   MS_BEAUTY_PUBLIC_PAGE,
+  SUNNY_TEA_LOCATION_SLUG,
+  SUNNY_TEA_MERCHANT_SLUG,
+  SUNNY_TEA_PUBLIC_PAGE,
 } from '@/lib/demo/ms-beauty';
 import { getPrismaClient } from '@/lib/server/prisma';
 
@@ -345,9 +348,13 @@ export async function markGenerationMetricAction(
 }
 
 function getDemoPage(merchantSlug: string, locationSlug: string): PublicReviewPage | null {
-  return merchantSlug === MS_BEAUTY_MERCHANT_SLUG && locationSlug === MS_BEAUTY_LOCATION_SLUG
-    ? MS_BEAUTY_PUBLIC_PAGE
-    : null;
+  if (merchantSlug === MS_BEAUTY_MERCHANT_SLUG && locationSlug === MS_BEAUTY_LOCATION_SLUG) {
+    return MS_BEAUTY_PUBLIC_PAGE;
+  }
+  if (merchantSlug === SUNNY_TEA_MERCHANT_SLUG && locationSlug === SUNNY_TEA_LOCATION_SLUG) {
+    return SUNNY_TEA_PUBLIC_PAGE;
+  }
+  return null;
 }
 
 function isSafeSlug(value: string): boolean {

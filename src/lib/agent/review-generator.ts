@@ -11,6 +11,10 @@ export interface ReviewDraftInput {
   experience: string;
   voice?: ContentVoice;
   seed?: number;
+  socialHandles?: {
+    instagram?: string;
+    xiaohongshu?: string;
+  };
 }
 
 export interface GeneratedDraft {
@@ -40,49 +44,49 @@ function isChinesePlatform(platform: ReviewPlatform): boolean {
 }
 
 function localGoogleDraft(input: ReviewDraftInput): string {
-  const service = formatList(input.serviceNames, 'and') || 'spa treatment';
+  const service = formatList(input.serviceNames, 'and') || 'session';
   const experience = sentenceCase(input.experience);
   const voice = input.voice ?? 'natural';
   const seed = input.seed ?? Date.now();
-  const tagsPhrase = input.tags.length > 0 ? input.tags.join(' and ') : 'calming atmosphere and attentive service';
+  const tagsPhrase = input.tags.length > 0 ? input.tags.join(' and ') : 'calm atmosphere and attentive service';
 
   const details = experience && !/[\u4e00-\u9fff]/.test(experience)
     ? experience
     : input.tags.length > 0
-      ? `The ${tagsPhrase.toLowerCase()} really stood out to me`
-      : 'The atmosphere was so peaceful and the staff took great care of me';
+      ? `The ${tagsPhrase.toLowerCase()} really stood out to me from the start`
+      : 'The peaceful atmosphere and kind staff made me feel welcome immediately';
 
   if (voice === 'concise') {
-    return `Had a great ${service} appointment at ${input.merchantName} in ${input.location}. ${details}. The space was spotless and welcoming. Would definitely recommend!`;
+    return `Had a truly wonderful visit to ${input.merchantName} in ${input.location} for their ${service}. ${details}. The space was spotless, unhurried, and comfortable throughout. The team took genuine care with every step of the appointment. A very enjoyable and relaxing experience overall, and I look forward to coming back again soon!`;
   }
   if (voice === 'warm') {
-    return `Such a wonderful, restorative visit to ${input.merchantName}! I booked the ${service}, and from start to finish, ${details.toLowerCase()}. Truly appreciate the calm energy and attentive care. Left feeling completely refreshed.`;
+    return `Such a lovely, restorative visit to ${input.merchantName} in ${input.location}! I booked an appointment for their ${service}, and from the moment I arrived, ${details.toLowerCase()}. The environment felt so calm, clean, and genuinely welcoming. Every single detail showed skilled care and attention. Left feeling completely refreshed, and I would gladly recommend them to anyone in the area.`;
   }
   return pick([
-    `Really enjoyed my visit to ${input.merchantName} in ${input.location} for their ${service}. ${details}. Everything felt clean, relaxing, and very professionally done. Definitely recommend booking a session here!`,
-    `Had an amazing experience with the ${service} at ${input.merchantName}. ${details}. The environment was calm and comfortable without feeling rushed. Highly recommend!`,
+    `Really enjoyed my visit to ${input.merchantName} in ${input.location} for the ${service}. ${details}. Everything felt immaculate, comfortable, and very thoughtfully handled without any feeling of being rushed. The staff was attentive and professional the whole time. A fantastic local spot that I definitely look forward to visiting again.`,
+    `Had a great experience at ${input.merchantName} trying their ${service}. ${details}. The setting is peaceful and clean, and the staff made sure I was comfortable through every step of the service. Truly appreciated the unhurried pace and skilled care. Highly recommend checking them out!`,
   ], seed);
 }
 
 function localYelpDraft(input: ReviewDraftInput): string {
-  const service = formatList(input.serviceNames, 'and') || 'spa service';
+  const service = formatList(input.serviceNames, 'and') || 'service';
   const experience = sentenceCase(input.experience);
   const voice = input.voice ?? 'natural';
   const seed = (input.seed ?? Date.now()) + 11;
-  const tagsPhrase = input.tags.length > 0 ? input.tags.join(' and ') : 'peaceful space and thoughtful service';
+  const tagsPhrase = input.tags.length > 0 ? input.tags.join(' and ') : 'peaceful space, skilled care, and thoughtful staff';
 
   const details = experience && !/[\u4e00-\u9fff]/.test(experience)
     ? experience
     : input.tags.length > 0
-      ? `I was particularly impressed by the ${tagsPhrase.toLowerCase()}`
-      : 'The attention to detail and calming environment were top notch';
+      ? `What stood out most was the ${tagsPhrase.toLowerCase()}`
+      : 'The calming ambiance and the staff’s attention to detail made an immediate positive impression';
 
   if (voice === 'concise') {
-    return `Five stars for ${input.merchantName} in ${input.location}. Tried their ${service}—clean, unhurried, and very skilled technique. ${details}. Will be back!`;
+    return `Came to ${input.merchantName} in ${input.location} and had a fantastic appointment. Booked their ${service}, and the overall quality was evident right away. ${details}. The facility is spotless, quiet, and well-managed, and the staff took the time to explain everything clearly without any pressure. Highly recommend them for anyone looking for consistent, professional care in the area. Will definitely be returning for another appointment.`;
   }
   return pick([
-    `Came to ${input.merchantName} for their ${service} and had a fantastic experience. ${details}. The place is immaculate, peaceful, and the service was thoughtful throughout. A great addition to ${input.location}!`,
-    `Five stars for ${input.merchantName}! I booked the ${service} and couldn't be happier with how relaxing the session was. ${details}. Clean, unhurried, and genuinely restorative. Will definitely be returning!`,
+    `I booked a visit to ${input.merchantName} in ${input.location} for their ${service}, and it exceeded my expectations. Check-in was smooth, and the entire space felt peaceful and exceptionally clean. ${details}. The staff was patient, knowledgeable, and genuinely attentive from beginning to end. It is rare to find a business that balances technical skill with such a welcoming environment. A standout spot in Baltimore that I will happily revisit and recommend to friends.`,
+    `Had an exceptional experience at ${input.merchantName}. I tried their ${service} based on positive recommendations, and I am glad I did. ${details}. The entire appointment was completely unhurried, relaxing, and tailored to what I needed. The treatment room was immaculate and comfortable. If you appreciate skilled service and a tranquil atmosphere, this is definitely a place worth booking.`,
   ], seed);
 }
 
@@ -93,13 +97,17 @@ function hashtag(value: string): string {
 
 function localInstagramDraft(input: ReviewDraftInput): string {
   const typedExperience = sentenceCase(input.experience);
-  const service = formatList(input.serviceNames, 'and') || 'spa treatment';
-  const tagList = input.tags.length > 0 ? input.tags.join(', ') : 'self-care vibes';
+  const service = formatList(input.serviceNames, 'and') || 'self-care session';
+  const tagList = input.tags.length > 0 ? input.tags.join(', ') : 'peaceful vibes';
   const note = typedExperience && !/[\u4e00-\u9fff]/.test(typedExperience)
     ? typedExperience
     : tagList
       ? `Loving the ${tagList.toLowerCase()} here.`
       : 'Much needed restorative time.';
+
+  const mention = input.socialHandles?.instagram
+    ? ` @${input.socialHandles.instagram.replace(/^@/, '')}`
+    : '';
 
   const hashtags = [
     hashtag(input.merchantName),
@@ -107,30 +115,37 @@ function localInstagramDraft(input: ReviewDraftInput): string {
     hashtag(input.location || 'Baltimore'),
     '#SelfCare',
     '#SpaDay',
-  ].filter(Boolean).slice(0, 5).join(' ');
+    '#WeekendVibes',
+    '#WellnessJourney',
+    '#CleanSpace',
+  ].filter(Boolean).slice(0, 8).join(' ');
 
-  return `Self-care afternoon at ${input.merchantName} ✨\n\nTried their ${service} today. ${note} Left feeling refreshed, grounded, and so taken care of.\n\n${hashtags}`;
+  return `Self-care afternoon at ${input.merchantName}${mention} ✨\n\nTried their ${service} today. ${note} The entire atmosphere felt so calming, clean, and restorative.\n\nLeft feeling completely refreshed and grounded 🤍\n\n${hashtags}`;
 }
 
 function localXiaohongshuDraft(input: ReviewDraftInput): string {
-  const service = formatList(input.serviceNames, '和') || '面部与头疗SPA';
-  const tagsStr = input.tags.length > 0 ? input.tags.join('、') : '环境很舒服、手法很专业';
+  const service = formatList(input.serviceNames, '和') || '面部与护理项目';
+  const tagsStr = input.tags.length > 0 ? input.tags.join('、') : '环境舒服、服务细心';
   const experience = sentenceCase(input.experience);
   const seed = input.seed ?? Date.now();
 
   const expDetail = experience
-    ? `自己最深刻的感受是：${experience}。`
+    ? `我自己的真实感受是：${experience}`
     : `全程体验下来最大的亮点就是【${tagsStr}】。`;
 
+  const mention = input.socialHandles?.xiaohongshu
+    ? ` @${input.socialHandles.xiaohongshu.replace(/^@/, '')}`
+    : '';
+
   const titles = [
-    `✨在${input.location}挖到超舒服的${service}宝藏店！`,
-    `💆周末放松指南｜${input.merchantName}真实体验打卡`,
+    `✨在${input.location}挖到超治愈的${service}宝藏店！`,
+    `💆周末放松打卡｜${input.merchantName}真实体验分享`,
     `🌿把疲惫一扫而空！私藏的${service}治愈小天地`,
   ];
 
   const bodies = [
-    `这次在${input.merchantName}做了${service}，体验感真的拉满！\n\n${expDetail}空间干净私密，轻音乐伴随精油香气让人很快就沉静下来。技师细致周到，完全不会有推销或者催促的压迫感，整个节奏特别舒服。\n\n做完后整个人状态轻盈了很多，在${input.location}想找个地方好好放松的姐妹们强烈推荐来试试～`,
-    `近期在${input.merchantName}体验的${service}真的值得专门写篇笔记！\n\n${expDetail}进店就感觉环境特别雅致整洁，服务流程规范贴心，每一个环节都能感受到用心。做完身心都得到了彻底的舒缓与放松，属于会无限次回购的宝藏店铺～`,
+    `这次在${input.merchantName}${mention}做了${service}，体验感真的拉满！\n\n${expDetail}空间干净私密，轻音乐伴随舒缓香气让人很快就沉静下来。技师细致周到，完全没有催促感，做完身心都得到了彻底的舒缓与放松～`,
+    `近期在${input.merchantName}${mention}体验的${service}特别惊喜！\n\n${expDetail}进店就觉得环境雅致整洁，流程规范贴心，细节处处体现用心，做完感觉整个人轻松了不少，值得放进日常心动清单～`,
   ];
 
   const title = pick(titles, seed);
@@ -139,8 +154,8 @@ function localXiaohongshuDraft(input: ReviewDraftInput): string {
     `#${input.location.replace(/[^a-zA-Z]/g, '') || 'Baltimore'}探店`,
     '#美容护理',
     `#${service.replace(/\s+/g, '')}`,
-    '#沉浸式SPA',
-    '#周末放松',
+    '#沉浸式放松',
+    '#周末好去处',
   ].join(' ');
 
   return `${title}\n\n${body}\n\n${tagList}`;
@@ -148,50 +163,63 @@ function localXiaohongshuDraft(input: ReviewDraftInput): string {
 
 function buildSystemPrompt(input: ReviewDraftInput): string {
   const voiceDesc = input.voice === 'concise'
-    ? 'Keep it concise, punchy, and direct (2-3 sentences).'
+    ? 'Keep it direct, focused, and unhurried.'
     : input.voice === 'warm'
       ? 'Use a warm, appreciative, relaxing and heartfelt tone.'
       : 'Use an authentic, conversational, everyday customer tone.';
 
+  const igMentionRule = input.socialHandles?.instagram
+    ? `Naturally mention @${input.socialHandles.instagram.replace(/^@/, '')} in the caption.`
+    : 'Do not invent any social media handles.';
+
+  const xhsMentionRule = input.socialHandles?.xiaohongshu
+    ? `在正文中自然提及 @${input.socialHandles.xiaohongshu.replace(/^@/, '')}。`
+    : '不要虚构账号。';
+
   if (input.platform === 'google') {
-    return `You are a real customer writing a 5-star Google review for "${input.merchantName}" in ${input.location} from your phone.
-CRITICAL WRITING RULES:
-1. Write in a completely natural, human voice. Sound like a real patron sharing a positive experience.
-2. NEVER use robotic cliches like "The experience I chose to highlight is" or "I am writing this review".
-3. Seamlessly weave the customer's selected feelings/tags and services into vivid, authentic sentences.
-4. ${voiceDesc}
-5. Keep it around 40-70 words (3-4 concise sentences).
-6. Never invent medical claims, guaranteed cures, prices, or fake employee names.
+    return `You are a genuine customer writing a 5-star Google review for "${input.merchantName}" in ${input.location}.
+STRICT FORMAT & COMPLIANCE RULES:
+1. Language: English only.
+2. Length: Exactly 60–120 words.
+3. Format: Pure plain text in 1–2 paragraphs. NO title, NO hashtags, NO emojis.
+4. Voice: ${voiceDesc} Authentic, grounded, no marketing fluff or AI cliches.
+5. Content: Only reference the customer's selected services and feelings. Mention the merchant name "${input.merchantName}" naturally.
+6. Guardrails: No extreme claims (e.g. "the best in the world", "#1"), no mention of discounts, promotions, or incentives for reviews.
 7. Output ONLY the review text.`;
   }
 
   if (input.platform === 'yelp') {
-    return `You are a genuine Yelp reviewer writing a 5-star review for "${input.merchantName}" in ${input.location}.
-CRITICAL WRITING RULES:
-1. Write a descriptive, conversational English Yelp review (around 50-90 words, 1-2 short paragraphs).
-2. Highlight the atmosphere, attentive care, clean space, and how refreshed you felt after the session.
-3. ${voiceDesc}
-4. Sounds 100% human and relaxed. Never sound like marketing copy.
-5. Output ONLY the review text.`;
+    return `You are a genuine customer writing a detailed 5-star Yelp review for "${input.merchantName}" in ${input.location}.
+STRICT FORMAT & COMPLIANCE RULES:
+1. Language: English only.
+2. Length: Exactly 80–150 words (more detailed and descriptive than Google).
+3. Format: Pure plain text in 1–2 paragraphs. NO title, NO hashtags.
+4. Voice: ${voiceDesc} Balanced, observational, highlighting ambiance, check-in, cleanliness, and thoughtful care.
+5. Content: Only mention selected services/tags and genuine experience. Mention "${input.merchantName}".
+6. Guardrails: No hyperbolic words ("best ever", "perfection"), no mention of discounts/exchanges.
+7. Output ONLY the review text.`;
   }
 
   if (input.platform === 'instagram') {
     return `You are posting an aesthetic Instagram caption after visiting "${input.merchantName}" in ${input.location}.
-CRITICAL WRITING RULES:
-1. Write a relaxed, aesthetic first-person caption (2-3 short lines with a few tasteful emojis ✨💆).
-2. Mention the self-care vibe and how peaceful and refreshing the session was.
-3. End with 3-5 clean hashtags (e.g. #${input.merchantName.replace(/\s+/g, '')} #SelfCare #SpaDay).
-4. Output ONLY the caption.`;
+STRICT FORMAT & COMPLIANCE RULES:
+1. Language: English.
+2. Length: Exactly 50–100 words.
+3. Format: Segmented lines with subtle emojis (✨, 💆, 🤍). ${igMentionRule}
+4. Hashtags: End with 5–10 relevant hashtags (e.g. #${input.merchantName.replace(/\s+/g, '')} #SelfCare).
+5. Output ONLY the caption.`;
   }
 
   // Xiaohongshu
-  return `你是一位在美华人博主/生活家，刚在 ${input.location} 的【${input.merchantName}】做完护理，在手机上随手写一条真实、治愈、有闺蜜分享感的小红书笔记。
-核心要求：
-1. 语言自然生活化、有真实呼吸感，绝不要“AI味”、“广告宣传腔”或“模板味”。
-2. 严禁使用“想重点记录的关键词是”、“关于这次体验”等生硬句式。
-3. 把感受标签和项目自然融进第一人称的真实感受里（如环境多舒服、技师多贴心不催促、做完身心放松）。
-4. 格式：第1行是抓人眼球的日常标题（带Emoji）；正文分2-3个短段落（留空行）；结尾3-4个精准话题。
-5. 只输出文案纯文本。`;
+  return `你是一位在美华人顾客，刚在 ${input.location} 的【${input.merchantName}】体验完项目，写一篇真实、有生活气息的小红书打卡笔记。
+严格格式与合规要求：
+1. 语言：中文。
+2. 标题：第1行必须是吸睛标题，长度严格控制在 20 字以内（可带合适 Emoji）。
+3. 正文：100–200 字，分 2–3 个短段落，空行隔开，语气自然舒服，适量 Emoji。
+4. 账号提及：${xhsMentionRule}
+5. 话题标签：文末附带 3–8 个相关话题标签（如 #${input.location}探店）。
+6. 合规红线：严禁极限词（如“最好”、“第一”），严禁提及“好评返现/送折扣”等违规诱导。无生硬套话与AI感。
+7. 只输出纯文本笔记。`;
 }
 
 type CompatibleChatProvider = {
