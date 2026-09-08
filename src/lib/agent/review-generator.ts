@@ -183,8 +183,8 @@ STRICT FORMAT & COMPLIANCE RULES:
 2. Length: Exactly 60–120 words.
 3. Format: Pure plain text in 1–2 paragraphs. NO title, NO hashtags, NO emojis.
 4. Voice: ${voiceDesc} Authentic, grounded, no marketing fluff or AI cliches.
-5. Content: Only reference the customer's selected services and feelings. Mention the merchant name "${input.merchantName}" naturally.
-6. Guardrails: No extreme claims (e.g. "the best in the world", "#1"), no mention of discounts, promotions, or incentives for reviews.
+5. Content: Mention "${input.merchantName}" naturally. Use ONLY the selected services, selected feelings, and customer note supplied in the user message. Do not infer or add staff, cleanliness, check-in, timing, atmosphere, results, or any other detail.
+6. Guardrails: No extreme claims (e.g. "the best in the world", "#1"), no mention of discounts, promotions, incentives, ratings, or review exchanges.
 7. Output ONLY the review text.`;
   }
 
@@ -194,9 +194,9 @@ STRICT FORMAT & COMPLIANCE RULES:
 1. Language: English only.
 2. Length: Exactly 80–150 words (more detailed and descriptive than Google).
 3. Format: Pure plain text in 1–2 paragraphs. NO title, NO hashtags.
-4. Voice: ${voiceDesc} Balanced, observational, highlighting ambiance, check-in, cleanliness, and thoughtful care.
-5. Content: Only mention selected services/tags and genuine experience. Mention "${input.merchantName}".
-6. Guardrails: No hyperbolic words ("best ever", "perfection"), no mention of discounts/exchanges.
+4. Voice: ${voiceDesc} Balanced and observational; do not add any setting, check-in, cleanliness, staff, or treatment detail unless it appears literally in the supplied facts.
+5. Content: Only mention selected services, selected tags, and the customer's own note. Mention "${input.merchantName}".
+6. Guardrails: No hyperbolic words ("best ever", "perfection"), no mention of discounts/exchanges, ratings, or review incentives.
 7. Output ONLY the review text.`;
   }
 
@@ -206,7 +206,8 @@ STRICT FORMAT & COMPLIANCE RULES:
 1. Language: English.
 2. Length: Exactly 50–100 words.
 3. Format: Segmented lines with subtle emojis (✨, 💆, 🤍). ${igMentionRule}
-4. Hashtags: End with 5–10 relevant hashtags (e.g. #${input.merchantName.replace(/\s+/g, '')} #SelfCare).
+4. Hashtags: End with 5–10 hashtags. They may use only the merchant name, location, selected services, and selected feelings; do not add unselected claims.
+5. Content: Use only the supplied facts. Never invent the setting, staff, outcome, or a before/after result.
 5. Output ONLY the caption.`;
   }
 
@@ -217,8 +218,9 @@ STRICT FORMAT & COMPLIANCE RULES:
 2. 标题：第1行必须是吸睛标题，长度严格控制在 20 字以内（可带合适 Emoji）。
 3. 正文：100–200 字，分 2–3 个短段落，空行隔开，语气自然舒服，适量 Emoji。
 4. 账号提及：${xhsMentionRule}
-5. 话题标签：文末附带 3–8 个相关话题标签（如 #${input.location}探店）。
-6. 合规红线：严禁极限词（如“最好”、“第一”），严禁提及“好评返现/送折扣”等违规诱导。无生硬套话与AI感。
+5. 话题标签：文末附带 3–8 个话题标签；标签只能使用门店名、地点、已选项目和已选感受。
+6. 内容边界：只可使用输入中明确提供的项目、标签与顾客原话；不可补充环境、员工、流程、效果或任何未提供细节。
+7. 合规红线：严禁极限词（如“最好”、“第一”），严禁提及“好评返现/送折扣”等违规诱导。无生硬套话与AI感。
 7. 只输出纯文本笔记。`;
 }
 
@@ -275,12 +277,12 @@ async function requestCompatibleChat(
 
 async function generateWithRemoteProvider(input: ReviewDraftInput, provider: CompatibleChatProvider): Promise<string | null> {
   const system = buildSystemPrompt(input);
-  const services = input.serviceNames.join(', ') || (isChinesePlatform(input.platform) ? 'SPA护理' : 'spa treatment');
-  const tags = input.tags.join(', ') || (isChinesePlatform(input.platform) ? '放松舒服、细心专业' : 'relaxing atmosphere, thoughtful service');
+  const services = input.serviceNames.join(', ') || 'None selected';
+  const tags = input.tags.join(', ') || 'None selected';
 
   const user = isChinesePlatform(input.platform)
-    ? `门店：${input.merchantName} (${input.location})\n体验项目：${services}\n体验感受：${tags}${input.experience ? `\n顾客原话：${input.experience}` : ''}\n请写文案：`
-    : `Store: ${input.merchantName} in ${input.location}\nService: ${services}\nCustomer Highlights: ${tags}${input.experience ? `\nCustomer Note: ${input.experience}` : ''}\nPlease write the review:`;
+    ? `门店：${input.merchantName} (${input.location})\n已选项目：${services}\n已选感受：${tags}${input.experience ? `\n顾客原话：${input.experience}` : ''}\n\n只可使用以上事实。未选项目、未填写感受或未出现的细节必须完全不提。请写文案：`
+    : `Store: ${input.merchantName} in ${input.location}\nSelected services: ${services}\nSelected feelings: ${tags}${input.experience ? `\nCustomer note: ${input.experience}` : ''}\n\nUse only the facts above. Do not mention any service, staff, cleanliness, timing, ambiance, outcome, or detail that does not literally appear above. Please write the review:`;
 
   const temperature = input.voice === 'concise' ? 0.7 : 0.8;
 
@@ -345,19 +347,39 @@ function isGroundedRemoteDraft(content: string, input: ReviewDraftInput): boolea
 
   const alwaysBlocked = [
     /\$\s*\d{3,}/, /\bguarantee[ds]?\b/i, /\bcure[ds]?\b/i, /\bcancer\b/i,
-    /包治/, /彻底根除/, /神医/, /百病/, /保修/,
+    /\b(best|perfect|number\s*one|#1)\b/i, /最好|第一|顶级|完美|拉满|彻底/, 
+    /包治/, /彻底根除/, /神医/, /百病/, /保修/, /好评返现|好评.*折扣/,
   ];
   if (alwaysBlocked.some((pattern) => pattern.test(content))) return false;
+
+  if (!content.toLowerCase().includes(input.merchantName.toLowerCase())) return false;
 
   return hasPlatformAppropriateLength(content, input.platform);
 }
 
 function hasPlatformAppropriateLength(content: string, platform: ReviewPlatform): boolean {
-  if (isChinesePlatform(platform)) return content.length >= 10 && content.length <= 1_500;
+  if (platform === 'xiaohongshu') {
+    const lines = content.split('\n').map((line) => line.trim()).filter(Boolean);
+    const title = lines[0] ?? '';
+    const hashtags = content.match(/#[^\s#]+/g) ?? [];
+    const body = lines.slice(1).filter((line) => !line.startsWith('#')).join('');
+    return Array.from(title).length <= 20 && body.length >= 100 && body.length <= 200 && hashtags.length >= 3 && hashtags.length <= 8;
+  }
 
-  const wordCount = content.match(/[a-z0-9]+(?:['’-][a-z0-9]+)?/gi)?.length ?? 0;
-  if (platform === 'instagram') return wordCount >= 3 && wordCount <= 180;
-  return wordCount >= 4 && wordCount <= 220;
+  if (platform === 'google' || platform === 'yelp') {
+    if (/#|[✨💆🤍]/u.test(content)) return false;
+    const words = englishWordCount(content);
+    return platform === 'google' ? words >= 60 && words <= 120 : words >= 80 && words <= 150;
+  }
+
+  const hashtags = content.match(/#[^\s#]+/g) ?? [];
+  const body = content.replace(/#[^\s#]+/g, ' ');
+  const words = englishWordCount(body);
+  return words >= 50 && words <= 100 && hashtags.length >= 5 && hashtags.length <= 10;
+}
+
+function englishWordCount(content: string): number {
+  return content.match(/[a-z0-9]+(?:['’-][a-z0-9]+)?/gi)?.length ?? 0;
 }
 
 export async function generateReviewDraft(input: ReviewDraftInput): Promise<GeneratedDraft> {

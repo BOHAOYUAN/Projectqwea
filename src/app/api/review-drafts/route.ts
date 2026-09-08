@@ -46,7 +46,9 @@ export async function POST(request: NextRequest) {
       ? body.voice as ContentVoice
       : 'natural';
     const experience = typeof body.experience === 'string' ? body.experience.trim().slice(0, 900) : '';
-    const serviceSlugs = asStringArray(body.serviceSlugs, 3);
+    // The public UI permits a maximum of two services. Enforce the same
+    // boundary server-side so a crafted request cannot change the prompt.
+    const serviceSlugs = asStringArray(body.serviceSlugs, 2);
     const tags = asStringArray(body.tags, 8);
     const seed = typeof body.seed === 'number' && Number.isFinite(body.seed) ? body.seed : Date.now();
     const merchantSlug = typeof body.merchantSlug === 'string' ? body.merchantSlug.trim() : '';
