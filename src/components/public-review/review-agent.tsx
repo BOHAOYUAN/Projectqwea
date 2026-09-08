@@ -324,8 +324,8 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
   }
 
   return (
-    <main className="min-h-screen bg-[#ece5dc] px-3.5 py-6 sm:py-10 flex flex-col items-center justify-center font-sans text-[#3c342f]">
-      <div className="w-full max-w-[440px] flex flex-col space-y-3.5">
+    <main className="min-h-screen overflow-x-hidden bg-[#ece5dc] px-3 py-5 sm:px-3.5 sm:py-10 flex flex-col items-center justify-center font-sans text-[#3c342f]">
+      <div className="flex w-full min-w-0 max-w-[440px] flex-col space-y-3.5">
         {/* TOP BAR: 返回平台选择 */}
         <div className="flex items-center justify-between px-1">
           <Link
@@ -351,16 +351,16 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
         </div>
 
         {/* MAIN CONTAINER (卡片包裹表单) */}
-        <div className="rounded-3xl border border-[#d9ccbe] bg-[#fbf6ef] p-4 sm:p-5 shadow-[0_8px_25px_rgba(80,60,40,0.06)] space-y-4">
+        <div className="min-w-0 overflow-hidden rounded-3xl border border-[#d9ccbe] bg-[#fbf6ef] p-3.5 sm:p-5 shadow-[0_8px_25px_rgba(80,60,40,0.06)] space-y-4">
           
           {/* ① 服务与标签（服务限2项，标签可多选，验收 #17） */}
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-[#4a362b] flex items-center gap-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <label className="flex min-w-0 items-center gap-1.5 text-xs font-bold text-[#4a362b]">
                 <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#8c674e] text-[10px] text-white font-bold">
                   1
                 </span>
-                <span>{isChinese ? '服务与体验（服务限2项，标签可多选）' : 'Service & Highlights (max 2)'}</span>
+                <span className="min-w-0">{isChinese ? '服务与体验（服务限2项，标签可多选）' : 'Service & Highlights (max 2)'}</span>
               </label>
               <span className="text-[10.5px] text-[#9c8475]">
                 {selectedServiceIds.length}/2
@@ -408,17 +408,17 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
 
           {/* ② 平台与口吻 */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-[#4a362b] flex items-center gap-1.5">
+            <label className="flex min-w-0 items-center gap-1.5 text-xs font-bold text-[#4a362b]">
               <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#8c674e] text-[10px] text-white font-bold">
                 2
               </span>
               <span>{isChinese ? '平台与口吻' : 'Platform & Tone'}</span>
             </label>
-            <div className="flex items-center gap-2">
-              <span className="rounded-lg bg-[#efe5d7] border border-[#dccbb9] px-2.5 py-1 text-xs font-bold text-[#624b3c]">
+            <div className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
+              <span className="w-fit rounded-lg border border-[#dccbb9] bg-[#efe5d7] px-2.5 py-1 text-xs font-bold text-[#624b3c]">
                 {getPlatformName(platform)}
               </span>
-              <div className="flex flex-1 items-center gap-1 rounded-xl bg-[#eee3d5]/70 p-1 border border-[#dfcebc]">
+              <div className="flex min-w-0 w-full items-center gap-1 rounded-xl border border-[#dfcebc] bg-[#eee3d5]/70 p-1 sm:flex-1">
                 {voiceOptions.map((opt) => {
                   const isSelected = voice === opt.value;
                   return (
@@ -426,7 +426,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
                       key={opt.value}
                       type="button"
                       onClick={() => handleVoiceChange(opt.value)}
-                      className={`flex-1 rounded-lg py-1 text-center text-xs font-bold transition ${
+                      className={`min-w-0 flex-1 rounded-lg py-1 text-center text-[11px] font-bold transition ${
                         isSelected
                           ? 'bg-white text-[#523d30] shadow-xs'
                           : 'text-[#8c7464] hover:text-[#523d30]'
@@ -447,11 +447,11 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
               onClick={() => setIsExperienceOpen(!isExperienceOpen)}
               className="w-full flex items-center justify-between rounded-xl border border-[#dec9b5] bg-white/70 px-3 py-2 text-xs font-bold text-[#4a362b] hover:bg-white transition"
             >
-              <span className="flex items-center gap-1.5">
+              <span className="flex min-w-0 items-center gap-1.5 text-left">
                 <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#8c674e] text-[10px] text-white font-bold">
                   3
                 </span>
-                <span>{isChinese ? '添加自定义细节（选填）' : 'Add custom details (optional)'}</span>
+                <span className="min-w-0">{isChinese ? '添加自定义细节（选填）' : 'Add custom details (optional)'}</span>
               </span>
               <span className="text-[11px] font-semibold text-[#8b6147]">
                 {isExperienceOpen ? (isChinese ? '收起 ▲' : 'Collapse ▲') : (isChinese ? '展开输入 ▼' : 'Expand ▼')}
@@ -482,8 +482,8 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
 
           {/* ④ 可编辑草稿 */}
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-[#4a362b] flex items-center gap-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <label className="flex min-w-0 items-center gap-1.5 text-xs font-bold text-[#4a362b]">
                 <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#8c674e] text-[10px] text-white font-bold">
                   4
                 </span>
@@ -513,7 +513,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
             {/* COMPLIANCE NOTICE (验收 #30 & #31: 内容可编辑、请自行核对、系统不会自动发布) */}
             <p className="flex items-center gap-1 text-[10.5px] text-[#91796a]">
               <ShieldCheck className="h-3.5 w-3.5 text-[#a1795c] shrink-0" />
-              <span>
+              <span className="min-w-0">
                 {isChinese
                   ? '内容可编辑 · 请自行核对 · 系统不会自动发布'
                   : 'You can edit anytime. Please review before posting. System will never publish automatically.'}
@@ -541,10 +541,10 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
             type="button"
             disabled={!draft.trim() || isGenerating}
             onClick={() => void copyAndOpen()}
-            className={`w-full rounded-2xl py-3.5 px-4 text-center text-sm font-bold text-white shadow-md transition flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed ${style.copyButton}`}
+            className={`flex w-full min-w-0 items-center justify-center gap-2 rounded-2xl px-3 py-3.5 text-center text-sm font-bold text-white shadow-md transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 ${style.copyButton}`}
           >
             {isCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-            <span>{isChinese ? '复制并前往平台' : `Copy & Open ${getPlatformName(platform)}`}</span>
+            <span className="min-w-0">{isChinese ? '复制并前往平台' : `Copy & Open ${getPlatformName(platform)}`}</span>
             <ExternalLink className="h-3.5 w-3.5 opacity-80" />
           </button>
         </div>
