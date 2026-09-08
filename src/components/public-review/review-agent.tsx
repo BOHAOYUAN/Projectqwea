@@ -398,7 +398,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
                 <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#8c674e] text-[10px] text-white font-bold">
                   3
                 </span>
-                <span className="min-w-0">{isChinese ? '添加自定义细节（选填）' : 'Add custom details (optional)'}</span>
+                <span className="min-w-0">{isChinese ? '添加真实细节（选填，但建议填写）' : 'Add one real detail (optional, recommended)'}</span>
               </span>
               <span className="text-[11px] font-semibold text-[#8b6147]">
                 {isExperienceOpen ? (isChinese ? '收起 ▲' : 'Collapse ▲') : (isChinese ? '展开输入 ▼' : 'Expand ▼')}
@@ -413,14 +413,14 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
                   onChange={(e) => handleExperienceChange(e.target.value)}
                   placeholder={
                     isChinese
-                      ? '例如：过程不赶，每一步都会先说明，我没有做得很催促，很放松。'
-                      : 'For example: calm atmosphere, unhurried pace, attentive care throughout.'
+                      ? '例如：我选的项目是什么；哪一步让我印象深；请写你真实遇到的细节。'
+                      : 'For example: what you chose, what happened, and one detail you genuinely noticed.'
                   }
                   rows={3}
                   className="w-full resize-none rounded-xl border border-[#dec9b5] bg-white p-3 text-xs sm:text-sm text-[#46352a] placeholder:text-[#b49f8f] outline-none transition focus:border-[#986a4c] focus:ring-2 focus:ring-[#986a4c]/15 shadow-inner"
                 />
                 <div className="flex justify-between items-center text-[10.5px] text-[#9c8475] px-1">
-                  <span>{isChinese ? '仅作为生成参考，不会泄露隐私' : 'Used only for generating your draft'}</span>
+                  <span>{isChinese ? '具体细节会让每一版更像你本人' : 'A concrete detail makes each version sound more like you'}</span>
                   <span className="font-mono">{experience.length}/500</span>
                 </div>
               </div>
