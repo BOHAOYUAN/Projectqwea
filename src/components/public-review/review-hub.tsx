@@ -192,7 +192,11 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
                   <span className={`inline-flex w-full items-center justify-center rounded-full px-3 py-[4px] text-[8px] font-medium ${
                     isDark ? 'bg-[#ffd13f] text-[#15150f]' : 'bg-[#ffd13f] text-[#15150f]'
                   }`}>
-                    Rate your experience
+                    {p.key === 'google' || p.key === 'yelp'
+                      ? 'Write a review'
+                      : p.key === 'instagram'
+                        ? 'Create a post'
+                        : '发布内容'}
                   </span>
                 </button>
               );
