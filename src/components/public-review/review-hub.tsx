@@ -285,7 +285,7 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
                           : 'bg-[#11120f] text-white hover:bg-black'
                       }`}
                     >
-                      <span>Flow</span>
+                      <span>Follow</span>
                     </a>
                   </div>
                 );
