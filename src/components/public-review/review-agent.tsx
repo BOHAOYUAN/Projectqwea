@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
   Camera,
@@ -139,22 +139,6 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
     [merchant.experienceTags, selectedTagIds],
   );
 
-  // Initialize a baseline draft on first load
-  useEffect(() => {
-    if (!draft) {
-      setDraft(
-        buildLocalDraft({
-          platform,
-          merchant,
-          services: selectedServices,
-          tags: selectedTags.map((tag) => (isChinese ? tag.label : tag.googleLabel)),
-          experience,
-          voice,
-        }),
-      );
-    }
-  }, []);
-
   const toggleService = (serviceId: string) => {
     setError('');
     if (!selectedServiceIds.includes(serviceId) && selectedServiceIds.length >= maxSelectedServices) {
@@ -166,17 +150,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
         ? current.filter((id) => id !== serviceId)
         : [...current, serviceId];
 
-      const newServices = merchant.services.filter((s) => updated.includes(s.id));
-      setDraft(
-        buildLocalDraft({
-          platform,
-          merchant,
-          services: newServices,
-          tags: selectedTags.map((tag) => (isChinese ? tag.label : tag.googleLabel)),
-          experience,
-          voice,
-        }),
-      );
+      setDraft('');
       return updated;
     });
   };
@@ -185,38 +159,20 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
     setError('');
     setSelectedTagIds((current) => {
       const updated = current.includes(tagId) ? current.filter((id) => id !== tagId) : [...current, tagId];
-      const newTags = merchant.experienceTags.filter((t) => updated.includes(t.id));
-      setDraft(
-        buildLocalDraft({
-          platform,
-          merchant,
-          services: selectedServices,
-          tags: newTags.map((tag) => (isChinese ? tag.label : tag.googleLabel)),
-          experience,
-          voice,
-        }),
-      );
+      setDraft('');
       return updated;
     });
   };
 
   const handleVoiceChange = (newVoice: PublicReviewVoice) => {
     setVoice(newVoice);
-    setDraft(
-      buildLocalDraft({
-        platform,
-        merchant,
-        services: selectedServices,
-        tags: selectedTags.map((tag) => (isChinese ? tag.label : tag.googleLabel)),
-        experience,
-        voice: newVoice,
-      }),
-    );
+    setDraft('');
   };
 
   const handleExperienceChange = (value: string) => {
     setExperience(value);
     setError('');
+    setDraft('');
   };
 
   const generateDraft = async (nextVariation = variation + 1) => {
@@ -261,17 +217,8 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
       setDraft(apiDraft || data.review || '');
       setMetricId(data.metricId || null);
     } catch (err) {
-      console.warn('Review draft fetch fallback:', err);
-      setDraft(
-        buildLocalDraft({
-          platform,
-          merchant,
-          services: selectedServices,
-          tags: selectedTags.map((tag) => (isChinese ? tag.label : tag.googleLabel)),
-          experience,
-          voice,
-        }),
-      );
+      console.warn('Review draft request failed:', err);
+      setError(isChinese ? '暂时无法生成，请稍后重试；系统不会用默认模板替代。' : 'Draft generation is temporarily unavailable. Please retry; we will not substitute a default template.');
       setMetricId(null);
     } finally {
       setIsGenerating(false);
@@ -496,7 +443,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
                 className="text-[11px] font-semibold text-[#8b6147] hover:text-[#5e3c27] flex items-center gap-1 transition"
               >
                 <RefreshCw className={`h-3 w-3 ${isGenerating ? 'animate-spin' : ''}`} />
-                <span>{isChinese ? '换一版' : 'Try another'}</span>
+                <span>{draft ? (isChinese ? '换一版' : 'Try another') : (isChinese ? '生成草稿' : 'Generate draft')}</span>
               </button>
             </div>
             <div className="relative">

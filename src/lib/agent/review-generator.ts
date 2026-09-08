@@ -66,19 +66,16 @@ function localYelpDraft(input: ReviewDraftInput): string {
 }
 
 function hashtag(value: string): string {
-  const compact = value.replace(/[^a-zA-Z0-9]/g, '');
+  const compact = value.replace(/[^\p{L}\p{N}]/gu, '');
   return compact ? `#${compact.slice(0, 48)}` : '';
 }
 
 function localInstagramDraft(input: ReviewDraftInput): string {
   const typedExperience = sentenceCase(input.experience);
-  const service = formatList(input.serviceNames, 'and') || 'self-care session';
-  const tagList = input.tags.length > 0 ? input.tags.join(', ') : 'peaceful vibes';
-  const note = typedExperience && !/[\u4e00-\u9fff]/.test(typedExperience)
-    ? typedExperience
-    : tagList
-      ? `Loving the ${tagList.toLowerCase()} here.`
-      : 'Much needed restorative time.';
+  const service = formatList(input.serviceNames, 'and');
+  const tagList = input.tags.join(', ');
+  const note = typedExperience || tagList;
+  const seed = input.seed ?? Date.now();
 
   const mention = input.socialHandles?.instagram
     ? ` @${input.socialHandles.instagram.replace(/^@/, '')}`
@@ -87,51 +84,45 @@ function localInstagramDraft(input: ReviewDraftInput): string {
   const hashtags = [
     hashtag(input.merchantName),
     hashtag(service),
-    hashtag(input.location || 'Baltimore'),
-    '#SelfCare',
-    '#SpaDay',
-    '#WeekendVibes',
-    '#WellnessJourney',
-    '#CleanSpace',
-  ].filter(Boolean).slice(0, 8).join(' ');
+    hashtag(input.location),
+    ...input.tags.map(hashtag),
+    hashtag(`${input.merchantName}Visit`),
+    hashtag(`${input.location}Visit`),
+  ].filter(Boolean).slice(0, 10).join(' ');
 
-  return `Self-care afternoon at ${input.merchantName}${mention} ✨\n\nTried their ${service} today. ${note} The entire atmosphere felt so calming, clean, and restorative.\n\nLeft feeling completely refreshed and grounded 🤍\n\n${hashtags}`;
+  return pick([
+    `A note from ${input.merchantName}${mention} ✨\n\nI chose ${service}. My own words from the visit: ${note}\n\nI am keeping this post close to the selected service and details, without adding a broader description. This is my personal note from ${input.merchantName} in ${input.location}. 🤍\n\n${hashtags}`,
+    `${input.merchantName}${mention} — a short visit note ✨\n\nSelected service: ${service}. What I wrote down was: ${note}\n\nPosting the details that mattered to me from this visit, and leaving out anything I did not experience or choose. That is my own record from ${input.merchantName}. 🤍\n\n${hashtags}`,
+    `Sharing one specific note from ${input.merchantName}${mention} ✨\n\nFor ${service}, the part I wanted to remember was: ${note}\n\nThis caption stays with those selected details only. It is a small personal record from my visit in ${input.location}, written in my own words. 🤍\n\n${hashtags}`,
+  ], seed);
 }
 
 function localXiaohongshuDraft(input: ReviewDraftInput): string {
-  const service = formatList(input.serviceNames, '和') || '面部与护理项目';
-  const tagsStr = input.tags.length > 0 ? input.tags.join('、') : '环境舒服、服务细心';
+  const service = formatList(input.serviceNames, '和');
+  const tagsStr = input.tags.join('、');
   const experience = sentenceCase(input.experience);
   const seed = input.seed ?? Date.now();
-
-  const expDetail = experience
-    ? `我自己的真实感受是：${experience}`
-    : `全程体验下来最大的亮点就是【${tagsStr}】。`;
 
   const mention = input.socialHandles?.xiaohongshu
     ? ` @${input.socialHandles.xiaohongshu.replace(/^@/, '')}`
     : '';
 
-  const titles = [
-    `✨在${input.location}挖到超治愈的${service}宝藏店！`,
-    `💆周末放松打卡｜${input.merchantName}真实体验分享`,
-    `🌿把疲惫一扫而空！私藏的${service}治愈小天地`,
-  ];
-
-  const bodies = [
-    `这次在${input.merchantName}${mention}做了${service}，体验感真的拉满！\n\n${expDetail}空间干净私密，轻音乐伴随舒缓香气让人很快就沉静下来。技师细致周到，完全没有催促感，做完身心都得到了彻底的舒缓与放松～`,
-    `近期在${input.merchantName}${mention}体验的${service}特别惊喜！\n\n${expDetail}进店就觉得环境雅致整洁，流程规范贴心，细节处处体现用心，做完感觉整个人轻松了不少，值得放进日常心动清单～`,
-  ];
-
-  const title = pick(titles, seed);
-  const body = pick(bodies, seed);
+  const title = pick([
+    `${input.merchantName}体验记录`,
+    `${service}的一次记录`,
+    `今天只记这次${service}`,
+  ], seed);
+  const body = pick([
+    `这次在${input.location}的${input.merchantName}${mention}选择了${service}。填写时我选的是：${tagsStr}。\n\n我自己写下的感受是：“${experience}”。这段内容只整理我选择的项目、标签和原话，不补充环境、人员或效果等没有提供的细节。发布前我会再按自己的真实体验核对一遍。`,
+    `在${input.merchantName}${mention}，这次记录的项目是${service}，地点在${input.location}。我选中的感受是：${tagsStr}。\n\n顾客原话是：“${experience}”。不把它写成泛泛的推荐，也不加未发生的细节，只留下一条可以自己修改的体验记录。`,
+    `这条笔记写给自己回看：${input.location}的${input.merchantName}${mention}，本次选择${service}。我勾选的是${tagsStr}。\n\n我的原话：“${experience}”。这里只使用已填写的信息，不扩写成其他项目或效果；发出前也会根据自己的体验再确认。`,
+  ], seed);
   const tagList = [
-    `#${input.location.replace(/[^a-zA-Z]/g, '') || 'Baltimore'}探店`,
-    '#美容护理',
-    `#${service.replace(/\s+/g, '')}`,
-    '#沉浸式放松',
-    '#周末好去处',
-  ].join(' ');
+    hashtag(input.merchantName),
+    hashtag(input.location),
+    hashtag(service),
+    ...input.tags.map(hashtag),
+  ].filter(Boolean).slice(0, 8).join(' ');
 
   return `${title}\n\n${body}\n\n${tagList}`;
 }
@@ -343,6 +334,7 @@ function isGroundedRemoteDraft(content: string, input: ReviewDraftInput): boolea
     /包治/, /彻底根除/, /神医/, /百病/, /保修/, /好评返现|好评.*折扣/,
   ];
   if (alwaysBlocked.some((pattern) => pattern.test(content))) return false;
+  if (containsUnselectedDetailClaim(content)) return false;
 
   if (!content.toLowerCase().includes(input.merchantName.toLowerCase())) return false;
 
@@ -372,6 +364,16 @@ function hasPlatformAppropriateLength(content: string, platform: ReviewPlatform)
 
 function englishWordCount(content: string): number {
   return content.match(/[a-z0-9]+(?:['’-][a-z0-9]+)?/gi)?.length ?? 0;
+}
+
+/**
+ * These are common fabricated-detail signals in review-model output. The
+ * prompt already forbids them; this final guard sends the request to a safe,
+ * input-only fallback instead of quietly publishing a made-up claim.
+ */
+function containsUnselectedDetailClaim(content: string): boolean {
+  return /\b(staff|team|esthetician|space|lighting|music|scent|product|products|skin|glow|glowing|check-in|check in|walked in|walk in|solid spot|sanctuary|luxurious|tailored|before and after)\b/i.test(content)
+    || /环境|员工|美容师|技师|灯光|音乐|香薰|产品|皮肤|毛孔|上妆|交通|推销/.test(content);
 }
 
 export async function generateReviewDraft(input: ReviewDraftInput): Promise<GeneratedDraft> {
