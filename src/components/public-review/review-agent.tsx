@@ -60,8 +60,6 @@ type VoiceOption = {
   detail: string;
 };
 
-const maxSelectedServices = 2;
-
 const ENGLISH_VOICES: VoiceOption[] = [
   { value: 'natural', label: 'Natural', detail: 'Everyday phrasing' },
   { value: 'concise', label: 'Concise', detail: 'Short and direct' },
@@ -114,7 +112,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
     if (!initialServiceId) return merchant.services.slice(0, 1).map((s) => s.id);
     const ids = initialServiceId.split(',').map((id) => id.trim()).filter(Boolean);
     const validIds = ids.filter((id) => merchant.services.some((s) => s.id === id));
-    return validIds.length > 0 ? validIds.slice(0, 2) : merchant.services.slice(0, 1).map((s) => s.id);
+    return validIds.length > 0 ? validIds : merchant.services.slice(0, 1).map((s) => s.id);
   }, [initialServiceId, merchant.services]);
 
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>(parsedInitialIds);
@@ -141,10 +139,6 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
 
   const toggleService = (serviceId: string) => {
     setError('');
-    if (!selectedServiceIds.includes(serviceId) && selectedServiceIds.length >= maxSelectedServices) {
-      setError(isChinese ? '服务最多选择两项' : 'You can select up to 2 services.');
-      return;
-    }
     setSelectedServiceIds((current) => {
       const updated = current.includes(serviceId)
         ? current.filter((id) => id !== serviceId)
@@ -300,17 +294,17 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
         {/* MAIN CONTAINER (卡片包裹表单) */}
         <div className="min-w-0 overflow-hidden rounded-3xl border border-[#d9ccbe] bg-[#fbf6ef] p-3.5 sm:p-5 shadow-[0_8px_25px_rgba(80,60,40,0.06)] space-y-4">
           
-          {/* ① 服务与标签（服务限2项，标签可多选，验收 #17） */}
+          {/* ① 服务与标签：均可多选，按真实体验勾选 */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between gap-2">
               <label className="flex min-w-0 items-center gap-1.5 text-xs font-bold text-[#4a362b]">
                 <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#8c674e] text-[10px] text-white font-bold">
                   1
                 </span>
-                <span className="min-w-0">{isChinese ? '服务与体验（服务限2项，标签可多选）' : 'Service & Highlights (max 2)'}</span>
+                <span className="min-w-0">{isChinese ? '服务与体验（均可多选）' : 'Service & Highlights (multi-select)'}</span>
               </label>
               <span className="text-[10.5px] text-[#9c8475]">
-                {selectedServiceIds.length}/2
+                {isChinese ? `已选 ${selectedServiceIds.length}` : `${selectedServiceIds.length} selected`}
               </span>
             </div>
             <div className="flex flex-wrap gap-1.5">

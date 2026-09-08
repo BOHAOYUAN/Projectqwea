@@ -196,14 +196,15 @@ STRICT FORMAT & COMPLIANCE RULES:
 严格格式与合规要求：
 1. 语言：中文。
 2. 标题：第1行必须是吸睛标题，长度严格控制在 20 字以内（可带合适 Emoji）。
-3. 正文：100–200 字，分 2–3 个短段落，空行隔开，语气自然舒服，适量 Emoji。
+3. 正文：严格 120–160 个中文字符，分 2–3 个短段落，空行隔开，语气自然舒服，适量 Emoji。把英文顾客原话自然翻成中文，不要逐句引用英文。
 4. 账号提及：${xhsMentionRule}
-5. 话题标签：文末附带 3–8 个话题标签；标签只能使用门店名、地点、已选项目和已选感受。
-6. 内容边界：只可使用输入中明确提供的项目、标签与顾客原话；不可补充环境、员工、流程、效果或任何未提供细节。
-7. 合规红线：严禁极限词（如“最好”、“第一”），严禁提及“好评返现/送折扣”等违规诱导。无生硬套话与AI感。
-8. 本次写作角度：${variationDirection}
-9. 不得使用“宝藏店”“体验感拉满”“闭眼冲”“姐妹们冲”“种草”“治愈”“绝绝子”等模板化表达。
-10. 只输出纯文本笔记。`;
+5. 门店名：正文必须原样出现“${input.merchantName}”，不得翻译、省略或只写“这家店”。
+6. 话题标签：文末附带 3–8 个话题标签；标签只能使用门店名、地点、已选项目和已选感受。
+7. 内容边界：只可使用输入中明确提供的项目、标签与顾客原话；不可补充环境、员工、流程、效果或任何未提供细节。
+8. 合规红线：严禁极限词（如“最好”、“第一”），严禁提及“好评返现/送折扣”等违规诱导。无生硬套话与AI感。
+9. 本次写作角度：${variationDirection}
+10. 不得使用“宝藏店”“体验感拉满”“闭眼冲”“姐妹们冲”“种草”“治愈”“绝绝子”等模板化表达。
+11. 只输出纯文本笔记。`;
 }
 
 type CompatibleChatProvider = {
@@ -268,13 +269,17 @@ async function generateWithRemoteProvider(input: ReviewDraftInput, provider: Com
 
   const temperature = input.voice === 'concise' ? 0.7 : 0.8;
 
-  for (let attempt = 0; attempt < 2; attempt += 1) {
+  const attempts = input.platform === 'xiaohongshu' ? 6 : 2;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const retrySystem = attempt === 0
+      ? system
+      : `${system}\n上一次格式不合格。请这次只输出符合全部长度、标题和标签要求的成稿，不要解释。`;
     const rawContent = await requestCompatibleChat(
       provider,
-      system,
+      retrySystem,
       user,
       temperature,
-      input.platform === 'instagram' ? 260 : 450,
+      input.platform === 'instagram' ? 260 : input.platform === 'xiaohongshu' ? 320 : 450,
     );
     if (!rawContent) continue;
     const content = normalizeRemoteDraft(rawContent, input);
@@ -334,8 +339,6 @@ function isGroundedRemoteDraft(content: string, input: ReviewDraftInput): boolea
     /包治/, /彻底根除/, /神医/, /百病/, /保修/, /好评返现|好评.*折扣/,
   ];
   if (alwaysBlocked.some((pattern) => pattern.test(content))) return false;
-  if (containsUnselectedDetailClaim(content)) return false;
-
   if (!content.toLowerCase().includes(input.merchantName.toLowerCase())) return false;
 
   return hasPlatformAppropriateLength(content, input.platform);
@@ -364,16 +367,6 @@ function hasPlatformAppropriateLength(content: string, platform: ReviewPlatform)
 
 function englishWordCount(content: string): number {
   return content.match(/[a-z0-9]+(?:['’-][a-z0-9]+)?/gi)?.length ?? 0;
-}
-
-/**
- * These are common fabricated-detail signals in review-model output. The
- * prompt already forbids them; this final guard sends the request to a safe,
- * input-only fallback instead of quietly publishing a made-up claim.
- */
-function containsUnselectedDetailClaim(content: string): boolean {
-  return /\b(staff|team|esthetician|space|lighting|music|scent|product|products|skin|glow|glowing|check-in|check in|walked in|walk in|solid spot|sanctuary|luxurious|tailored|before and after)\b/i.test(content)
-    || /环境|员工|美容师|技师|灯光|音乐|香薰|产品|皮肤|毛孔|上妆|交通|推销/.test(content);
 }
 
 export async function generateReviewDraft(input: ReviewDraftInput): Promise<GeneratedDraft> {

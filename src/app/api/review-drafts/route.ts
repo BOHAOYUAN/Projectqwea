@@ -46,9 +46,9 @@ export async function POST(request: NextRequest) {
       ? body.voice as ContentVoice
       : 'natural';
     const experience = typeof body.experience === 'string' ? body.experience.trim().slice(0, 900) : '';
-    // The public UI permits a maximum of two services. Enforce the same
-    // boundary server-side so a crafted request cannot change the prompt.
-    const serviceSlugs = asStringArray(body.serviceSlugs, 2);
+    // A customer can select all published services. Keep a sensible request
+    // ceiling so crafted requests cannot turn this endpoint into a prompt proxy.
+    const serviceSlugs = asStringArray(body.serviceSlugs, 8);
     const tags = asStringArray(body.tags, 8);
     const seed = typeof body.seed === 'number' && Number.isFinite(body.seed) ? body.seed : Date.now();
     const merchantSlug = typeof body.merchantSlug === 'string' ? body.merchantSlug.trim() : '';
@@ -105,6 +105,17 @@ export async function POST(request: NextRequest) {
       seed,
       socialHandles: publicPage.socialHandles,
     });
+
+    // A local fallback is intentionally never sent to a customer. It cannot
+    // satisfy the required platform-specific voice and formatting quality as
+    // reliably as a validated model response. The UI offers "Try another"
+    // instead of presenting a generic or non-compliant draft.
+    if (draft.mode === 'local') {
+      return NextResponse.json(
+        { error: 'This draft did not meet the platform format yet. Please try another version.' },
+        { status: 503 },
+      );
+    }
 
     const metricId = await recordAnonymousGenerationMetric({
       merchantSlug,
