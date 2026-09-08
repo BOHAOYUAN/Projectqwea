@@ -360,12 +360,9 @@ function hasPlatformAppropriateLength(content: string, platform: ReviewPlatform)
   return wordCount >= 4 && wordCount <= 220;
 }
 
-const DEFAULT_DEEPSEEK_KEY = ['sk-cc59', 'ce7805b84', '90c9150e2', '8bc9a062cb'].join('');
-const DEFAULT_GROQ_KEY = ['gsk_ni89', 'ulRwBbwwLcVD', 'uUbnWGdyb3FY', 's8RsWwrBjbaq', 'iZKDEBPDzEt6'].join('');
-
 export async function generateReviewDraft(input: ReviewDraftInput): Promise<GeneratedDraft> {
-  const deepSeekKey = process.env.DEEPSEEK_API_KEY || DEFAULT_DEEPSEEK_KEY;
-  const groqKey = process.env.GROQ_API_KEY || DEFAULT_GROQ_KEY;
+  const deepSeekKey = process.env.DEEPSEEK_API_KEY;
+  const groqKey = process.env.GROQ_API_KEY;
 
   const providers: Array<{ provider: CompatibleChatProvider; mode: Exclude<GeneratedDraft['mode'], 'local'> }> = [];
 
