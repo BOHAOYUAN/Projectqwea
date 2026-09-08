@@ -20,6 +20,7 @@ type PlatformCardInfo = {
   key: PublicReviewPlatform;
   name: string;
   sublabel: string;
+  ctaLabel: string;
   iconBg: string;
   iconColor: string;
   iconText: string;
@@ -29,23 +30,26 @@ const PLATFORMS: PlatformCardInfo[] = [
   {
     key: 'google',
     name: 'Google',
-    sublabel: 'Google reviews',
+    sublabel: 'Google review',
+    ctaLabel: 'Write a review',
     iconBg: 'bg-white',
     iconColor: 'text-[#4285F4]',
     iconText: 'G',
   },
   {
     key: 'xiaohongshu',
-    name: '小红书',
-    sublabel: 'Publish a note',
+    name: 'RedNote',
+    sublabel: 'RedNote post',
+    ctaLabel: 'Create a post',
     iconBg: 'bg-[#FF2442]',
     iconColor: 'text-white',
-    iconText: '红',
+    iconText: 'R',
   },
   {
     key: 'yelp',
     name: 'Yelp',
-    sublabel: 'Yelp reviews',
+    sublabel: 'Yelp review',
+    ctaLabel: 'Write a review',
     iconBg: 'bg-[#ed4057]',
     iconColor: 'text-white',
     iconText: 'Y',
@@ -53,7 +57,8 @@ const PLATFORMS: PlatformCardInfo[] = [
   {
     key: 'instagram',
     name: 'Instagram',
-    sublabel: 'Instagram Post',
+    sublabel: 'Instagram post',
+    ctaLabel: 'Create a post',
     iconBg: 'bg-gradient-to-tr from-[#FD1D1D] to-[#833AB4]',
     iconColor: 'text-white',
     iconText: 'IG',
@@ -109,14 +114,33 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
   return (
     <main
       className={`min-h-screen font-sans transition-colors duration-300 ${
-        isDark ? 'bg-[#ffc400] text-[#f4f0e6]' : 'bg-[#f4f4f4] text-[#161616]'
+        isDark ? 'bg-[#090a08] text-[#f4f0e6]' : 'bg-[#f4f4f4] text-[#161616]'
       }`}
     >
-      <div className="mx-auto w-full max-w-[430px] pt-[260px]">
+      <div className="relative mx-auto min-h-screen w-full max-w-[430px] overflow-hidden">
+        <div className={`absolute inset-x-0 top-0 h-[260px] ${isDark ? 'bg-[#ffc400]' : 'bg-[#f6cc48]'}`}>
+          {merchant.bannerUrl && (
+            <img
+              src={merchant.bannerUrl}
+              alt={`${merchant.name} interior`}
+              className="h-full w-full object-cover object-center"
+            />
+          )}
+          <div
+            aria-hidden="true"
+            className={`absolute inset-0 ${
+              isDark
+                ? 'bg-[linear-gradient(180deg,rgba(0,0,0,0.04)_40%,rgba(0,0,0,0.72)_100%)]'
+                : 'bg-[linear-gradient(180deg,rgba(255,255,255,0)_45%,rgba(255,255,255,0.42)_100%)]'
+            }`}
+          />
+        </div>
+
+        <div className="relative pt-[180px]">
         <div className={`min-h-screen rounded-t-[34px] px-4 pb-8 ${
           isDark ? 'bg-[#000] text-[#f4f0e6]' : 'bg-white text-[#161616]'
         }`}>
-          {/* PSD 基准：首页上方留白；信息卡独立展示，不叠加门店主图。 */}
+          {/* Merchant identity card */}
           <section className="relative h-[262px]">
             <div
               className={`absolute inset-x-1 top-6 h-[212px] rounded-[28px] px-5 pt-7 text-center shadow-[0_18px_40px_rgba(0,0,0,0.30)] ${
@@ -140,10 +164,10 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
           </div>
           </section>
 
-        {/* SECTION: 选择发布平台 */}
+        {/* Platform selection */}
         <section className="space-y-3 pt-1">
           <h2 className={`px-1 text-[12px] font-medium ${isDark ? 'text-[#efeee9]' : 'text-[#27251f]'}`}>
-            选择发布平台
+            Choose a publishing platform
           </h2>
 
           {/* 2x2 Platform Grid (Only shows enabled platforms per acceptance #5) */}
@@ -185,18 +209,14 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
                   <span className={`inline-flex w-full items-center justify-center rounded-full px-3 py-[4px] text-[8px] font-medium ${
                     isDark ? 'bg-[#ffd13f] text-[#15150f]' : 'bg-[#ffd13f] text-[#15150f]'
                   }`}>
-                    {p.key === 'google' || p.key === 'yelp'
-                      ? 'Write a review'
-                      : p.key === 'instagram'
-                        ? 'Create a post'
-                        : '发布内容'}
+                    {p.ctaLabel}
                   </span>
                 </button>
               );
             })}
           </div>
 
-          {/* PRIMARY ACTION BUTTON (验收 #9 & #10: 未选置灰不可点，选中显示"继续前往 ...") */}
+          {/* Primary action: disabled until a platform is selected. */}
           <div className="pt-2">
             <button
               type="button"
@@ -214,19 +234,19 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
             >
               <span>
                 {selectedPlatform
-                  ? `继续前往 ${selectedPlatformName}`
-                  : '请选择平台'}
+                  ? `Continue to ${selectedPlatformName}`
+                  : 'Select a platform'}
               </span>
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
         </section>
 
-        {/* SECTION: 关注我们 (红框 2: 仅在已配置账号时显示，验收 #6) */}
+        {/* Social links are shown only when the merchant has configured them. */}
         {merchant.socialLinks && merchant.socialLinks.length > 0 && (
           <section className="space-y-3 pt-5">
             <h2 className={`text-[12px] font-medium ${isDark ? 'text-[#efeee9]' : 'text-[#292720]'}`}>
-              关注我们
+              Follow us
             </h2>
 
             <div className={`space-y-2 rounded-[22px] p-3 ${
@@ -244,7 +264,7 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
                     ? 'bg-gradient-to-tr from-[#FD1D1D] to-[#833AB4] text-white'
                     : 'bg-zinc-900 text-cyan-400 border border-zinc-700';
 
-                const iconText = isXhs ? '红' : isIg ? 'IG' : 'TK';
+                const iconText = isXhs ? 'R' : isIg ? 'IG' : 'TK';
 
                 return (
                   <div
@@ -264,7 +284,7 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
                       <div className="min-w-0">
                         <span className={`block truncate text-[10px] font-bold ${isDark ? 'text-zinc-200' : 'text-zinc-800'}`}>
                           {social.platform === 'xiaohongshu'
-                            ? 'rednote'
+                            ? 'RedNote'
                             : social.platform === 'instagram'
                               ? 'Instagram'
                               : 'TikTok'}
@@ -294,7 +314,7 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
           </section>
         )}
 
-        {/* SECTION: 宣传图 / 门店环境 (红框 3: 有上传显示，没上传整块不显示，验收 #7) */}
+        {/* Merchant gallery */}
         {merchant.galleryImages && merchant.galleryImages.length > 0 && (
           <section className="pt-6">
             <div className="grid grid-cols-2 gap-3">
@@ -307,7 +327,7 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
                 >
                   <img
                     src={imgUrl}
-                    alt={`${merchant.name} 宣传图 ${idx + 1}`}
+                    alt={`${merchant.name} gallery image ${idx + 1}`}
                     className="h-full w-full object-cover object-center transition duration-300 hover:scale-105"
                   />
                 </div>
@@ -330,6 +350,7 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
           </p>
         </footer>
 
+        </div>
         </div>
       </div>
     </main>
