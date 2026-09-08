@@ -136,6 +136,13 @@ function buildSystemPrompt(input: ReviewDraftInput): string {
     'Write in a conversational, diary-like order: what was chosen, what was noticed, then stop.',
     'Use a calm, direct structure with no stock opening such as “I had a great experience”.',
   ], input.seed ?? Date.now());
+  const editorialPrinciples = `EDITORIAL METHOD:
+- Treat the customer note as the primary source of voice and detail. Preserve its concrete observation rather than replacing it with generic praise.
+- Selected services and tags are supporting facts, not an instruction to invent a full story for each one. If the note does not describe a service detail, do not make one up.
+- When two or more services are selected, mention every selected service once in a compact, natural way where the platform format permits. Do not attach an invented result or detail to any of them.
+- Do not use ratings language, sales language, calls to action, recommendations, or a business-owner voice.
+- Avoid filler, symmetry, and list-like wording. Use varied sentence length and a specific first-person rhythm that sounds like one person wrote it after one visit.
+- Before answering, silently check: correct language; merchant name present; no fabricated facts; no prohibited wording; every requested formatting rule is met. Then output only the finished draft.`;
   const voiceDesc = input.voice === 'concise'
     ? 'Keep it direct, focused, and unhurried.'
     : input.voice === 'warm'
@@ -153,6 +160,7 @@ function buildSystemPrompt(input: ReviewDraftInput): string {
   if (input.platform === 'google') {
     return `You are a genuine customer writing a 5-star Google review for "${input.merchantName}" in ${input.location}.
 STRICT FORMAT & COMPLIANCE RULES:
+${editorialPrinciples}
 1. Language: English only.
 2. Length: Exactly 60–120 words.
 3. Format: Pure plain text in 1–2 paragraphs. NO title, NO hashtags, NO emojis.
@@ -167,6 +175,7 @@ STRICT FORMAT & COMPLIANCE RULES:
   if (input.platform === 'yelp') {
     return `You are a genuine customer writing a detailed 5-star Yelp review for "${input.merchantName}" in ${input.location}.
 STRICT FORMAT & COMPLIANCE RULES:
+${editorialPrinciples}
 1. Language: English only.
 2. Length: Exactly 80–150 words (more detailed and descriptive than Google).
 3. Format: Pure plain text in 1–2 paragraphs. NO title, NO hashtags.
@@ -181,6 +190,7 @@ STRICT FORMAT & COMPLIANCE RULES:
   if (input.platform === 'instagram') {
     return `You are posting an aesthetic Instagram caption after visiting "${input.merchantName}" in ${input.location}.
 STRICT FORMAT & COMPLIANCE RULES:
+${editorialPrinciples}
 1. Language: English.
 2. Length: Exactly 50–100 words.
 3. Format: Segmented lines with subtle emojis (✨, 💆, 🤍). ${igMentionRule}
@@ -194,6 +204,8 @@ STRICT FORMAT & COMPLIANCE RULES:
   // Xiaohongshu
   return `你是一位在美华人顾客，刚在 ${input.location} 的【${input.merchantName}】体验完项目，写一篇真实、有生活气息的小红书打卡笔记。
 严格格式与合规要求：
+编辑原则：
+${editorialPrinciples}
 1. 语言：中文。
 2. 标题：第1行必须是吸睛标题，长度严格控制在 20 字以内（可带合适 Emoji）。
 3. 正文：严格 120–160 个中文字符，分 2–3 个短段落，空行隔开，语气自然舒服，适量 Emoji。把英文顾客原话自然翻成中文，不要逐句引用英文。
@@ -223,7 +235,7 @@ async function requestCompatibleChat(
 ): Promise<string | null> {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    const timeoutId = setTimeout(() => controller.abort(), 10_000);
 
     const response = await fetch(provider.endpoint, {
       method: 'POST',
@@ -279,7 +291,7 @@ async function generateWithRemoteProvider(input: ReviewDraftInput, provider: Com
       retrySystem,
       user,
       temperature,
-      input.platform === 'instagram' ? 260 : input.platform === 'xiaohongshu' ? 320 : 450,
+      800,
     );
     if (!rawContent) continue;
     const content = normalizeRemoteDraft(rawContent, input);

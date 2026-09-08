@@ -294,17 +294,19 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
         {/* MAIN CONTAINER (卡片包裹表单) */}
         <div className="min-w-0 overflow-hidden rounded-3xl border border-[#d9ccbe] bg-[#fbf6ef] p-3.5 sm:p-5 shadow-[0_8px_25px_rgba(80,60,40,0.06)] space-y-4">
           
-          {/* ① 服务与标签：均可多选，按真实体验勾选 */}
+          {/* ① 服务与标签：分开呈现，避免把服务和感受混为一组 */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between gap-2">
               <label className="flex min-w-0 items-center gap-1.5 text-xs font-bold text-[#4a362b]">
                 <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#8c674e] text-[10px] text-white font-bold">
                   1
                 </span>
-                <span className="min-w-0">{isChinese ? '服务与体验（均可多选）' : 'Service & Highlights (multi-select)'}</span>
+                <span className="min-w-0">{isChinese ? '服务项目（可多选 / 可全选）' : 'Services (select any or all)'}</span>
               </label>
               <span className="text-[10.5px] text-[#9c8475]">
-                {isChinese ? `已选 ${selectedServiceIds.length}` : `${selectedServiceIds.length} selected`}
+                {isChinese
+                  ? `服务 ${selectedServiceIds.length} · 标签 ${selectedTagIds.length}`
+                  : `${selectedServiceIds.length} services · ${selectedTagIds.length} highlights`}
               </span>
             </div>
             <div className="flex flex-wrap gap-1.5">
@@ -326,6 +328,18 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
                   </button>
                 );
               })}
+            </div>
+
+            <div className="border-t border-[#e3d7ca] pt-2.5">
+              <div className="mb-1.5 flex items-center justify-between gap-2">
+                <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[#8c7465]">
+                  {isChinese ? '体验标签（可多选）' : 'Highlights (multi-select)'}
+                </p>
+                <span className="text-[10.5px] text-[#9c8475]">
+                  {isChinese ? `已选 ${selectedTagIds.length}` : `${selectedTagIds.length} selected`}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
               {merchant.experienceTags.map((tag) => {
                 const isSelected = selectedTagIds.includes(tag.id);
                 return (
@@ -344,6 +358,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
                   </button>
                 );
               })}
+              </div>
             </div>
           </div>
 
