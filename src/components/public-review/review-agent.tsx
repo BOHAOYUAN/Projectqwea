@@ -127,6 +127,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
   const [variation, setVariation] = useState(0);
   const [metricId, setMetricId] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const draftHistoryRef = useRef(new Set<string>());
 
   const selectedServices = useMemo(
     () => merchant.services.filter((service) => selectedServiceIds.includes(service.id)),
@@ -175,44 +176,54 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
     setIsCopied(false);
     setVariation(nextVariation);
 
-    const payload = {
-      platform,
-      merchantName: merchant.name,
-      location: merchant.address,
-      merchantSlug: merchant.merchantSlug,
-      locationSlug: merchant.locationSlug,
-      serviceNames: selectedServices.map((service) => (isChinese ? service.name : service.englishName)),
-      serviceSlugs: selectedServices.map((service) => service.id),
-      tags: selectedTags.map((tag) => (isChinese ? tag.label : tag.googleLabel)),
-      experience: experience.trim(),
-      voice,
-      seed: Date.now() + nextVariation,
-    };
-
     try {
-      const response = await fetch('/api/review-drafts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data = (await response.json()) as {
-        success?: boolean;
-        draft?: ApiDraft | string;
-        review?: string;
-        metricId?: string | null;
-        error?: string;
-      };
-      const apiDraft = typeof data.draft === 'string' ? data.draft : data.draft?.content;
+      // A session never shows the exact same generated draft twice. This is a
+      // quality guard for a customer's own editable writing, not a substitute
+      // for platform policy or an attempt to bypass moderation.
+      for (let retry = 0; retry < 3; retry += 1) {
+        const payload = {
+          platform,
+          merchantName: merchant.name,
+          location: merchant.address,
+          merchantSlug: merchant.merchantSlug,
+          locationSlug: merchant.locationSlug,
+          serviceNames: selectedServices.map((service) => (isChinese ? service.name : service.englishName)),
+          serviceSlugs: selectedServices.map((service) => service.id),
+          tags: selectedTags.map((tag) => (isChinese ? tag.label : tag.googleLabel)),
+          experience: experience.trim(),
+          voice,
+          seed: Date.now() + nextVariation + retry,
+        };
+        const response = await fetch('/api/review-drafts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = (await response.json()) as {
+          success?: boolean;
+          draft?: ApiDraft | string;
+          review?: string;
+          metricId?: string | null;
+          error?: string;
+        };
+        const apiDraft = typeof data.draft === 'string' ? data.draft : data.draft?.content;
+        if (!response.ok || !data.success || !(apiDraft || data.review)) {
+          throw new Error(data.error || 'Unable to create a draft right now.');
+        }
 
-      if (!response.ok || !data.success || !(apiDraft || data.review)) {
-        throw new Error(data.error || 'Unable to create a draft right now.');
+        const candidate = apiDraft || data.review || '';
+        const fingerprint = fingerprintDraft(candidate);
+        if (draftHistoryRef.current.has(fingerprint)) continue;
+
+        draftHistoryRef.current.add(fingerprint);
+        setDraft(candidate);
+        setMetricId(data.metricId || null);
+        return;
       }
-
-      setDraft(apiDraft || data.review || '');
-      setMetricId(data.metricId || null);
+      throw new Error('The model repeated a previous draft.');
     } catch (err) {
       console.warn('Review draft request failed:', err);
-      setError(isChinese ? '暂时无法生成，请稍后重试；系统不会用默认模板替代。' : 'Draft generation is temporarily unavailable. Please retry; we will not substitute a default template.');
+      setError(isChinese ? '暂时无法生成一版不同的草稿。请补充一个真实细节后重试；系统不会用默认模板替代。' : 'A different draft could not be generated yet. Add one real detail and retry; we will not substitute a default template.');
       setMetricId(null);
     } finally {
       setIsGenerating(false);
@@ -975,6 +986,14 @@ async function copyText(value: string) {
   const success = document.execCommand('copy');
   document.body.removeChild(fallback);
   if (!success) throw new Error('Copy command failed.');
+}
+
+function fingerprintDraft(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .replace(/[\p{P}\p{S}]/gu, '')
+    .trim();
 }
 
 async function trackReviewEvent(metricId: string | null, event: 'copied' | 'published') {
