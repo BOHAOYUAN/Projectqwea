@@ -44,49 +44,24 @@ function isChinesePlatform(platform: ReviewPlatform): boolean {
 }
 
 function localGoogleDraft(input: ReviewDraftInput): string {
-  const service = formatList(input.serviceNames, 'and') || 'session';
-  const experience = sentenceCase(input.experience);
-  const voice = input.voice ?? 'natural';
+  const service = formatList(input.serviceNames, 'and');
+  const experience = sentenceCase(input.experience) || input.tags.join(', ');
   const seed = input.seed ?? Date.now();
-  const tagsPhrase = input.tags.length > 0 ? input.tags.join(' and ') : 'calm atmosphere and attentive service';
-
-  const details = experience && !/[\u4e00-\u9fff]/.test(experience)
-    ? experience
-    : input.tags.length > 0
-      ? `The ${tagsPhrase.toLowerCase()} really stood out to me from the start`
-      : 'The peaceful atmosphere and kind staff made me feel welcome immediately';
-
-  if (voice === 'concise') {
-    return `Had a truly wonderful visit to ${input.merchantName} in ${input.location} for their ${service}. ${details}. The space was spotless, unhurried, and comfortable throughout. The team took genuine care with every step of the appointment. A very enjoyable and relaxing experience overall, and I look forward to coming back again soon!`;
-  }
-  if (voice === 'warm') {
-    return `Such a lovely, restorative visit to ${input.merchantName} in ${input.location}! I booked an appointment for their ${service}, and from the moment I arrived, ${details.toLowerCase()}. The environment felt so calm, clean, and genuinely welcoming. Every single detail showed skilled care and attention. Left feeling completely refreshed, and I would gladly recommend them to anyone in the area.`;
-  }
   return pick([
-    `Really enjoyed my visit to ${input.merchantName} in ${input.location} for the ${service}. ${details}. Everything felt immaculate, comfortable, and very thoughtfully handled without any feeling of being rushed. The staff was attentive and professional the whole time. A fantastic local spot that I definitely look forward to visiting again.`,
-    `Had a great experience at ${input.merchantName} trying their ${service}. ${details}. The setting is peaceful and clean, and the staff made sure I was comfortable through every step of the service. Truly appreciated the unhurried pace and skilled care. Highly recommend checking them out!`,
+    `My visit to ${input.merchantName} in ${input.location} was for ${service}. The part I want to share is this: ${experience}. That is the detail I noticed during this visit, and it is why I wanted to leave a note. I am keeping this review focused on my own selected service and experience. For anyone considering ${input.merchantName}, this is simply my personal perspective from that appointment.`,
+    `At ${input.merchantName} in ${input.location}, I chose ${service}. ${experience}. I wanted my review to stay specific to what I selected and experienced, rather than add general claims. These points describe my visit in the clearest way I can: the service I chose and the feeling I took away from it. This is my own review of that visit to ${input.merchantName}.`,
+    `I visited ${input.merchantName} in ${input.location} for ${service}. My note from the visit is: ${experience}. I am sharing that exact part because it stood out to me personally. Nothing else needs to be added to make the point—the selected service and this experience are the full basis for my review. That was my experience with ${input.merchantName}.`,
   ], seed);
 }
 
 function localYelpDraft(input: ReviewDraftInput): string {
-  const service = formatList(input.serviceNames, 'and') || 'service';
-  const experience = sentenceCase(input.experience);
-  const voice = input.voice ?? 'natural';
+  const service = formatList(input.serviceNames, 'and');
+  const experience = sentenceCase(input.experience) || input.tags.join(', ');
   const seed = (input.seed ?? Date.now()) + 11;
-  const tagsPhrase = input.tags.length > 0 ? input.tags.join(' and ') : 'peaceful space, skilled care, and thoughtful staff';
-
-  const details = experience && !/[\u4e00-\u9fff]/.test(experience)
-    ? experience
-    : input.tags.length > 0
-      ? `What stood out most was the ${tagsPhrase.toLowerCase()}`
-      : 'The calming ambiance and the staff’s attention to detail made an immediate positive impression';
-
-  if (voice === 'concise') {
-    return `Came to ${input.merchantName} in ${input.location} and had a fantastic appointment. Booked their ${service}, and the overall quality was evident right away. ${details}. The facility is spotless, quiet, and well-managed, and the staff took the time to explain everything clearly without any pressure. Highly recommend them for anyone looking for consistent, professional care in the area. Will definitely be returning for another appointment.`;
-  }
   return pick([
-    `I booked a visit to ${input.merchantName} in ${input.location} for their ${service}, and it exceeded my expectations. Check-in was smooth, and the entire space felt peaceful and exceptionally clean. ${details}. The staff was patient, knowledgeable, and genuinely attentive from beginning to end. It is rare to find a business that balances technical skill with such a welcoming environment. A standout spot in Baltimore that I will happily revisit and recommend to friends.`,
-    `Had an exceptional experience at ${input.merchantName}. I tried their ${service} based on positive recommendations, and I am glad I did. ${details}. The entire appointment was completely unhurried, relaxing, and tailored to what I needed. The treatment room was immaculate and comfortable. If you appreciate skilled service and a tranquil atmosphere, this is definitely a place worth booking.`,
+    `I went to ${input.merchantName} in ${input.location} for ${service}. The specific things I selected to describe the visit are: ${experience}. I am writing this review around those points because they are the parts I actually experienced. I do not want to turn a personal note into a generic description of the business. If those details are useful to another visitor, that is the most accurate way I can share my visit to ${input.merchantName}.`,
+    `For my visit to ${input.merchantName}, I chose ${service}. ${experience}. This is the part of the appointment I wanted to document, and it is the basis for this review. I prefer to keep the description tied to the service and the details I selected, without filling it with assumptions. That makes this a straightforward account of my experience at ${input.merchantName} in ${input.location}.`,
+    `${input.merchantName} in ${input.location} was where I had ${service}. My own note is: ${experience}. That is what I would highlight from the visit. I am deliberately keeping this review close to the facts I selected, so it reads as a real customer note rather than a broad promotional statement. This is my perspective on the service I chose at ${input.merchantName}.`,
   ], seed);
 }
 
@@ -162,6 +137,14 @@ function localXiaohongshuDraft(input: ReviewDraftInput): string {
 }
 
 function buildSystemPrompt(input: ReviewDraftInput): string {
+  const variationDirection = pick([
+    'Open with the selected service, then explain the customer note in plain language.',
+    'Open with the customer note, then connect it naturally to the selected service.',
+    'Write as a short first-person reflection, using a different sentence rhythm from a typical review.',
+    'Use a concrete, understated observation first; avoid a recommendation-style ending.',
+    'Write in a conversational, diary-like order: what was chosen, what was noticed, then stop.',
+    'Use a calm, direct structure with no stock opening such as “I had a great experience”.',
+  ], input.seed ?? Date.now());
   const voiceDesc = input.voice === 'concise'
     ? 'Keep it direct, focused, and unhurried.'
     : input.voice === 'warm'
@@ -185,7 +168,9 @@ STRICT FORMAT & COMPLIANCE RULES:
 4. Voice: ${voiceDesc} Authentic, grounded, no marketing fluff or AI cliches.
 5. Content: Mention "${input.merchantName}" naturally. Use ONLY the selected services, selected feelings, and customer note supplied in the user message. Do not infer or add staff, cleanliness, check-in, timing, atmosphere, results, or any other detail.
 6. Guardrails: No extreme claims (e.g. "the best in the world", "#1"), no mention of discounts, promotions, incentives, ratings, or review exchanges.
-7. Output ONLY the review text.`;
+7. Variation direction for this draft: ${variationDirection}
+8. Do not use stock phrases including "great experience", "highly recommend", "look forward to coming back", "from start to finish", or "the staff was".
+9. Output ONLY the review text.`;
   }
 
   if (input.platform === 'yelp') {
@@ -197,7 +182,9 @@ STRICT FORMAT & COMPLIANCE RULES:
 4. Voice: ${voiceDesc} Balanced and observational; do not add any setting, check-in, cleanliness, staff, or treatment detail unless it appears literally in the supplied facts.
 5. Content: Only mention selected services, selected tags, and the customer's own note. Mention "${input.merchantName}".
 6. Guardrails: No hyperbolic words ("best ever", "perfection"), no mention of discounts/exchanges, ratings, or review incentives.
-7. Output ONLY the review text.`;
+7. Variation direction for this draft: ${variationDirection}
+8. Do not use stock phrases including "great experience", "highly recommend", "look forward to coming back", "from start to finish", or "the staff was".
+9. Output ONLY the review text.`;
   }
 
   if (input.platform === 'instagram') {
@@ -208,7 +195,9 @@ STRICT FORMAT & COMPLIANCE RULES:
 3. Format: Segmented lines with subtle emojis (✨, 💆, 🤍). ${igMentionRule}
 4. Hashtags: End with 5–10 hashtags. They may use only the merchant name, location, selected services, and selected feelings; do not add unselected claims.
 5. Content: Use only the supplied facts. Never invent the setting, staff, outcome, or a before/after result.
-5. Output ONLY the caption.`;
+6. Variation direction for this draft: ${variationDirection}
+7. Avoid reusable influencer filler such as "my new sanctuary", "much needed reset", or "this is your sign".
+8. Output ONLY the caption.`;
   }
 
   // Xiaohongshu
@@ -221,7 +210,9 @@ STRICT FORMAT & COMPLIANCE RULES:
 5. 话题标签：文末附带 3–8 个话题标签；标签只能使用门店名、地点、已选项目和已选感受。
 6. 内容边界：只可使用输入中明确提供的项目、标签与顾客原话；不可补充环境、员工、流程、效果或任何未提供细节。
 7. 合规红线：严禁极限词（如“最好”、“第一”），严禁提及“好评返现/送折扣”等违规诱导。无生硬套话与AI感。
-7. 只输出纯文本笔记。`;
+8. 本次写作角度：${variationDirection}
+9. 不得使用“宝藏店”“体验感拉满”“闭眼冲”“姐妹们冲”“种草”“治愈”“绝绝子”等模板化表达。
+10. 只输出纯文本笔记。`;
 }
 
 type CompatibleChatProvider = {
@@ -347,7 +338,8 @@ function isGroundedRemoteDraft(content: string, input: ReviewDraftInput): boolea
 
   const alwaysBlocked = [
     /\$\s*\d{3,}/, /\bguarantee[ds]?\b/i, /\bcure[ds]?\b/i, /\bcancer\b/i,
-    /\b(best|perfect|number\s*one|#1)\b/i, /最好|第一|顶级|完美|拉满|彻底/, 
+    /\b(best|perfect|number\s*one|#1)\b/i, /\b(great experience|highly recommend|look forward to coming back|from start to finish|my new sanctuary|much needed reset|this is your sign)\b/i,
+    /最好|第一|顶级|完美|拉满|彻底|宝藏店|闭眼冲|姐妹们冲|种草|治愈|绝绝子/,
     /包治/, /彻底根除/, /神医/, /百病/, /保修/, /好评返现|好评.*折扣/,
   ];
   if (alwaysBlocked.some((pattern) => pattern.test(content))) return false;

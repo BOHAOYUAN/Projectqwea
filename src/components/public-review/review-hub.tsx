@@ -109,27 +109,20 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
   return (
     <main
       className={`min-h-screen font-sans transition-colors duration-300 ${
-        isDark ? 'bg-[#030403] text-[#f4f0e6]' : 'bg-[#fbfaf5] text-[#161616]'
+        isDark ? 'bg-[#ffc400] text-[#f4f0e6]' : 'bg-[#f4f4f4] text-[#161616]'
       }`}
     >
-      <div className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col overflow-hidden px-4 pb-8">
-        {/* TOP HERO + 商家动态信息：按设计稿将信息卡叠放在门店主图上 */}
-        <section className="relative -mx-4 h-[556px] overflow-hidden">
-          {merchant.bannerUrl ? (
-            <img
-              src={merchant.bannerUrl}
-              alt={merchant.name}
-              className={`absolute inset-x-0 top-0 h-[370px] w-full object-cover object-center ${isDark ? 'brightness-[0.78]' : 'brightness-[0.9]'}`}
-            />
-          ) : (
-            <div className={isDark ? 'h-[370px] bg-[#26251e]' : 'h-[370px] bg-[#e7d9bc]'} />
-          )}
-          <div className={`absolute inset-x-0 top-0 h-[370px] ${isDark ? 'bg-gradient-to-b from-black/15 via-black/5 to-black/55' : 'bg-gradient-to-b from-white/5 via-[#ffd142]/10 to-[#fbfaf5]'}`} />
-          <div
-            className={`absolute inset-x-5 top-[320px] h-[212px] rounded-[28px] px-5 pt-7 text-center shadow-[0_18px_40px_rgba(0,0,0,0.45)] ${
+      <div className="mx-auto w-full max-w-[430px] pt-[260px]">
+        <div className={`min-h-screen rounded-t-[34px] px-4 pb-8 ${
+          isDark ? 'bg-[#000] text-[#f4f0e6]' : 'bg-white text-[#161616]'
+        }`}>
+          {/* PSD 基准：首页上方留白；信息卡独立展示，不叠加门店主图。 */}
+          <section className="relative h-[262px]">
+            <div
+              className={`absolute inset-x-1 top-6 h-[212px] rounded-[28px] px-5 pt-7 text-center shadow-[0_18px_40px_rgba(0,0,0,0.30)] ${
               isDark
                 ? 'border border-white/5 bg-[radial-gradient(circle_at_52%_-10%,rgba(211,181,25,0.68),rgba(31,32,28,0.98)_44%,#1b1c1a_100%)] text-white'
-                : 'border border-[#e5af15] bg-[#ffd13f] text-[#171715]'
+                : 'border border-[#ffc400] bg-[#ffc400] text-[#171715]'
             }`}
           >
             <div className="mx-auto mb-4 flex h-[68px] w-[68px] items-center justify-center overflow-hidden rounded-full border-2 border-white bg-white font-serif text-xl font-bold text-[#151515] shadow-md">
@@ -145,7 +138,7 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
               <span className="truncate">{merchant.address || merchant.neighborhood}</span>
             </p>
           </div>
-        </section>
+          </section>
 
         {/* SECTION: 选择发布平台 */}
         <section className="space-y-3 pt-1">
@@ -239,7 +232,7 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
             <div className={`space-y-2 rounded-[22px] p-3 ${
               isDark
                 ? 'bg-[radial-gradient(circle_at_70%_0%,#68633a,#373832_44%,#252625_100%)]'
-                : 'border border-[#e1ded3] bg-[#f2f0e5]'
+                : 'bg-[#e7e7e1]'
             }`}>
               {merchant.socialLinks.map((social) => {
                 const isXhs = social.platform === 'xiaohongshu';
@@ -259,7 +252,7 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
                     className={`flex items-center justify-between rounded-full px-2.5 py-1.5 transition ${
                       isDark
                         ? 'bg-[#515151] text-zinc-100'
-                        : 'border border-[#e1ded3] bg-white text-zinc-900'
+                        : 'bg-[#ffc400] text-zinc-900'
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
@@ -309,7 +302,7 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
                 <div
                   key={idx}
                   className={`relative h-[176px] overflow-hidden rounded-[18px] border-[6px] ${
-                    isDark ? 'border-[#30312e] bg-[#161713]' : 'border-[#e5af15] bg-[#fff9de]'
+                    isDark ? 'border-[#30312e] bg-[#161713]' : 'border-[#ffc400] bg-[#fff9de]'
                   }`}
                 >
                   <img
@@ -337,6 +330,7 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
           </p>
         </footer>
 
+        </div>
       </div>
     </main>
   );
