@@ -98,7 +98,7 @@ export const MS_BEAUTY_PUBLIC_PAGE: PublicReviewPage = {
   config: {
     headline: 'Share your MS BEAUTY experience',
     subheadline: 'Choose a platform and make your review your own.',
-    heroImageUrl: 'https://images.unsplash.com/photo-1560750588-73207b1ef5b8?q=80&w=1200&auto=format&fit=crop',
+    heroImageUrl: '/images/ms-beauty/hero-shelf.png',
     backgroundImageUrl: null,
     accentColor: '#9A6758',
     showAddress: true,
@@ -107,7 +107,7 @@ export const MS_BEAUTY_PUBLIC_PAGE: PublicReviewPage = {
     xiaohongshuQuery: 'MS BEAUTY Baltimore',
   },
   theme: 'dark',
-  bannerUrl: 'https://images.unsplash.com/photo-1560750588-73207b1ef5b8?q=80&w=1200&auto=format&fit=crop',
+  bannerUrl: '/images/ms-beauty/hero-shelf.png',
   socialLinks: [
     {
       platform: 'xiaohongshu',
@@ -125,10 +125,7 @@ export const MS_BEAUTY_PUBLIC_PAGE: PublicReviewPage = {
       url: 'https://www.tiktok.com/',
     },
   ],
-  galleryImages: [
-    'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?q=80&w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=80&w=800&auto=format&fit=crop',
-  ],
+  galleryImages: ['/images/ms-beauty/storefront.png', '/images/ms-beauty/interior.png'],
   socialHandles: {
     instagram: '@msbeauty_baltimore',
     xiaohongshu: 'MSBEAUTY_BALTIMORE',
