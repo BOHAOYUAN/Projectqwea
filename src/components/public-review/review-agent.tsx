@@ -938,7 +938,7 @@ function getWebFallback(merchant: PublicReviewMerchant, platform: PublicReviewPl
   if (platform === 'xiaohongshu') {
     return `https://www.xiaohongshu.com/search_result?keyword=${encodeURIComponent(merchant.name)}`;
   }
-  return 'https://www.instagram.com/';
+  return 'https://www.instagram.com/create/style/';
 }
 
 function PublishHandoff({
