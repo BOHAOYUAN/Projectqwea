@@ -24,6 +24,7 @@ type PlatformCardInfo = {
   iconBg: string;
   iconColor: string;
   iconText: string;
+  iconUrl: string;
 };
 
 const PLATFORMS: PlatformCardInfo[] = [
@@ -35,6 +36,7 @@ const PLATFORMS: PlatformCardInfo[] = [
     iconBg: 'bg-white',
     iconColor: 'text-[#4285F4]',
     iconText: 'G',
+    iconUrl: '/platforms/google.png',
   },
   {
     key: 'xiaohongshu',
@@ -44,6 +46,7 @@ const PLATFORMS: PlatformCardInfo[] = [
     iconBg: 'bg-[#FF2442]',
     iconColor: 'text-white',
     iconText: 'R',
+    iconUrl: '/platforms/xiaohongshu.png',
   },
   {
     key: 'yelp',
@@ -53,6 +56,7 @@ const PLATFORMS: PlatformCardInfo[] = [
     iconBg: 'bg-[#ed4057]',
     iconColor: 'text-white',
     iconText: 'Y',
+    iconUrl: '/platforms/yelp.png',
   },
   {
     key: 'instagram',
@@ -62,6 +66,7 @@ const PLATFORMS: PlatformCardInfo[] = [
     iconBg: 'bg-gradient-to-tr from-[#FD1D1D] to-[#833AB4]',
     iconColor: 'text-white',
     iconText: 'IG',
+    iconUrl: '/platforms/instagram.png',
   },
 ];
 
@@ -193,9 +198,13 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
                   <div className="flex flex-col items-center gap-1">
                     {/* Platform Icon Badge */}
                     <div
-                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[13px] font-black shadow-sm ${p.iconBg} ${p.iconColor}`}
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full overflow-hidden shadow-sm bg-white p-0.5"
                     >
-                      {p.iconText}
+                      <img
+                        src={p.iconUrl}
+                        alt={p.name}
+                        className="h-full w-full object-contain"
+                      />
                     </div>
                     <div className="min-w-0">
                       <span className={`block truncate text-[9px] font-medium ${isDark ? 'text-[#f8f6ef]' : 'text-zinc-900'}`}>
@@ -258,13 +267,11 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
                 const isXhs = social.platform === 'xiaohongshu';
                 const isIg = social.platform === 'instagram';
 
-                const iconStyle = isXhs
-                  ? 'bg-[#FF2442] text-white'
+                const socialIconUrl = isXhs
+                  ? '/platforms/xiaohongshu.png'
                   : isIg
-                    ? 'bg-gradient-to-tr from-[#FD1D1D] to-[#833AB4] text-white'
-                    : 'bg-zinc-900 text-cyan-400 border border-zinc-700';
-
-                const iconText = isXhs ? 'R' : isIg ? 'IG' : 'TK';
+                    ? '/platforms/instagram.png'
+                    : '/platforms/tiktok.png';
 
                 return (
                   <div
@@ -277,9 +284,13 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <div
-                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[9px] font-black shadow-xs ${iconStyle}`}
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full overflow-hidden shadow-xs bg-white p-0.5"
                       >
-                        {iconText}
+                        <img
+                          src={socialIconUrl}
+                          alt={social.platform}
+                          className="h-full w-full object-contain"
+                        />
                       </div>
                       <div className="min-w-0">
                         <span className={`block truncate text-[10px] font-bold ${isDark ? 'text-zinc-200' : 'text-zinc-800'}`}>
@@ -337,15 +348,13 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
         )}
 
         {/* FOOTER: POINTHUB 标识 (验收 #2) */}
-        <footer className="pt-8 pb-2 text-center">
-          <p
-            className={`text-[14px] font-black tracking-[-0.06em] uppercase transition ${
-              isDark ? 'text-[#ffd13f]' : 'text-[#181814]'
-            }`}
-          >
-            POINTHUB
-          </p>
-          <p className={`mt-1 text-[9px] ${isDark ? 'text-zinc-600' : 'text-zinc-400'}`}>
+        <footer className="pt-8 pb-2 text-center flex flex-col items-center justify-center">
+          <img
+            src={isDark ? '/platforms/pointhub-dark.png' : '/platforms/pointhub.png'}
+            alt="POINTHUB"
+            className="h-5 w-auto object-contain transition-opacity duration-300"
+          />
+          <p className={`mt-1.5 text-[9px] ${isDark ? 'text-zinc-600' : 'text-zinc-400'}`}>
             Smart Review &amp; Experience Sharing
           </p>
         </footer>

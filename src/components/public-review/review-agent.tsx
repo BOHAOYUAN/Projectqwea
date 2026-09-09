@@ -538,17 +538,17 @@ export function ReviewPlatformUnavailable({ merchant, platform }: ReviewAgentPro
 }
 
 function PlatformBadge({ platform, className }: { platform: PublicReviewPlatform; className: string }) {
-  const icon = platform === 'google'
-    ? <Globe2 className="h-3.5 w-3.5" />
-    : platform === 'instagram'
-      ? <Camera className="h-3.5 w-3.5" />
+  const logoUrl = platform === 'google'
+    ? '/platforms/google.png'
+    : platform === 'xiaohongshu'
+      ? '/platforms/xiaohongshu.png'
       : platform === 'yelp'
-        ? <Star className="h-3.5 w-3.5 fill-current" />
-        : null;
+        ? '/platforms/yelp.png'
+        : '/platforms/instagram.png';
 
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold ${className}`}>
-      {icon}
+      <img src={logoUrl} alt={platform} className="h-3.5 w-3.5 object-contain rounded-full" />
       <span>{getPlatformName(platform)}</span>
     </span>
   );
