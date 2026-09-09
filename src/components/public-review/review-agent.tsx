@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
   Camera,
@@ -58,6 +58,15 @@ type VoiceOption = {
   value: PublicReviewVoice;
   label: string;
   detail: string;
+};
+
+type PersistedReviewState = {
+  serviceIds?: string[];
+  tagIds?: string[];
+  experience?: string;
+  draft?: string;
+  voice?: PublicReviewVoice;
+  variation?: number;
 };
 
 const ENGLISH_VOICES: VoiceOption[] = [
@@ -126,8 +135,11 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
   const [error, setError] = useState('');
   const [variation, setVariation] = useState(0);
   const [metricId, setMetricId] = useState<string | null>(null);
+  const [hasRestoredState, setHasRestoredState] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const draftHistoryRef = useRef(new Set<string>());
+  const draftEdgesRef = useRef<string[]>([]);
+  const storageKey = `pointhub-review:${merchant.merchantSlug}:${merchant.locationSlug}:${platform}`;
 
   const selectedServices = useMemo(
     () => merchant.services.filter((service) => selectedServiceIds.includes(service.id)),
@@ -138,9 +150,53 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
     [merchant.experienceTags, selectedTagIds],
   );
 
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      try {
+        const raw = window.sessionStorage.getItem(storageKey);
+        if (!raw) return;
+        const saved = JSON.parse(raw) as PersistedReviewState;
+        const validServiceIds = (saved.serviceIds || []).filter((id) => merchant.services.some((service) => service.id === id)).slice(0, 2);
+        const validTagIds = (saved.tagIds || []).filter((id) => merchant.experienceTags.some((tag) => tag.id === id));
+        if (validServiceIds.length > 0) setSelectedServiceIds(validServiceIds);
+        if (validTagIds.length > 0) setSelectedTagIds(validTagIds);
+        if (typeof saved.experience === 'string') setExperience(saved.experience.slice(0, 500));
+        if (typeof saved.draft === 'string') setDraft(saved.draft);
+        if (saved.voice && ['natural', 'concise', 'warm'].includes(saved.voice)) setVoice(saved.voice);
+        if (typeof saved.variation === 'number') setVariation(saved.variation);
+      } catch {
+        // A malformed local session must never block the customer flow.
+      } finally {
+        setHasRestoredState(true);
+      }
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [merchant.experienceTags, merchant.services, storageKey]);
+
+  useEffect(() => {
+    if (!hasRestoredState) return;
+    const state: PersistedReviewState = {
+      serviceIds: selectedServiceIds,
+      tagIds: selectedTagIds,
+      experience,
+      draft,
+      voice,
+      variation,
+    };
+    try {
+      window.sessionStorage.setItem(storageKey, JSON.stringify(state));
+    } catch {
+      // Storage can be unavailable in private browser modes; continue normally.
+    }
+  }, [draft, experience, hasRestoredState, selectedServiceIds, selectedTagIds, storageKey, variation, voice]);
+
   const toggleService = (serviceId: string) => {
     setError('');
     setSelectedServiceIds((current) => {
+      if (!current.includes(serviceId) && current.length >= 2) {
+        setError(isChinese ? '最多选择 2 个服务项目。' : 'You can select up to 2 services.');
+        return current;
+      }
       const updated = current.includes(serviceId)
         ? current.filter((id) => id !== serviceId)
         : [...current, serviceId];
@@ -175,6 +231,8 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
     setError('');
     setIsCopied(false);
     setVariation(nextVariation);
+    setDraft('');
+    setMetricId(null);
 
     try {
       // A session never shows the exact same generated draft twice. This is a
@@ -193,6 +251,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
           experience: experience.trim(),
           voice,
           seed: Date.now() + nextVariation + retry,
+          avoidPhrases: draftEdgesRef.current,
         };
         const response = await fetch('/api/review-drafts', {
           method: 'POST',
@@ -216,6 +275,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
         if (draftHistoryRef.current.has(fingerprint)) continue;
 
         draftHistoryRef.current.add(fingerprint);
+        draftEdgesRef.current = [...draftEdgesRef.current, ...draftEdgeFragments(candidate)].slice(-6);
         setDraft(candidate);
         setMetricId(data.metricId || null);
         return;
@@ -223,7 +283,17 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
       throw new Error('The model repeated a previous draft.');
     } catch (err) {
       console.warn('Review draft request failed:', err);
-      setError(isChinese ? '暂时无法生成一版不同的草稿。请补充一个真实细节后重试；系统不会用默认模板替代。' : 'A different draft could not be generated yet. Add one real detail and retry; we will not substitute a default template.');
+      void clearClipboard();
+      const message = err instanceof Error ? err.message : '';
+      const rateLimited = message.includes('Please wait a few minutes');
+      const formatRejected = message.includes('did not meet the platform format');
+      setError(
+        rateLimited
+          ? (isChinese ? '生成次数较多，请几分钟后再试。' : 'You have created several drafts. Please wait a few minutes and try again.')
+          : formatRejected
+            ? (isChinese ? '这一版没有通过平台格式检查。请补充一个真实细节后重试。' : 'This version did not meet the platform format. Add one real detail and try again.')
+            : (isChinese ? '暂时无法生成草稿。请补充一个真实细节后重试；系统不会用默认模板替代。' : 'A draft could not be created yet. Add one real detail and try again; we will not substitute a default template.'),
+      );
       setMetricId(null);
     } finally {
       setIsGenerating(false);
@@ -312,12 +382,12 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
                 <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#8c674e] text-[10px] text-white font-bold">
                   1
                 </span>
-                <span className="min-w-0">{isChinese ? '服务项目（可多选 / 可全选）' : 'Services (select any or all)'}</span>
+                <span className="min-w-0">{isChinese ? '服务项目（最多 2 项）' : 'Services (max 2)'}</span>
               </label>
               <span className="text-[10.5px] text-[#9c8475]">
                 {isChinese
-                  ? `服务 ${selectedServiceIds.length} · 标签 ${selectedTagIds.length}`
-                  : `${selectedServiceIds.length} services · ${selectedTagIds.length} highlights`}
+                  ? `${selectedServiceIds.length}/2 项服务 · ${selectedTagIds.length} 标签`
+                  : `${selectedServiceIds.length}/2 services · ${selectedTagIds.length} highlights`}
               </span>
             </div>
             <div className="flex flex-wrap gap-1.5">
@@ -418,7 +488,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
                 <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#8c674e] text-[10px] text-white font-bold">
                   3
                 </span>
-                <span className="min-w-0">{isChinese ? '添加真实细节（选填，但建议填写）' : 'Add one real detail (optional, recommended)'}</span>
+                <span className="min-w-0">{isChinese ? '你想说点什么（选填，建议填写）' : 'What would you like to say? (optional, recommended)'}</span>
               </span>
               <span className="text-[11px] font-semibold text-[#8b6147]">
                 {isExperienceOpen ? (isChinese ? '收起 ▲' : 'Collapse ▲') : (isChinese ? '展开输入 ▼' : 'Expand ▼')}
@@ -433,8 +503,8 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
                   onChange={(e) => handleExperienceChange(e.target.value)}
                   placeholder={
                     isChinese
-                      ? '例如：我选的项目是什么；哪一步让我印象深；请写你真实遇到的细节。'
-                      : 'For example: what you chose, what happened, and one detail you genuinely noticed.'
+                      ? '先写下你的真实体验，我们会帮你整理成可编辑草稿。'
+                      : 'Write your real experience first; we will help polish it into an editable draft.'
                   }
                   rows={3}
                   className="w-full resize-none rounded-xl border border-[#dec9b5] bg-white p-3 text-xs sm:text-sm text-[#46352a] placeholder:text-[#b49f8f] outline-none transition focus:border-[#986a4c] focus:ring-2 focus:ring-[#986a4c]/15 shadow-inner"
@@ -463,7 +533,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
                 className="text-[11px] font-semibold text-[#8b6147] hover:text-[#5e3c27] flex items-center gap-1 transition"
               >
                 <RefreshCw className={`h-3 w-3 ${isGenerating ? 'animate-spin' : ''}`} />
-                <span>{draft ? (isChinese ? '换一版' : 'Try another') : (isChinese ? '生成草稿' : 'Generate draft')}</span>
+                <span>{draft ? (isChinese ? '换一版' : 'Try another') : (isChinese ? '帮我润色' : 'Polish my review')}</span>
               </button>
             </div>
             <div className="relative">
@@ -482,8 +552,8 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
               <ShieldCheck className="h-3.5 w-3.5 text-[#a1795c] shrink-0" />
               <span className="min-w-0">
                 {isChinese
-                  ? '内容可编辑 · 请自行核对 · 系统不会自动发布'
-                  : 'You can edit anytime. Please review before posting. System will never publish automatically.'}
+                  ? 'AI 生成内容可能有误，请核对后再发布 · 内容可编辑 · 系统不会自动发布'
+                  : 'AI-generated content may be inaccurate. Please double-check before posting. You can edit anytime; the system will never publish automatically.'}
               </span>
             </p>
           </div>
@@ -963,7 +1033,7 @@ function PublishHandoff({
           </a>
         </div>
         <p className="mt-4 text-[10.5px] text-[#91796a] text-center">
-          {isXiaohongshu ? '内容可编辑 · 请自行核对 · 系统不会自动发布' : 'You can edit anytime. Please review before posting. System will never publish automatically.'}
+          {isXiaohongshu ? 'AI 生成内容可能有误，请核对后再发布 · 内容可编辑 · 系统不会自动发布' : 'AI-generated content may be inaccurate. Please double-check before posting. You can edit anytime; the system will never publish automatically.'}
         </p>
       </section>
     </div>
@@ -986,6 +1056,29 @@ async function copyText(value: string) {
   const success = document.execCommand('copy');
   document.body.removeChild(fallback);
   if (!success) throw new Error('Copy command failed.');
+}
+
+async function clearClipboard() {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText('');
+    }
+  } catch {
+    // Clipboard permissions vary by browser. The visible draft is still cleared.
+  }
+}
+
+function draftEdgeFragments(value: string): string[] {
+  const sentences = value
+    .replace(/#[^\s#]+/g, '')
+    .split(/(?<=[.!?。！？])\s+|\n+/)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean);
+  const first = sentences[0];
+  const last = sentences.at(-1);
+  return [first, last]
+    .filter((sentence): sentence is string => Boolean(sentence))
+    .map((sentence) => sentence.slice(0, 160));
 }
 
 function fingerprintDraft(value: string): string {

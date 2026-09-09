@@ -68,10 +68,10 @@ export type PublicReviewMerchant = {
 const DEFAULT_SERVICE_ACCENTS = ['from-rose-100 to-orange-50', 'from-amber-100 to-yellow-50', 'from-stone-200 to-amber-50'];
 
 const DEFAULT_EXPERIENCE_TAGS: PublicReviewTag[] = [
-  { id: 'calm', label: '放松舒服', googleLabel: 'Relaxing atmosphere' },
-  { id: 'attentive', label: '细心专业', googleLabel: 'Thoughtful service' },
-  { id: 'clean', label: '环境整洁', googleLabel: 'Clean space' },
-  { id: 'unhurried', label: '节奏不赶', googleLabel: 'Unhurried visit' },
+  { id: 'shoulders-lighter', label: '肩颈松了', googleLabel: 'Shoulders felt lighter' },
+  { id: 'slow-down', label: '终于慢下来', googleLabel: 'I could finally slow down' },
+  { id: 'no-sales-pressure', label: '没有推销', googleLabel: 'No sales pressure' },
+  { id: 'worth-again', label: '值得再来', googleLabel: 'Worth doing again' },
 ];
 
 /** Converts the server's anonymous-safe page DTO into the compact UI model. */
@@ -111,7 +111,7 @@ export function merchantFromPublicReviewPage(page: PublicReviewPage): PublicRevi
     socialHandles: page.socialHandles || {},
     platforms: {
       google: toPlatformSetup(google, 'google'),
-      xiaohongshu: toPlatformSetup(xiaohongshu, 'xiaohongshu', { allowConfiguredFallback: true }),
+    xiaohongshu: toPlatformSetup(xiaohongshu, 'xiaohongshu'),
       yelp: toPlatformSetup(yelp, 'yelp'),
       instagram: toPlatformSetup(instagram, 'instagram'),
     },
@@ -151,11 +151,7 @@ const DEFAULT_PLATFORM_CONFIGS: Record<
     fallbackUrl: 'https://www.xiaohongshu.com/search_result?keyword=MS%20BEAUTY%20Baltimore',
     publishHint: '文案已复制，进入小红书直接粘贴发布即可。',
   },
-  yelp: {
-    destinationUrl: 'https://www.yelp.com/writeareview/search?q=MS+BEAUTY+Baltimore',
-    fallbackUrl: 'https://www.yelp.com/search?find_desc=MS+BEAUTY&find_loc=Baltimore%2C+MD',
-    publishHint: 'Draft copied! Opening Yelp to write your review.',
-  },
+  yelp: { destinationUrl: '', fallbackUrl: '', publishHint: 'Yelp review link is unavailable.' },
   instagram: {
     destinationUrl: 'instagram://camera',
     fallbackUrl: 'https://www.instagram.com/',
@@ -166,17 +162,16 @@ const DEFAULT_PLATFORM_CONFIGS: Record<
 function toPlatformSetup(
   source: PublicPlatformSource | undefined,
   platform: PublicReviewPlatform,
-  options: { allowConfiguredFallback?: boolean } = {},
 ): PublicReviewPlatformSetup {
   const fallbackConfig = DEFAULT_PLATFORM_CONFIGS[platform];
-  const rawDest = source?.destinationUrl || fallbackConfig.destinationUrl;
-  const rawFallback = source?.fallbackUrl || fallbackConfig.fallbackUrl;
+  const rawDest = source?.destinationUrl || '';
+  const rawFallback = source?.fallbackUrl || '';
 
-  const destinationUrl = isPublicPlatformUrl(rawDest, platform) ? rawDest : fallbackConfig.destinationUrl;
-  const fallbackUrl = isPublicPlatformUrl(rawFallback, platform) ? rawFallback : fallbackConfig.fallbackUrl;
+  const destinationUrl = isPublicPlatformUrl(rawDest, platform) ? rawDest : undefined;
+  const fallbackUrl = isPublicPlatformUrl(rawFallback, platform) ? rawFallback : undefined;
 
   return {
-    enabled: source !== undefined,
+    enabled: Boolean(source && destinationUrl),
     destinationUrl,
     fallbackUrl,
     publishHint: source?.publishHint || fallbackConfig.publishHint,
@@ -200,16 +195,17 @@ function isPublicPlatformUrl(value: string | null | undefined, platform: PublicR
         host.includes('google.')
       );
     }
-    return (
-      (host === 'yelp.com' || host.endsWith('.yelp.com')) &&
-      (parsed.pathname.startsWith('/writeareview') || parsed.pathname.startsWith('/biz') || parsed.pathname.startsWith('/search'))
-    );
+    return (host === 'yelp.com' || host.endsWith('.yelp.com')) && parsed.pathname.startsWith('/writeareview/biz/');
   } catch {
     return false;
   }
 }
 
 const TAG_COPY: Record<string, PublicReviewTag> = {
+  'Shoulders felt lighter': { id: 'shoulders-lighter', label: '肩颈松了', googleLabel: 'Shoulders felt lighter' },
+  'I could finally slow down': { id: 'slow-down', label: '终于慢下来', googleLabel: 'I could finally slow down' },
+  'No sales pressure': { id: 'no-sales-pressure', label: '没有推销', googleLabel: 'No sales pressure' },
+  'Worth doing again': { id: 'worth-again', label: '值得再来', googleLabel: 'Worth doing again' },
   'Relaxing atmosphere': { id: 'calm', label: '放松舒服', googleLabel: 'Relaxing atmosphere' },
   'Thoughtful service': { id: 'attentive', label: '细心专业', googleLabel: 'Thoughtful service' },
   'Clean space': { id: 'clean', label: '环境整洁', googleLabel: 'Clean space' },

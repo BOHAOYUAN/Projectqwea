@@ -8,16 +8,21 @@ interface DraftRequestBody {
   experience?: unknown;
   voice?: unknown;
   seed?: unknown;
+  avoidPhrases?: unknown;
   merchantSlug?: unknown;
   locationSlug?: unknown;
   serviceSlugs?: unknown;
 }
 
 const PUBLIC_GENERATION_WINDOW_MS = 10 * 60 * 1000;
-const PUBLIC_GENERATION_LIMIT = 500;
+const PUBLIC_GENERATION_LIMIT = 8;
 const publicGenerationAttempts = new Map<string, { startedAt: number; count: number }>();
 
 const PUBLIC_TAG_ALIASES: Record<string, string[]> = {
+  'Shoulders felt lighter': ['肩颈松了'],
+  'I could finally slow down': ['终于慢下来'],
+  'No sales pressure': ['没有推销'],
+  'Worth doing again': ['值得再来'],
   'Relaxing atmosphere': ['放松舒服'],
   'Thoughtful service': ['细心专业'],
   'Clean space': ['环境整洁'],
@@ -46,10 +51,11 @@ export async function POST(request: NextRequest) {
       ? body.voice as ContentVoice
       : 'natural';
     const experience = typeof body.experience === 'string' ? body.experience.trim().slice(0, 900) : '';
-    // A customer can select all published services. Keep a sensible request
-    // ceiling so crafted requests cannot turn this endpoint into a prompt proxy.
-    const serviceSlugs = asStringArray(body.serviceSlugs, 8);
+    // The customer flow permits at most two services. Enforce that rule again
+    // on the server so a crafted request cannot expand the prompt scope.
+    const serviceSlugs = asStringArray(body.serviceSlugs, 2);
     const tags = asStringArray(body.tags, 8);
+    const avoidPhrases = asStringArray(body.avoidPhrases, 6).map((value) => value.slice(0, 160));
     const seed = typeof body.seed === 'number' && Number.isFinite(body.seed) ? body.seed : Date.now();
     const merchantSlug = typeof body.merchantSlug === 'string' ? body.merchantSlug.trim() : '';
     const locationSlug = typeof body.locationSlug === 'string' ? body.locationSlug.trim() : '';
@@ -65,7 +71,7 @@ export async function POST(request: NextRequest) {
     if (!publicPage) {
       return NextResponse.json({ error: 'This public review page is unavailable.' }, { status: 404 });
     }
-    if (!publicPage.platforms.some((item) => item.platform === platform)) {
+    if (!hasUsablePlatformDestination(publicPage.platforms, platform)) {
       return NextResponse.json({ error: 'This review platform is not available for this location.' }, { status: 404 });
     }
 
@@ -103,6 +109,7 @@ export async function POST(request: NextRequest) {
       experience,
       voice,
       seed,
+      avoidPhrases,
       socialHandles: publicPage.socialHandles,
     });
 
@@ -112,8 +119,8 @@ export async function POST(request: NextRequest) {
     // instead of presenting a generic or non-compliant draft.
     if (draft.mode === 'local') {
       return NextResponse.json(
-        { error: 'This draft did not meet the platform format yet. Please try another version.' },
-        { status: 503 },
+        { error: 'This version did not meet the platform format. Please try another draft.' },
+        { status: 422 },
       );
     }
 
@@ -162,4 +169,25 @@ function consumePublicGenerationQuota(request: NextRequest, merchantSlug: string
   existing.count += 1;
   publicGenerationAttempts.set(key, existing);
   return true;
+}
+
+function hasUsablePlatformDestination(
+  platforms: Array<{ platform: ReviewPlatform; destinationUrl: string | null }>,
+  platform: ReviewPlatform,
+): boolean {
+  const destination = platforms.find((item) => item.platform === platform)?.destinationUrl;
+  if (!destination) return false;
+  try {
+    const parsed = new URL(destination);
+    const host = parsed.hostname.toLowerCase();
+    if (platform === 'yelp') {
+      return (host === 'yelp.com' || host.endsWith('.yelp.com')) && parsed.pathname.startsWith('/writeareview/biz/');
+    }
+    if (platform === 'google') return host.includes('google.') || host === 'g.page';
+    if (platform === 'xiaohongshu') return parsed.protocol === 'xhsdiscover:' || host.endsWith('xiaohongshu.com');
+    return parsed.protocol === 'instagram:' || host.endsWith('instagram.com');
+  } catch {
+    return platform === 'xiaohongshu' && destination.startsWith('xhsdiscover:') ||
+      platform === 'instagram' && destination.startsWith('instagram:');
+  }
 }

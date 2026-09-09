@@ -11,6 +11,7 @@ export interface ReviewDraftInput {
   experience: string;
   voice?: ContentVoice;
   seed?: number;
+  avoidPhrases?: string[];
   socialHandles?: {
     instagram?: string;
     xiaohongshu?: string;
@@ -130,13 +131,18 @@ function localXiaohongshuDraft(input: ReviewDraftInput): string {
 function buildSystemPrompt(input: ReviewDraftInput): string {
   const variationKey = Math.abs(input.seed ?? Date.now()).toString(36);
   const variationDirection = pick([
-    'Open with the selected service, then explain the customer note in plain language.',
-    'Open with the customer note, then connect it naturally to the selected service.',
-    'Write as a short first-person reflection, using a different sentence rhythm from a typical review.',
-    'Use a concrete, understated observation first; avoid a recommendation-style ending.',
-    'Write in a conversational, diary-like order: what was chosen, what was noticed, then stop.',
-    'Use a calm, direct structure with no stock opening such as “I had a great experience”.',
+    'Structure A: begin with the customer’s own observation; name the service only in the second sentence; end on that observation without a recommendation.',
+    'Structure B: begin with what was selected; use one short contrast in the middle; end with a plain present-tense feeling, not a future-visit statement.',
+    'Structure C: begin in the middle of the visit with a concrete fact from the customer note; then give the service context; finish abruptly and simply.',
+    'Structure D: write a compact first-person reflection in chronological order—choice, observation, takeaway—with a short final sentence.',
+    'Structure E: use two uneven paragraphs. Start with an understated reaction, put the service name later, and do not end with “I’ll be back” language.',
+    'Structure F: write a direct, diary-like note with a short first sentence and a longer second paragraph. Do not use a recommendation-style ending.',
+    'Structure G: start with one exact idea from the customer note in fresh wording, then connect it to the selected service; end on a neutral detail.',
+    'Structure H: start with the reason for the visit, use varied sentence length, and finish with the customer’s stated feeling rather than a call to action.',
   ], input.seed ?? Date.now());
+  const priorPhraseRule = input.avoidPhrases?.length
+    ? `Do not reuse or lightly rephrase any of these previous opening or closing fragments: ${input.avoidPhrases.map((value) => `“${value}”`).join('; ')}.`
+    : 'No earlier draft fragments are supplied.';
   const editorialPrinciples = `EDITORIAL METHOD:
 - Treat the customer note as the primary source of voice and detail. Preserve its concrete observation rather than replacing it with generic praise.
 - Selected services and tags are supporting facts, not an instruction to invent a full story for each one. If the note does not describe a service detail, do not make one up.
@@ -144,6 +150,7 @@ function buildSystemPrompt(input: ReviewDraftInput): string {
 - Do not use ratings language, sales language, calls to action, recommendations, or a business-owner voice.
 - Avoid filler, symmetry, and list-like wording. Use varied sentence length and a specific first-person rhythm that sounds like one person wrote it after one visit.
 - This is a one-use revision identified internally as ${variationKey}. Make its opening, sentence order, and closing meaningfully distinct from a generic version of the same input. Never print this identifier.
+- ${priorPhraseRule}
 - Before answering, silently check: correct language; merchant name present; no fabricated facts; no prohibited wording; every requested formatting rule is met. Then output only the finished draft.`;
   const voiceDesc = input.voice === 'concise'
     ? 'Keep it direct, focused, and unhurried.'
@@ -414,7 +421,8 @@ function hasPlatformAppropriateLength(content: string, platform: ReviewPlatform)
     const title = lines[0] ?? '';
     const hashtags = content.match(/#[^\s#]+/g) ?? [];
     const body = lines.slice(1).filter((line) => !line.startsWith('#')).join('');
-    return Array.from(title).length <= 20 && body.length >= 100 && body.length <= 200 && hashtags.length >= 3 && hashtags.length <= 8;
+    const chineseCharacters = body.match(/[\u4e00-\u9fff]/g)?.length ?? 0;
+    return Array.from(title).length <= 20 && chineseCharacters >= 100 && chineseCharacters <= 200 && hashtags.length >= 3 && hashtags.length <= 8;
   }
 
   if (platform === 'google' || platform === 'yelp') {

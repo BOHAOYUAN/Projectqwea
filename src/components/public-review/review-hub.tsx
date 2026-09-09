@@ -156,7 +156,7 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
           >
             <div className="mx-auto mb-4 flex h-[68px] w-[68px] items-center justify-center overflow-hidden rounded-full border-2 border-white bg-white font-serif text-xl font-bold text-[#151515] shadow-md">
               {merchant.logoUrl ? (
-                <img src={merchant.logoUrl} alt={merchant.name} className="h-full w-full object-cover" />
+                <img src={merchant.logoUrl} alt={merchant.name} className="h-full w-full object-contain p-1" />
               ) : (
                 <span className="font-black tracking-[-0.1em] text-[#111]">{brandInitials}</span>
               )}

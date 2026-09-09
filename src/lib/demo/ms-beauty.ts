@@ -53,8 +53,8 @@ export const MS_BEAUTY_PLATFORM_LINKS: PublicPlatformLink[] = [
   },
   {
     platform: 'yelp',
-    destinationUrl: 'https://www.yelp.com/writeareview/search?q=MS+BEAUTY+Baltimore',
-    fallbackUrl: 'https://www.yelp.com/search?find_desc=MS+BEAUTY&find_loc=Baltimore%2C+MD',
+    destinationUrl: 'https://www.yelp.com/writeareview/biz/h-mlAQkvdUuVZruJxErjNA',
+    fallbackUrl: 'https://www.yelp.com/biz/ms-beauty-baltimore-2',
     ctaLabel: 'Write a Yelp review',
     publishHint: 'Draft copied! Opening Yelp to write your review.',
   },
@@ -78,7 +78,7 @@ export const MS_BEAUTY_PUBLIC_PAGE: PublicReviewPage = {
     description:
       'A Baltimore beauty and wellness spa offering professional skincare, scalp therapy, and personalized relaxation services.',
     industryTags: ['美容', '头疗'],
-    logoUrl: null,
+    logoUrl: 'https://www.msbeautymd.com/images/logo.png',
     websiteUrl: 'https://msbeautymd.com/',
     phone: '+1 443-438-5887',
     brandColor: '#9A6758',
@@ -117,12 +117,12 @@ export const MS_BEAUTY_PUBLIC_PAGE: PublicReviewPage = {
     {
       platform: 'instagram',
       handle: '@msbeauty_baltimore',
-      url: 'https://www.instagram.com/',
+      url: 'https://www.instagram.com/msbeauty_baltimore/',
     },
     {
       platform: 'tiktok',
       handle: '@msbeauty.us',
-      url: 'https://www.tiktok.com/',
+      url: 'https://www.tiktok.com/@msbeauty.us',
     },
   ],
   galleryImages: ['/images/ms-beauty/storefront.png', '/images/ms-beauty/interior.png'],
@@ -130,7 +130,7 @@ export const MS_BEAUTY_PUBLIC_PAGE: PublicReviewPage = {
     instagram: '@msbeauty_baltimore',
     xiaohongshu: 'MSBEAUTY_BALTIMORE',
   },
-  suggestedTags: ['Relaxing atmosphere', 'Thoughtful service', 'Clean space', 'Unhurried visit'],
+  suggestedTags: ['Shoulders felt lighter', 'I could finally slow down', 'No sales pressure', 'Worth doing again'],
   services: MS_BEAUTY_SERVICES,
   platforms: MS_BEAUTY_PLATFORM_LINKS,
 };
