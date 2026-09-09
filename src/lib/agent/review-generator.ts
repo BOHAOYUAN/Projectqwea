@@ -128,6 +128,7 @@ function localXiaohongshuDraft(input: ReviewDraftInput): string {
 }
 
 function buildSystemPrompt(input: ReviewDraftInput): string {
+  const variationKey = Math.abs(input.seed ?? Date.now()).toString(36);
   const variationDirection = pick([
     'Open with the selected service, then explain the customer note in plain language.',
     'Open with the customer note, then connect it naturally to the selected service.',
@@ -142,6 +143,7 @@ function buildSystemPrompt(input: ReviewDraftInput): string {
 - When two or more services are selected, mention every selected service once in a compact, natural way where the platform format permits. Do not attach an invented result or detail to any of them.
 - Do not use ratings language, sales language, calls to action, recommendations, or a business-owner voice.
 - Avoid filler, symmetry, and list-like wording. Use varied sentence length and a specific first-person rhythm that sounds like one person wrote it after one visit.
+- This is a one-use revision identified internally as ${variationKey}. Make its opening, sentence order, and closing meaningfully distinct from a generic version of the same input. Never print this identifier.
 - Before answering, silently check: correct language; merchant name present; no fabricated facts; no prohibited wording; every requested formatting rule is met. Then output only the finished draft.`;
   const voiceDesc = input.voice === 'concise'
     ? 'Keep it direct, focused, and unhurried.'
@@ -198,7 +200,8 @@ ${editorialPrinciples}
 5. Content: Use only the supplied facts. Never invent the setting, staff, outcome, or a before/after result.
 6. Variation direction for this draft: ${variationDirection}
 7. Avoid reusable influencer filler such as "my new sanctuary", "much needed reset", or "this is your sign".
-8. Output ONLY the caption.`;
+8. Before answering, count the non-hashtag English words and the final hashtags. Return 50–100 non-hashtag words followed by exactly 5–10 final hashtags.
+9. Output ONLY the caption.`;
   }
 
   // Xiaohongshu
@@ -281,11 +284,16 @@ async function generateWithRemoteProvider(input: ReviewDraftInput, provider: Com
 
   const temperature = input.voice === 'concise' ? 0.7 : 0.8;
 
-  const attempts = input.platform === 'xiaohongshu' ? 6 : 2;
+  const attempts = input.platform === 'xiaohongshu' ? 6 : input.platform === 'instagram' ? 4 : 3;
   for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const retryRequirement = input.platform === 'instagram'
+      ? 'The last caption was invalid. Return only 50–100 English non-hashtag words followed by exactly 5–10 end hashtags; no explanation.'
+      : input.platform === 'xiaohongshu'
+        ? '上一次格式不合格。请这次只输出符合全部长度、标题和标签要求的成稿，不要解释。'
+        : 'The last draft was invalid. Return only a finished draft that satisfies every required length and formatting rule; no explanation.';
     const retrySystem = attempt === 0
       ? system
-      : `${system}\n上一次格式不合格。请这次只输出符合全部长度、标题和标签要求的成稿，不要解释。`;
+      : `${system}\n${retryRequirement}`;
     const rawContent = await requestCompatibleChat(
       provider,
       retrySystem,
@@ -307,6 +315,27 @@ async function generateWithRemoteProvider(input: ReviewDraftInput, provider: Com
 
 function normalizeRemoteDraft(content: string, input: ReviewDraftInput): string {
   let normalized = content.replace(/\r\n/g, '\n').trim();
+  if (input.platform === 'instagram') {
+    const allowedHashtags = Array.from(new Set([
+      hashtag(input.merchantName),
+      ...input.serviceNames.map(hashtag),
+      ...input.tags.map(hashtag),
+      hashtag(input.location),
+    ].filter(Boolean)));
+
+    // When the selected facts provide at least five safe tags, normalize the
+    // model's tag tail. This prevents invented tags and removes an otherwise
+    // common source of format-retry failures without changing the review body.
+    if (allowedHashtags.length >= 5) {
+      const body = normalized
+        .replace(/(?:^|\s)#[^\s#]+/gu, ' ')
+        .replace(/[ \t]+\n/g, '\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+      normalized = `${body}\n\n${allowedHashtags.slice(0, 8).join(' ')}`;
+    }
+    return normalized;
+  }
   if (!isChinesePlatform(input.platform)) return normalized;
 
   const temporalLead = /今天|昨天|前几天|上周|周末/;
@@ -317,9 +346,27 @@ function normalizeRemoteDraft(content: string, input: ReviewDraftInput): string 
     ).trim();
   }
 
-  if (!/(^|\s)#\S+/u.test(normalized)) {
-    const tag = input.tags[0] || input.serviceNames[0];
-    if (tag) normalized = `${normalized}\n\n#${tag.replace(/\s+/g, '')}`;
+  const lines = normalized.split('\n').map((line) => line.trim()).filter(Boolean);
+  const rawTitle = lines.shift() ?? '';
+  const title = Array.from(rawTitle).slice(0, 20).join('');
+  const rawBody = lines
+    .filter((line) => !line.startsWith('#'))
+    .join('\n')
+    .replace(/(?:^|\s)@[\w.-]+/gu, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+  // Only shorten an overlong model response; never pad or add fictional
+  // customer details merely to meet a target length.
+  const body = Array.from(rawBody).slice(0, 180).join('').trim();
+  const safeTags = Array.from(new Set([
+    hashtag(input.merchantName),
+    hashtag(input.location),
+    ...input.serviceNames.map(hashtag),
+    ...input.tags.map(hashtag),
+  ].filter(Boolean))).slice(0, 8);
+
+  if (title && body && safeTags.length >= 3) {
+    normalized = `${title}\n\n${body}\n\n${safeTags.join(' ')}`;
   }
   return normalized;
 }
