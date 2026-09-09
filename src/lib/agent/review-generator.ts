@@ -355,9 +355,14 @@ function normalizeRemoteDraft(content: string, input: ReviewDraftInput): string 
     .replace(/(?:^|\s)@[\w.-]+/gu, ' ')
     .replace(/\s{2,}/g, ' ')
     .trim();
+  const configuredMention = input.socialHandles?.xiaohongshu
+    ? `@${input.socialHandles.xiaohongshu.replace(/^@/, '')}`
+    : '';
   // Only shorten an overlong model response; never pad or add fictional
   // customer details merely to meet a target length.
-  const body = Array.from(rawBody).slice(0, 180).join('').trim();
+  const bodyLimit = configuredMention ? 180 - Array.from(configuredMention).length - 1 : 180;
+  const bodyBase = Array.from(rawBody).slice(0, bodyLimit).join('').trim();
+  const body = configuredMention && bodyBase ? `${bodyBase} ${configuredMention}` : bodyBase;
   const safeTags = Array.from(new Set([
     hashtag(input.merchantName),
     hashtag(input.location),
