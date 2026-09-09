@@ -36,7 +36,7 @@ const PLATFORMS: PlatformCardInfo[] = [
     iconBg: 'bg-white',
     iconColor: 'text-[#4285F4]',
     iconText: 'G',
-    iconUrl: '/platforms/google.png',
+    iconUrl: '/platforms/google-official.png',
   },
   {
     key: 'xiaohongshu',
@@ -46,7 +46,7 @@ const PLATFORMS: PlatformCardInfo[] = [
     iconBg: 'bg-[#FF2442]',
     iconColor: 'text-white',
     iconText: 'R',
-    iconUrl: '/platforms/xiaohongshu.png',
+    iconUrl: '/platforms/xiaohongshu-official.png',
   },
   {
     key: 'yelp',
@@ -56,7 +56,7 @@ const PLATFORMS: PlatformCardInfo[] = [
     iconBg: 'bg-[#ed4057]',
     iconColor: 'text-white',
     iconText: 'Y',
-    iconUrl: '/platforms/yelp.png',
+    iconUrl: '/platforms/yelp-official.png',
   },
   {
     key: 'instagram',
@@ -66,7 +66,7 @@ const PLATFORMS: PlatformCardInfo[] = [
     iconBg: 'bg-gradient-to-tr from-[#FD1D1D] to-[#833AB4]',
     iconColor: 'text-white',
     iconText: 'IG',
-    iconUrl: '/platforms/instagram.png',
+    iconUrl: '/platforms/instagram-official.png',
   },
 ];
 
@@ -198,7 +198,7 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
                   <div className="flex flex-col items-center gap-1">
                     {/* Platform Icon Badge */}
                     <div
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full overflow-hidden shadow-sm bg-white p-0.5"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[11px] drop-shadow-[0_1px_2px_rgba(0,0,0,0.22)]"
                     >
                       <img
                         src={p.iconUrl}
@@ -268,10 +268,10 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
                 const isIg = social.platform === 'instagram';
 
                 const socialIconUrl = isXhs
-                  ? '/platforms/xiaohongshu.png'
+                  ? '/platforms/xiaohongshu-official.png'
                   : isIg
-                    ? '/platforms/instagram.png'
-                    : '/platforms/tiktok.png';
+                    ? '/platforms/instagram-official.png'
+                    : '/platforms/tiktok-official.png';
 
                 return (
                   <div
@@ -284,7 +284,7 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <div
-                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full overflow-hidden shadow-xs bg-white p-0.5"
+                        className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-[8px] drop-shadow-[0_1px_1px_rgba(0,0,0,0.18)]"
                       >
                         <img
                           src={socialIconUrl}
