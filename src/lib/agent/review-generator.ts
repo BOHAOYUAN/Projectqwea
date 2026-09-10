@@ -221,11 +221,11 @@ ${editorialPrinciples}
 ${editorialPrinciples}
 1. 语言：中文。
 2. 标题：第1行必须是简短、自然的标题，长度严格控制在 20 字以内（可带合适 Emoji）。
-3. 正文：严格 100–180 个中文字符，分 2–3 个短段落，空行隔开，语气自然舒服，适量 Emoji。把英文顾客原话自然翻成中文，不要逐句引用英文。
+3. 正文：严格 120–160 个中文字符，分 2–3 个短段落，空行隔开，语气自然舒服，适量 Emoji。把英文顾客原话自然翻成中文，不要逐句引用英文。这个字数是硬性要求：输出前请只计算正文中的汉字；不足 120 字时，只能用顾客已给出的感受做一两句自然回想补足，绝不能补充新的事件或细节。
 4. 账号提及：${xhsMentionRule}
 5. 门店名：正文必须原样出现“${input.merchantName}”，不得翻译、省略或只写“这家店”。
 6. 话题标签：文末附带 3–8 个话题标签；标签只能使用门店名、地点、已选项目和已选感受。
-7. 内容边界：只可使用输入中明确提供的项目、标签与顾客原话；不可补充环境、员工、流程、效果或任何未提供细节。
+7. 内容边界：只可使用输入中明确提供的项目、标签与顾客原话；不可补充环境、员工、流程、效果或任何未提供细节。尤其不得自行写“躺下/椅子/睡着/手法/一小时/赶时间/看手机”等场景；这些词除非顾客原话中出现，否则一律不用。
 8. 合规红线：严禁极限词（如“最好”、“第一”），严禁提及“好评返现/送折扣”等违规诱导。无生硬套话与AI感。
 9. 本次写作角度：${variationDirection}
 10. 不得使用“宝藏店”“体验感拉满”“闭眼冲”“姐妹们冲”“种草”“治愈”“绝绝子”等模板化表达。
@@ -373,12 +373,17 @@ function normalizeRemoteDraft(content: string, input: ReviewDraftInput): string 
   }
 
   const lines = normalized.split('\n').map((line) => line.trim()).filter(Boolean);
-  const rawTitle = lines.shift() ?? '';
+  const firstLine = lines[0] ?? '';
+  // Models occasionally omit a standalone title and start directly with the
+  // body. Do not silently discard that first paragraph by treating it as a
+  // title; provide a neutral title and preserve the customer's wording.
+  const hasStandaloneTitle = Array.from(firstLine).length <= 20 && !/[。！？]/.test(firstLine);
+  const rawTitle = hasStandaloneTitle ? (lines.shift() ?? '') : `${input.merchantName}体验记录`;
   const title = Array.from(rawTitle).slice(0, 20).join('');
   const rawBody = lines
     .filter((line) => !line.startsWith('#'))
     .join('\n')
-    .replace(/(?:^|\s)@[\w.-]+/gu, ' ')
+    .replace(/(?:^|\s)@[\w.-]+的?/gu, ' ')
     .replace(/\s{2,}/g, ' ')
     .trim();
   const configuredMention = input.socialHandles?.xiaohongshu
@@ -388,7 +393,11 @@ function normalizeRemoteDraft(content: string, input: ReviewDraftInput): string 
   // customer details merely to meet a target length.
   const bodyLimit = configuredMention ? 180 - Array.from(configuredMention).length - 1 : 180;
   const bodyBase = Array.from(rawBody).slice(0, bodyLimit).join('').trim();
-  const body = configuredMention && bodyBase ? `${bodyBase} ${configuredMention}` : bodyBase;
+  const bodyWithoutConfiguredMention = configuredMention
+    ? bodyBase.replaceAll(configuredMention, '').replace(/\s{2,}/g, ' ').trim()
+    : bodyBase;
+  const bodyWithReflection = extendShortXiaohongshuBody(bodyWithoutConfiguredMention, input, bodyLimit);
+  const body = configuredMention && bodyWithReflection ? `${bodyWithReflection} ${configuredMention}` : bodyWithReflection;
   const safeTags = Array.from(new Set([
     hashtag(input.merchantName),
     hashtag(input.location),
@@ -400,6 +409,23 @@ function normalizeRemoteDraft(content: string, input: ReviewDraftInput): string 
     normalized = `${title}\n\n${body}\n\n${safeTags.join(' ')}`;
   }
   return normalized;
+}
+
+function extendShortXiaohongshuBody(body: string, input: ReviewDraftInput, limit: number): string {
+  const chineseCharacters = body.match(/[\u4e00-\u9fff]/g)?.length ?? 0;
+  if (chineseCharacters >= 100) return body;
+
+  // Keep a short remote draft usable without fabricating a setting, person,
+  // process, or outcome. The added line is only a natural restatement of the
+  // customer’s own note (or, if they gave none, of the selected feelings).
+  const note = input.experience.replace(/\s+/g, ' ').trim();
+  const noteAlreadyUsed = note.length >= 8 && body.includes(note.slice(0, 8));
+  const reflection = noteAlreadyUsed
+    ? '这次就想把这种松一点、慢一点的状态记下来。'
+    : note && /[\u4e00-\u9fff]/.test(note)
+    ? `离开后再想起这件事，还是会记得：${note}`
+    : '这几个感受放在一起，就是这次最想留下的一笔。';
+  return Array.from(`${body} ${reflection}`).slice(0, limit).join('').trim();
 }
 
 function groqProvider(apiKey: string): CompatibleChatProvider {
@@ -429,9 +455,16 @@ function isGroundedRemoteDraft(content: string, input: ReviewDraftInput): boolea
     /包治/, /彻底根除/, /神医/, /百病/, /保修/, /好评返现|好评.*折扣/,
   ];
   if (alwaysBlocked.some((pattern) => pattern.test(content))) return false;
+  if (input.platform === 'xiaohongshu' && hasUnprovidedXiaohongshuScene(content, input)) return false;
   if (!content.toLowerCase().includes(input.merchantName.toLowerCase())) return false;
 
   return hasPlatformAppropriateLength(content, input.platform);
+}
+
+function hasUnprovidedXiaohongshuScene(content: string, input: ReviewDraftInput): boolean {
+  const suppliedFacts = [input.experience, ...input.serviceNames, ...input.tags].join('');
+  const sceneTerms = ['躺', '椅子', '睡', '手法', '流程', '环境', '房间', '一小时', '上班', '赶时间', '看手机'];
+  return sceneTerms.some((term) => content.includes(term) && !suppliedFacts.includes(term));
 }
 
 function hasPlatformAppropriateLength(content: string, platform: ReviewPlatform): boolean {
