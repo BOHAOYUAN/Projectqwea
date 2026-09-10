@@ -112,7 +112,7 @@ export const MS_BEAUTY_PUBLIC_PAGE: PublicReviewPage = {
     {
       platform: 'xiaohongshu',
       handle: 'MSBEAUTY_BALTIMORE',
-      url: 'https://www.xiaohongshu.com/search_result?keyword=MS%20BEAUTY%20Baltimore',
+      url: 'https://www.xiaohongshu.com/user/profile/67c81f05000000000a03cf46?xsec_token=YB5Tz7Ls2iePJ1Peg1iHJNszPDqkHSiTPXNoaHWRzLKSM=&xsec_source=app_share&xhsshare=WeixinSession&appuid=67c81f05000000000a03cf46&apptime=1775356236',
     },
     {
       platform: 'instagram',
