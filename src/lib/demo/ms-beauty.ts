@@ -98,7 +98,7 @@ export const MS_BEAUTY_PUBLIC_PAGE: PublicReviewPage = {
   config: {
     headline: 'Share your MS BEAUTY experience',
     subheadline: 'Choose a platform and make your review your own.',
-    heroImageUrl: '/images/ms-beauty/hero-shelf.png',
+    heroImageUrl: '/images/ms-beauty/hero-collin-shelf.jpg',
     backgroundImageUrl: null,
     accentColor: '#9A6758',
     showAddress: true,
@@ -107,7 +107,7 @@ export const MS_BEAUTY_PUBLIC_PAGE: PublicReviewPage = {
     xiaohongshuQuery: 'MS BEAUTY Baltimore',
   },
   theme: 'dark',
-  bannerUrl: '/images/ms-beauty/hero-shelf.png',
+  bannerUrl: '/images/ms-beauty/hero-collin-shelf.jpg',
   socialLinks: [
     {
       platform: 'xiaohongshu',

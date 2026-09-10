@@ -154,11 +154,11 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
                 : 'border border-[#ffc400] bg-[#ffc400] text-[#171715]'
             }`}
           >
-            <div className="mx-auto mb-4 flex h-[68px] w-[68px] items-center justify-center overflow-hidden rounded-full border-2 border-white bg-white font-serif text-xl font-bold text-[#151515] shadow-md">
+            <div className="mx-auto mb-4 flex h-[68px] w-[68px] items-center justify-center overflow-hidden rounded-full border-2 border-[#f1cd51]/70 bg-[#171714] font-serif text-xl font-bold text-[#f5d459] shadow-md">
               {merchant.logoUrl ? (
-                <img src={merchant.logoUrl} alt={merchant.name} className="h-full w-full object-contain p-1" />
+                <img src={merchant.logoUrl} alt={merchant.name} className="h-full w-full object-contain p-2" />
               ) : (
-                <span className="font-black tracking-[-0.1em] text-[#111]">{brandInitials}</span>
+                <span className="font-black tracking-[-0.1em] text-[#f5d459]">{brandInitials}</span>
               )}
             </div>
             <h1 className="text-[18px] font-medium tracking-tight">{displayName}</h1>
