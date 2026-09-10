@@ -326,20 +326,12 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
       return;
     }
 
-    // App schemes must be launched from an immediate tap. Show their dedicated
-    // handoff first; copying continues independently and never blocks it.
+    // App schemes are not consistently accepted by mobile browsers when they
+    // are assigned programmatically. Show a clear handoff first so the next
+    // tap is an actual link gesture, with an always-visible web option.
     if (requiresMobileHandoff(platform, target)) {
       copyDraftInBackground();
       setStep('handoff');
-      // iOS Safari and Android Chrome only allow app schemes inside the
-      // original user gesture. If no installed app accepts the scheme, keep a
-      // short grace period and then continue to the configured web fallback.
-      window.location.assign(target);
-      window.setTimeout(() => {
-        if (document.visibilityState === 'visible') {
-          window.location.assign(getWebFallback(merchant, platform));
-        }
-      }, 1200);
       return;
     }
 
@@ -1040,8 +1032,8 @@ function PublishHandoff({
         <h1 className="mt-5 font-serif text-3xl text-[#382a22]">{isXiaohongshu ? '文案已经复制好了' : 'Your caption is copied'}</h1>
         <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-[#766154]">
           {isXiaohongshu
-            ? '正在尝试打开小红书 App。没有唤起时，可点击下方按钮重试或使用网页入口。'
-            : 'We are trying to open Instagram. If the app does not open, use the button below or continue on the web.'}
+            ? '点击“打开小红书 App”后可直接粘贴文案；如果设备没有唤起 App，请使用网页入口。'
+            : 'Tap “Open Instagram app” to continue. If the app is unavailable, use the web entry below.'}
         </p>
         {destination && (
           <a
@@ -1049,7 +1041,7 @@ function PublishHandoff({
             onClick={() => void trackReviewEvent(metricId, 'published')}
             className={`mt-7 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-sm font-bold text-white shadow-lg transition active:scale-[0.99] ${PLATFORM_STYLES[platform].copyButton}`}
           >
-            {isXiaohongshu ? '打开小红书去发布' : 'Open Instagram'} <ExternalLink className="h-4 w-4" />
+            {isXiaohongshu ? '打开小红书 App' : 'Open Instagram app'} <ExternalLink className="h-4 w-4" />
           </a>
         )}
         {isXiaohongshu && (
@@ -1063,8 +1055,8 @@ function PublishHandoff({
           <p className="mt-1 text-xs leading-5 text-[#8b7566]">
             {isXiaohongshu ? '文案仍在剪贴板中。你可以手动打开 App 粘贴，或先进入网页搜索页。' : 'Your caption remains copied. Open the app manually, or continue to the web site.'}
           </p>
-          <a href={webFallback} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-[#8b5f44] hover:text-[#5d3e2c]">
-            {isXiaohongshu ? '打开小红书网页搜索' : 'Open Instagram on the web'} <ExternalLink className="h-3.5 w-3.5" />
+          <a href={webFallback} className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-[#8b5f44] hover:text-[#5d3e2c]">
+            {isXiaohongshu ? '打开小红书网页入口' : 'Open Instagram on the web'} <ExternalLink className="h-3.5 w-3.5" />
           </a>
         </div>
         <p className="mt-4 text-[10.5px] text-[#91796a] text-center">

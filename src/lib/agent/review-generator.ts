@@ -148,8 +148,10 @@ function buildSystemPrompt(input: ReviewDraftInput): string {
 - Treat the customer note as the primary source of voice and detail. Preserve its concrete observation rather than replacing it with generic praise.
 - Selected services and tags are supporting facts, not an instruction to invent a full story for each one. If the note does not describe a service detail, do not make one up.
 - When two or more services are selected, mention every selected service once in a compact, natural way where the platform format permits. Do not attach an invented result or detail to any of them.
+- Never expose the app's mechanics in the writing: do not say “I selected,” “the details I chose,” “this review is based on,” “I am keeping this focused,” or explain that facts were omitted. Those are instructions for the model, not words a customer would post.
+- Do not turn a tag into a list. Weave at most one or two selected feelings into ordinary first-person sentences; leave a feeling out rather than inventing an event to support it.
 - Do not use ratings language, sales language, calls to action, recommendations, or a business-owner voice.
-- Avoid filler, symmetry, and list-like wording. Use varied sentence length and a specific first-person rhythm that sounds like one person wrote it after one visit.
+- Avoid filler, symmetry, and list-like wording. Use varied sentence length, mild imperfection, and a specific first-person rhythm that sounds like one person wrote it after one visit.
 - This is a one-use revision identified internally as ${variationKey}. Make its opening, sentence order, and closing meaningfully distinct from a generic version of the same input. Never print this identifier.
 - ${priorPhraseRule}
 - Before answering, silently check: correct language; merchant name present; no fabricated facts; no prohibited wording; every requested formatting rule is met. Then output only the finished draft.`;
@@ -168,7 +170,7 @@ function buildSystemPrompt(input: ReviewDraftInput): string {
     : '不要虚构账号。';
 
   if (input.platform === 'google') {
-    return `You are a genuine customer writing a 5-star Google review for "${input.merchantName}" in ${input.location}.
+    return `You are a genuine customer writing a Google review for "${input.merchantName}" in ${input.location}.
 STRICT FORMAT & COMPLIANCE RULES:
 ${editorialPrinciples}
 1. Language: English only.
@@ -183,7 +185,7 @@ ${editorialPrinciples}
   }
 
   if (input.platform === 'yelp') {
-    return `You are a genuine customer writing a detailed 5-star Yelp review for "${input.merchantName}" in ${input.location}.
+    return `You are a genuine customer writing a detailed Yelp review for "${input.merchantName}" in ${input.location}.
 STRICT FORMAT & COMPLIANCE RULES:
 ${editorialPrinciples}
 1. Language: English only.
@@ -290,9 +292,9 @@ async function generateWithRemoteProvider(input: ReviewDraftInput, provider: Com
     ? `门店：${input.merchantName} (${input.location})\n已选项目：${services}\n已选感受：${tags}${input.experience ? `\n顾客原话：${input.experience}` : ''}\n\n只可使用以上事实。未选项目、未填写感受或未出现的细节必须完全不提。请写文案：`
     : `Store: ${input.merchantName} in ${input.location}\nSelected services: ${services}\nSelected feelings: ${tags}${input.experience ? `\nCustomer note: ${input.experience}` : ''}\n\nUse only the facts above. Do not mention any service, staff, cleanliness, timing, ambiance, outcome, or detail that does not literally appear above. Please write the review:`;
 
-  const temperature = input.voice === 'concise' ? 0.7 : 0.8;
+  const temperature = input.voice === 'concise' ? 0.8 : 0.95;
 
-  const attempts = input.platform === 'xiaohongshu' ? 8 : input.platform === 'instagram' ? 4 : 3;
+  const attempts = input.platform === 'xiaohongshu' ? 10 : input.platform === 'instagram' ? 6 : 5;
   let formatFeedback = '';
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     const retryRequirement = input.platform === 'instagram'
@@ -308,7 +310,7 @@ async function generateWithRemoteProvider(input: ReviewDraftInput, provider: Com
       retrySystem,
       user,
       temperature,
-      800,
+      1200,
     );
     if (!rawContent) continue;
     const content = normalizeRemoteDraft(rawContent, input);
