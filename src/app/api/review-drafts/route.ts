@@ -15,7 +15,9 @@ interface DraftRequestBody {
 }
 
 const PUBLIC_GENERATION_WINDOW_MS = 10 * 60 * 1000;
-const PUBLIC_GENERATION_LIMIT = 8;
+// A shop floor commonly has several customers sharing one mobile network.
+// Keep a guardrail, but leave enough room for normal QA and real visitors.
+const PUBLIC_GENERATION_LIMIT = 30;
 const publicGenerationAttempts = new Map<string, { startedAt: number; count: number }>();
 
 const PUBLIC_TAG_ALIASES: Record<string, string[]> = {

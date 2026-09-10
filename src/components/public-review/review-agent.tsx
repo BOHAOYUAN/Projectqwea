@@ -331,6 +331,15 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
     if (requiresMobileHandoff(platform, target)) {
       copyDraftInBackground();
       setStep('handoff');
+      // iOS Safari and Android Chrome only allow app schemes inside the
+      // original user gesture. If no installed app accepts the scheme, keep a
+      // short grace period and then continue to the configured web fallback.
+      window.location.assign(target);
+      window.setTimeout(() => {
+        if (document.visibilityState === 'visible') {
+          window.location.assign(getWebFallback(merchant, platform));
+        }
+      }, 1200);
       return;
     }
 
@@ -1018,8 +1027,8 @@ function PublishHandoff({
         <h1 className="mt-5 font-serif text-3xl text-[#382a22]">{isXiaohongshu ? '文案已经复制好了' : 'Your caption is copied'}</h1>
         <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-[#766154]">
           {isXiaohongshu
-            ? '请点击下方按钮打开小红书，再粘贴、补充真实图片后发布。'
-            : 'Tap the button below to open Instagram and paste your caption when you are ready.'}
+            ? '正在尝试打开小红书 App。没有唤起时，可点击下方按钮重试或使用网页入口。'
+            : 'We are trying to open Instagram. If the app does not open, use the button below or continue on the web.'}
         </p>
         {destination && (
           <a
