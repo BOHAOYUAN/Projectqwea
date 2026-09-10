@@ -300,34 +300,47 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
     }
   };
 
-  const copyAndOpen = async () => {
+  const copyDraftInBackground = () => {
+    void copyText(draft)
+      .then(() => {
+        setIsCopied(true);
+        window.setTimeout(() => setIsCopied(false), 3000);
+        void trackReviewEvent(metricId, 'copied');
+      })
+      .catch(() => {
+        // Opening the configured platform must not depend on browser clipboard
+        // permission. The customer can still long-press the editable draft.
+        setError(isChinese ? '未能自动复制，可长按草稿手动复制；已继续打开平台。' : 'Copy was unavailable. Please select the editable draft and copy it manually; the platform was still opened.');
+      });
+  };
+
+  const copyAndOpen = () => {
     if (!draft.trim()) {
       setError(isChinese ? '请先生成评价草稿。' : 'Create a draft before copying it.');
       return;
     }
 
-    try {
-      await copyText(draft);
-      setIsCopied(true);
-      window.setTimeout(() => setIsCopied(false), 3000);
-      void trackReviewEvent(metricId, 'copied');
-
-      const target = getPlatformDestination(merchant, platform);
-      if (!target) {
-        setError(getMissingDestinationCopy(platform));
-        return;
-      }
-
-      if (requiresMobileHandoff(platform, target)) {
-        setStep('handoff');
-        return;
-      }
-
-      void trackReviewEvent(metricId, 'published');
-      window.open(target, '_blank', 'noopener,noreferrer');
-    } catch {
-      setError(isChinese ? '复制失败，请长按文本后手动复制。' : 'Copy did not work. Please select the text and copy it manually.');
+    const target = getPlatformDestination(merchant, platform);
+    if (!target) {
+      setError(getMissingDestinationCopy(platform));
+      return;
     }
+
+    // App schemes must be launched from an immediate tap. Show their dedicated
+    // handoff first; copying continues independently and never blocks it.
+    if (requiresMobileHandoff(platform, target)) {
+      copyDraftInBackground();
+      setStep('handoff');
+      return;
+    }
+
+    // Mobile Safari/Chrome will commonly block a popup after an awaited
+    // clipboard call. Launch synchronously, then fall back to same-tab
+    // navigation when a popup is blocked.
+    const popup = window.open(target, '_blank', 'noopener,noreferrer');
+    if (!popup) window.location.assign(target);
+    void trackReviewEvent(metricId, 'published');
+    copyDraftInBackground();
   };
 
   if (step === 'handoff') {
