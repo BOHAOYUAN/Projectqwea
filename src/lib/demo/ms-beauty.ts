@@ -125,7 +125,10 @@ export const MS_BEAUTY_PUBLIC_PAGE: PublicReviewPage = {
       url: 'https://www.tiktok.com/@msbeauty.us',
     },
   ],
-  galleryImages: ['/images/ms-beauty/storefront.png', '/images/ms-beauty/interior.png'],
+  galleryImages: [
+    '/images/ms-beauty/storefront-20260910.jpg',
+    '/images/ms-beauty/interior-20260910.jpg',
+  ],
   socialHandles: {
     instagram: '@msbeauty_baltimore',
     xiaohongshu: 'MSBEAUTY_BALTIMORE',
