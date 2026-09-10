@@ -78,7 +78,7 @@ export const MS_BEAUTY_PUBLIC_PAGE: PublicReviewPage = {
     description:
       'A Baltimore beauty and wellness spa offering professional skincare, scalp therapy, and personalized relaxation services.',
     industryTags: ['美容', '头疗'],
-    logoUrl: 'https://www.msbeautymd.com/images/logo.png',
+    logoUrl: '/images/ms-beauty/avatar-ms-beauty.png',
     websiteUrl: 'https://msbeautymd.com/',
     phone: '+1 443-438-5887',
     brandColor: '#9A6758',
