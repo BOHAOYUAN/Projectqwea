@@ -113,10 +113,11 @@ function localXiaohongshuDraft(input: ReviewDraftInput): string {
     `${service}的一次记录`,
     `今天只记这次${service}`,
   ], seed);
+  const ownWords = experience ? `我自己补充的一句是：“${experience}”。` : '';
   const body = pick([
-    `这次在${input.location}的${input.merchantName}${mention}选择了${service}。填写时我选的是：${tagsStr}。\n\n我自己写下的感受是：“${experience}”。这段内容只整理我选择的项目、标签和原话，不补充环境、人员或效果等没有提供的细节。发布前我会再按自己的真实体验核对一遍。`,
-    `在${input.merchantName}${mention}，这次记录的项目是${service}，地点在${input.location}。我选中的感受是：${tagsStr}。\n\n顾客原话是：“${experience}”。不把它写成泛泛的推荐，也不加未发生的细节，只留下一条可以自己修改的体验记录。`,
-    `这条笔记写给自己回看：${input.location}的${input.merchantName}${mention}，本次选择${service}。我勾选的是${tagsStr}。\n\n我的原话：“${experience}”。这里只使用已填写的信息，不扩写成其他项目或效果；发出前也会根据自己的体验再确认。`,
+    `这次在${input.location}的${input.merchantName}${mention}选了${service}。我不想把它写成一段夸张的推荐，只想把自己确认过的项目和感受认真记下来。\n\n我勾选的是${tagsStr}。这几个词听起来很简单，却是我这次最想留下的部分。${ownWords}发布前我也会按当天的真实体验再核对一遍。`,
+    `这条笔记记录的是${input.merchantName}${mention}的一次${service}，地点在${input.location}。没有打算延伸成别的故事，重点就放在我实际选择的项目和感受上。\n\n这次我选了${tagsStr}。对我来说，这些感受已经足够具体；${ownWords}剩下的内容，发布前会再按自己的真实情况修改。`,
+    `在${input.location}的${input.merchantName}${mention}，这次我选择了${service}。写下来时，我更想保留那些确实属于这次体验的感受，而不是补进没有发生过的细节。\n\n我勾选的是${tagsStr}。这就是我现在最直接的记录。${ownWords}等准备发布时，我会再把文字改得更贴近当天的真实感受。`,
   ], seed);
   const tagList = [
     hashtag(input.merchantName),
@@ -217,8 +218,8 @@ ${editorialPrinciples}
 编辑原则：
 ${editorialPrinciples}
 1. 语言：中文。
-2. 标题：第1行必须是吸睛标题，长度严格控制在 20 字以内（可带合适 Emoji）。
-3. 正文：严格 120–160 个中文字符，分 2–3 个短段落，空行隔开，语气自然舒服，适量 Emoji。把英文顾客原话自然翻成中文，不要逐句引用英文。
+2. 标题：第1行必须是简短、自然的标题，长度严格控制在 20 字以内（可带合适 Emoji）。
+3. 正文：严格 100–180 个中文字符，分 2–3 个短段落，空行隔开，语气自然舒服，适量 Emoji。把英文顾客原话自然翻成中文，不要逐句引用英文。
 4. 账号提及：${xhsMentionRule}
 5. 门店名：正文必须原样出现“${input.merchantName}”，不得翻译、省略或只写“这家店”。
 6. 话题标签：文末附带 3–8 个话题标签；标签只能使用门店名、地点、已选项目和已选感受。
@@ -291,12 +292,13 @@ async function generateWithRemoteProvider(input: ReviewDraftInput, provider: Com
 
   const temperature = input.voice === 'concise' ? 0.7 : 0.8;
 
-  const attempts = input.platform === 'xiaohongshu' ? 6 : input.platform === 'instagram' ? 4 : 3;
+  const attempts = input.platform === 'xiaohongshu' ? 8 : input.platform === 'instagram' ? 4 : 3;
+  let formatFeedback = '';
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     const retryRequirement = input.platform === 'instagram'
       ? 'The last caption was invalid. Return only 50–100 English non-hashtag words followed by exactly 5–10 end hashtags; no explanation.'
       : input.platform === 'xiaohongshu'
-        ? '上一次格式不合格。请这次只输出符合全部长度、标题和标签要求的成稿，不要解释。'
+        ? formatFeedback || '上一次格式不合格。请这次只输出符合全部长度、标题和标签要求的成稿，不要解释。'
         : 'The last draft was invalid. Return only a finished draft that satisfies every required length and formatting rule; no explanation.';
     const retrySystem = attempt === 0
       ? system
@@ -315,9 +317,24 @@ async function generateWithRemoteProvider(input: ReviewDraftInput, provider: Com
     if (!isChinesePlatform(input.platform) && /[\u4e00-\u9fff]/.test(content)) continue;
     if (isChinesePlatform(input.platform) && !/[\u4e00-\u9fff]/.test(content)) continue;
     if (isGroundedRemoteDraft(content, input)) return content;
+    if (input.platform === 'xiaohongshu') formatFeedback = getXiaohongshuFormatFeedback(content);
   }
 
   return null;
+}
+
+function getXiaohongshuFormatFeedback(content: string): string {
+  const lines = content.split('\n').map((line) => line.trim()).filter(Boolean);
+  const title = lines[0] ?? '';
+  const body = lines.slice(1).filter((line) => !line.startsWith('#')).join('');
+  const chineseCharacters = body.match(/[\u4e00-\u9fff]/g)?.length ?? 0;
+  const hashtags = content.match(/#[^\s#]+/g)?.length ?? 0;
+  const issues: string[] = [];
+  if (Array.from(title).length > 20) issues.push('标题超过 20 字');
+  if (chineseCharacters < 100) issues.push(`正文只有 ${chineseCharacters} 个中文字符，必须扩写到 100–180 个`);
+  if (chineseCharacters > 200) issues.push(`正文有 ${chineseCharacters} 个中文字符，必须缩到 100–180 个`);
+  if (hashtags < 3 || hashtags > 8) issues.push(`标签数量为 ${hashtags}，必须是 3–8 个`);
+  return `刚才的成稿未通过检查：${issues.join('；') || '格式或内容不合格'}。请重写一篇合格成稿。只能围绕已选项目和感受，把这些已选感受写得更完整；不得补充门店环境、员工、流程、时间、价格或其他未提供事实。只输出成稿，不要解释。`;
 }
 
 function normalizeRemoteDraft(content: string, input: ReviewDraftInput): string {

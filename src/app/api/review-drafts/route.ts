@@ -113,11 +113,11 @@ export async function POST(request: NextRequest) {
       socialHandles: publicPage.socialHandles,
     });
 
-    // A local fallback is intentionally never sent to a customer. It cannot
-    // satisfy the required platform-specific voice and formatting quality as
-    // reliably as a validated model response. The UI offers "Try another"
-    // instead of presenting a generic or non-compliant draft.
-    if (draft.mode === 'local') {
+    // A source-bound Xiaohongshu draft is safe to show if a provider is
+    // temporarily unavailable: it uses only the customer's selections and
+    // keeps the platform's title, body-length, and hashtag structure. Other
+    // platforms remain remote-only to avoid showing generic English reviews.
+    if (draft.mode === 'local' && platform !== 'xiaohongshu') {
       return NextResponse.json(
         { error: 'This version did not meet the platform format. Please try another draft.' },
         { status: 422 },
