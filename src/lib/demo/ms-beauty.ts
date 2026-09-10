@@ -39,7 +39,7 @@ export const MS_BEAUTY_PLATFORM_LINKS: PublicPlatformLink[] = [
   {
     platform: 'google',
     destinationUrl:
-      'https://www.google.com/search?q=MS+BEAUTY+1006+Eastern+Ave+Baltimore#lrd=0x89c8035d1afafeff:0x47a57effa39720a7,3',
+      'https://www.google.com/maps/place//data=!4m3!3m2!1s0x89c8035d1afafeff:0x47a57effa39720a7!12e1',
     fallbackUrl: 'https://maps.google.com/?cid=5162608466650407079',
     ctaLabel: 'Write a Google review',
     publishHint: 'Draft copied! Opening Google Maps to write your review.',
