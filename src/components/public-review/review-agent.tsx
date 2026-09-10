@@ -343,9 +343,18 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
       return;
     }
 
-    // Mobile Safari/Chrome will commonly block a popup after an awaited
-    // clipboard call. Launch synchronously, then fall back to same-tab
-    // navigation when a popup is blocked.
+    // A direct, same-tab navigation is the most reliable handoff in mobile
+    // Safari and Chrome. It avoids treating the platform page as a popup.
+    // Desktop keeps the new-tab experience.
+    if (shouldUseSameTabPlatformNavigation()) {
+      void trackReviewEvent(metricId, 'published');
+      copyDraftInBackground();
+      window.location.assign(target);
+      return;
+    }
+
+    // Desktop browsers can open the configured platform in a new tab. Keep
+    // a same-tab fallback for popup-blocking configurations.
     const popup = window.open(target, '_blank', 'noopener,noreferrer');
     if (!popup) window.location.assign(target);
     void trackReviewEvent(metricId, 'published');
@@ -982,6 +991,10 @@ function getPlatformDestination(merchant: PublicReviewMerchant, platform: Public
 
 function requiresMobileHandoff(platform: PublicReviewPlatform, destination: string) {
   return (platform === 'xiaohongshu' || platform === 'instagram') && !destination.startsWith('http');
+}
+
+function shouldUseSameTabPlatformNavigation() {
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 }
 
 function getMissingDestinationCopy(platform: PublicReviewPlatform) {
