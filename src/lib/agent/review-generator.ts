@@ -22,6 +22,7 @@ export interface GeneratedDraft {
   content: string;
   mode: 'local' | 'groq' | 'deepseek';
   platform: ReviewPlatform;
+  fallbackValidated?: boolean;
 }
 
 function pick<T>(items: readonly T[], seed: number): T {
@@ -45,9 +46,21 @@ function isChinesePlatform(platform: ReviewPlatform): boolean {
 }
 
 function localGoogleDraft(input: ReviewDraftInput): string {
-  const service = formatList(input.serviceNames, 'and');
-  const experience = sentenceCase(input.experience) || input.tags.join(', ');
+  const service = formatList(input.serviceNames, 'and') || 'an appointment';
+  const experience = (sentenceCase(input.experience) || input.tags.join(', ')).replace(/[.!?]+$/, '');
   const seed = input.seed ?? Date.now();
+  const hasCriticalNote = /average|ordinary|not (?:good|great|impressed|satisfied)|disappoint|underwhelm|mixed/i.test(experience);
+  if (hasCriticalNote) {
+    return pick([
+      `I booked ${service} at ${input.merchantName} in ${input.location}. ${experience}. My overall impression stayed mixed rather than clearly positive. I appreciated the good part I mentioned, while the rest of the visit did not stand out to me. That balance is the most honest way I can describe the appointment. Nothing felt especially memorable, though the positive detail was still worth noting.`,
+      `${input.merchantName} in ${input.location} was where I tried ${service}. ${experience}. I came away with an average overall impression, even though one part of the visit was positive. I do not want that good detail to get lost, but it also did not change how ordinary the appointment felt as a whole. Both sides are part of my experience, so I am mentioning them together.`,
+      `I went to ${input.merchantName} in ${input.location} for ${service}. ${experience}. The visit felt ordinary overall, with one positive detail that I genuinely noticed. I appreciated that part without feeling that it changed the rest of the experience. My reaction is still mixed, and this is the clearest way to describe what stood out and what did not.`,
+      `My visit to ${input.merchantName} in ${input.location} was for ${service}. ${experience}. The good part was noticeable, but my overall reaction remained average. I would rather keep both impressions in the same review than let one erase the other. The appointment was not entirely negative, though it also did not give me much else to remember afterward.`,
+      `At ${input.merchantName} in ${input.location}, I tried ${service}. ${experience}. I appreciated the positive part of that experience, while the appointment as a whole still felt ordinary to me. It was a mixed visit, not an especially good or bad one. The balance between those two impressions is what I remember most clearly now.`,
+      `I chose ${service} at ${input.merchantName} in ${input.location}. ${experience}. One part of the visit went well, and that deserves to be mentioned. Even so, my overall impression was still average. I did not come away particularly disappointed or impressed, so the visit still sits somewhere in the middle for me.`,
+      `${experience}. That is how I would sum up my visit to ${input.merchantName} in ${input.location}, where I booked ${service}. I noticed the positive detail, but the rest of the appointment felt fairly ordinary. It was enough to keep the experience from feeling completely negative, though not enough to change my average overall impression.`,
+    ], seed);
+  }
   return pick([
     `I went to ${input.merchantName} in ${input.location} for ${service}. ${experience}. The visit gave me room to pay attention to how I actually felt instead of rushing on to the next thing. What stayed with me afterward was the simple sense that the time had been well spent. It was an easy experience to describe because those details were the parts that genuinely stood out to me.`,
     `${input.merchantName} was where I booked ${service} during my visit to ${input.location}. ${experience}. I noticed those things without having to think too hard about them, which made the appointment feel straightforward and comfortable. By the time I left, that was still the clearest impression I had. It felt worth taking a moment to write down while the visit was still fresh.`,
@@ -56,9 +69,17 @@ function localGoogleDraft(input: ReviewDraftInput): string {
 }
 
 function localYelpDraft(input: ReviewDraftInput): string {
-  const service = formatList(input.serviceNames, 'and');
-  const experience = sentenceCase(input.experience) || input.tags.join(', ');
+  const service = formatList(input.serviceNames, 'and') || 'an appointment';
+  const experience = (sentenceCase(input.experience) || input.tags.join(', ')).replace(/[.!?]+$/, '');
   const seed = (input.seed ?? Date.now()) + 11;
+  const hasCriticalNote = /average|ordinary|not (?:good|great|impressed|satisfied)|disappoint|underwhelm|mixed/i.test(experience);
+  if (hasCriticalNote) {
+    return pick([
+      `I visited ${input.merchantName} in ${input.location} for ${service}. ${experience}. My reaction afterward was mixed. The positive part I mentioned was noticeable and worth giving credit for, but the visit as a whole still felt average to me. I did not leave with a strong negative impression, yet there was not much else that stood out either. The most accurate summary is that one part went well while the overall experience remained fairly ordinary.`,
+      `For this visit to ${input.merchantName}, I booked ${service}. ${experience}. I appreciated the good detail in that experience, although it did not change my broader impression of the appointment. Overall, it felt ordinary rather than especially memorable. I think it is fair to mention both sides instead of turning one positive moment into praise for the entire visit. That balance is what stayed with me when I thought about the appointment later.`,
+      `${input.merchantName} in ${input.location} was where I tried ${service}. ${experience}. There was a positive part to the visit, and I noticed it, but the rest of the appointment did not leave much of an impression. I would describe the overall experience as average. It was not a completely negative visit, and I do not want to overlook what went well, yet the good detail was not enough to make the whole appointment feel distinctive.`,
+    ], seed);
+  }
   return pick([
     `I visited ${input.merchantName} in ${input.location} for ${service}. ${experience}. I had enough time during the appointment to notice what felt different instead of moving through it on autopilot. The details that stayed with me were small but clear, and they shaped the whole visit for me. Looking back, the experience felt consistent with what I had hoped for when I booked the service, and I left with a calm, straightforward impression of the appointment.`,
     `For this visit to ${input.merchantName}, I booked ${service}. ${experience}. Those parts of the appointment stood out naturally and did not need much embellishment. I found myself thinking about them again later because they made the visit feel easy to remember. The experience in ${input.location} was simple in a good way: I knew what I had come in for, had the time to take it in, and left with a clear sense of the visit.`,
@@ -91,12 +112,27 @@ function localInstagramDraft(input: ReviewDraftInput): string {
     hashtag(`${input.location}Visit`),
   ].filter(Boolean).slice(0, 10).join(' ');
 
+  const hasCriticalNote = /average|ordinary|not (?:good|great|impressed|satisfied)|disappoint|underwhelm|mixed/i.test(typedExperience);
+  if (hasCriticalNote) {
+    return pick([
+      `${input.merchantName}${mention}\n\nI came in for ${service}. ${note}. That left me with a mixed impression: the overall visit did not stand out, while the positive part I mentioned was still worth noting. Both things can be true, and that is the most accurate way to describe this visit in ${input.location}.\n\n${hashtags}`,
+      `An honest note from ${input.merchantName}${mention}\n\nI booked ${service}. ${note}. My overall impression was ordinary, even though the good part of the visit still mattered to me. The positive interaction was part of the experience, but it did not make the place feel more than average to me. That balance is what I remember.\n\n${hashtags}`,
+      `${service} at ${input.merchantName}${mention}\n\n${note}. The visit felt mixed rather than amazing. I appreciated the positive detail I mentioned, but it did not change my broader impression of the place. Looking back, the good part and the average overall feeling are both still clear to me.\n\n${hashtags}`,
+      `A mixed visit at ${input.merchantName}${mention}\n\nI came in for ${service}. ${note}. One part of the experience was genuinely positive, but the place still felt average overall. I can appreciate that detail without making the rest sound better than it felt. That is the simple version of my visit in ${input.location}.\n\n${hashtags}`,
+      `${input.merchantName}${mention}, honestly\n\nI booked ${service}. ${note}. I noticed the positive part and appreciated it, while my overall reaction stayed ordinary. The visit was not all bad, but it also did not give me much else to remember. Both impressions belong in the same note.\n\n${hashtags}`,
+      `A straightforward note on ${input.merchantName}${mention}\n\n${note}. I was there for ${service}, and my reaction stayed mixed after I left. I appreciated the one good part without reading more into the rest of the visit. Overall, it still felt average to me, so that is where I would leave it.\n\n${hashtags}`,
+      `What stood out at ${input.merchantName}${mention}\n\nI tried ${service}. ${note}. The positive detail was real, but so was the ordinary overall feeling. Neither one cancels out the other. Looking back on the visit in ${input.location}, that combination is still the clearest impression I have.\n\n${hashtags}`,
+    ], seed);
+  }
+
   return pick([
     `${input.merchantName}${mention} ✨\n\nI stopped in for ${service}, and this is what stayed with me afterward: ${note}. It was nice to give the visit its own space instead of rushing through the moment. A simple pause in ${input.location}, and one I was glad I made time for. 🤍\n\n${hashtags}`,
     `A little time at ${input.merchantName}${mention} 💆\n\nI booked ${service}. ${note}. Those were the details I noticed most, and they made the visit easy to remember later. Sometimes a straightforward appointment is exactly enough. This one in ${input.location} left a clear impression without needing a big story around it. ✨\n\n${hashtags}`,
     `${service} at ${input.merchantName}${mention} 🤍\n\n${note}. That was the part of the visit that stayed in my mind afterward. I liked being able to slow the moment down and simply notice how it felt. A small piece of my day in ${input.location}, but one that was worth remembering. ✨\n\n${hashtags}`,
     `After work at ${input.merchantName}${mention} ✨\n\nI made time for ${service}. ${note}. The calm pace was what I noticed most, and it stayed with me after I headed home. Nothing dramatic, just a visit that gave the day a quieter ending and felt easy to remember later. 🤍\n\n${hashtags}`,
     `${input.merchantName}${mention}, one small pause in the day 💆\n\nI came in for ${service}. ${note}. Once I had time to settle, the rest of the day felt less hurried. That simple change in pace is what I remember from the visit in ${input.location}. ✨\n\n${hashtags}`,
+    `A calm part of the day at ${input.merchantName}${mention} 🤍\n\nI chose ${service}. ${note}. The visit gave me a little room to slow down and notice the moment as it was happening. That quieter pace is the part I carried with me afterward in ${input.location}. ✨\n\n${hashtags}`,
+    `${input.merchantName}${mention} after a busy day ✨\n\nI stopped in for ${service}. ${note}. What mattered most was the chance to pause without turning it into a big occasion. It was a simple visit in ${input.location}, and the details I mentioned are what made it feel personal to me. 🤍\n\n${hashtags}`,
   ], seed);
 }
 
@@ -104,41 +140,61 @@ function localXiaohongshuDraft(input: ReviewDraftInput): string {
   const service = formatList(input.serviceNames, '和');
   const experience = sentenceCase(input.experience);
   const seed = input.seed ?? Date.now();
+  const hasCriticalNote = /一般|普通|还行|不好|差|失望|不满意|没惊喜|没有惊喜|贵|等(?:了|得)?(?:有点|比较|很|太)?久|速度太慢|服务太慢/.test(experience);
+  const effectiveTags = hasCriticalNote
+    ? input.tags.filter((tag) => tag !== '值得再来')
+    : input.tags;
 
-  const title = Array.from(pick([
-    `在${input.merchantName}放松一下`,
-    `${service}体验随记`,
-    `给自己慢下来的时间`,
-    `巴尔的摩护理随记`,
-    `今天的放松安排`,
-  ], seed)).slice(0, 20).join('');
+  const titleOptions = hasCriticalNote
+    ? [`${input.merchantName}体验随记`, `${service}真实感受`, '这次体验简单说说', '巴尔的摩护理随记', '一次普通的体验', '说说这次真实感受', '这次体验不硬夸']
+    : [`在${input.merchantName}放松一下`, `${service}体验随记`, '给自己慢下来的时间', '巴尔的摩护理随记', '今天的放松安排', '这次护理简单记录', '慢下来的一次体验'];
+  const title = Array.from(pick(titleOptions, seed)).slice(0, 20).join('');
   const location = input.location.replace(/Baltimore(?:,\s*MD)?/i, '巴尔的摩');
-  const tagSentences = input.tags.map(xiaohongshuFeelingSentence).filter(Boolean).join('');
-  const ownWords = experience && /[\u4e00-\u9fff]/.test(experience) ? `${experience.replace(/[。！？!?]+$/, '')}。` : '';
-  const opening = ownWords
-    ? `这次去的是${location}的 ${input.merchantName}。${ownWords}`
+  const tagSentences = effectiveTags.map(xiaohongshuFeelingSentence).filter(Boolean).join('');
+  const experienceExpansion = xiaohongshuExperienceExpansion(experience);
+  const ownWords = experience && /[\u4e00-\u9fff]/.test(experience) && !experienceExpansion
+    ? `${experience.replace(/[。！？!?]+$/, '')}。`
+    : '';
+  const opening = experience
+    ? `这次去的是${location}的 ${input.merchantName}，做了${service}。${ownWords}`
     : `在${location}的 ${input.merchantName} 做了${service}。`;
   const body = extendShortXiaohongshuBody(
-    `${opening}${tagSentences}`,
-    input,
+    `${opening}${experienceExpansion}${tagSentences}`,
+    { ...input, tags: effectiveTags },
     180,
   );
   const tagList = [
     hashtag(input.merchantName),
     hashtag(input.location),
     hashtag(service),
-    ...input.tags.map(hashtag),
+    ...effectiveTags.map(hashtag),
   ].filter(Boolean).slice(0, 8).join(' ');
 
   return `${title}\n\n${body}\n\n${tagList}`;
 }
 
+function xiaohongshuExperienceExpansion(experience: string): string {
+  if (!experience) return '';
+  const parts: string[] = [];
+  if (/一般|普通|还行|没惊喜|没有惊喜/.test(experience)) {
+    parts.push('整体感觉比较普通，没有特别惊喜。不是很差，但也没有什么让我特别记住的地方。做完以后再回想，感受还是平平的，对我来说就是一次很正常的体验。');
+  } else if (/不好|差|失望|不满意/.test(experience)) {
+    parts.push('这次确实有不太满意的地方，整体感受没有达到自己的预期。优点和不足放在一起看，感受还是偏失望。');
+  }
+  if (/(?:服务员|员工|工作人员|店员)[^。！？]{0,10}(?:不错|很好|挺好|友好|耐心|专业)/.test(experience)) {
+    parts.push('不过服务员人挺好，这一点我觉得应该说一下。');
+  }
+  if (/贵|价格高|有点贵/.test(experience)) parts.push('价格确实有点贵，这一点会直接影响我的整体感受。其他方面没有特别想夸或吐槽的，但这个价格还是让我有些在意。算下来值不值，每个人可能感受不一样，我这里只说自己的真实想法。');
+  if (/等(?:了|得)?(?:有点|比较|很|太)?久|等待时间(?:长|久)|速度太慢|服务太慢/.test(experience)) parts.push('这次确实等得有点久，时间拖长以后多少会影响心情。其他方面我先不多评价，单说等候这件事，和我原本预想的不太一样。要是这部分能更利落一点，整体感受会好不少。');
+  return parts.join('');
+}
+
 function xiaohongshuFeelingSentence(tag: string): string {
   const copy: Record<string, string> = {
-    '肩颈松了': '做完后最明显的是肩颈没那么紧了，身体跟着轻松了一些。',
-    '终于慢下来': '难得把节奏放慢一点，整个人也慢慢松了下来。',
-    '没有推销': '过程中没有推销，待着会更自在，不用分心应付别的事情。',
-    '值得再来': '这次留下的感受不错，以后有需要时我还会再考虑。',
+    '肩颈松了': '做完后最明显的是肩颈没那么紧了，身体跟着轻松了一些。原本绷着的感觉缓下来以后，人也舒服多了。',
+    '终于慢下来': '难得把节奏放慢一点，整个人也慢慢松了下来。不用一直赶着做下一件事，这种状态对我来说刚刚好。',
+    '没有推销': '过程中没有推销，待着会更自在，不用分心应付别的事情。能安静做完自己选的项目，这一点挺加分。',
+    '值得再来': '这次留下的感受不错，以后有需要时我还会再考虑。不是很夸张的惊喜，但整体符合我这次的期待。',
     '放松舒服': '整个感受比较放松，身体和心情都没有那么绷着。',
     '细心专业': '让我印象比较深的是细致和专业，体验起来很踏实。',
     '环境整洁': '环境收拾得很整洁，看着清爽，待着也舒服。',
@@ -165,6 +221,7 @@ function buildSystemPrompt(input: ReviewDraftInput): string {
   const editorialPrinciples = `EDITORIAL METHOD:
 - Treat the customer note as the primary source of voice and detail. Preserve its concrete observation rather than replacing it with generic praise.
 - Selected services and tags are supporting facts, not an instruction to invent a full story for each one. If the note does not describe a service detail, do not make one up.
+- The customer's own note outranks selected tags. Preserve criticism, mixed feelings, and ordinary wording exactly in meaning; never turn an average or negative visit into praise. If a tag conflicts with the note, omit the tag rather than soften the note.
 - When two or more services are selected, mention every selected service once in a compact, natural way where the platform format permits. Do not attach an invented result or detail to any of them.
 - Never expose the app's mechanics in the writing: do not say “I selected,” “the details I chose,” “this review is based on,” “I am keeping this focused,” or explain that facts were omitted. Those are instructions for the model, not words a customer would post.
 - Do not turn a tag into a list. Weave at most one or two selected feelings into ordinary first-person sentences; leave a feeling out rather than inventing an event to support it.
@@ -239,11 +296,11 @@ ${editorialPrinciples}
 ${editorialPrinciples}
 1. 语言：中文。
 2. 标题：第1行必须是简短、自然的标题，长度严格控制在 20 字以内（可带合适 Emoji）。
-3. 正文：严格 120–160 个中文字符，写 6–8 句，分 2–3 个短段落，空行隔开。使用中国人日常分享会说的短句和自然语序，不写说明文，不写翻译腔，不重复同一个感受。英文顾客原话只提炼事实和感受后自然转述，绝不逐句翻译。地点如需出现，把 “Baltimore, MD” 写成“巴尔的摩”，禁止出现“这次在Baltimore, MD的MS BEAUTY”一类中英夹杂句式。字数不足时，只能围绕已提供的感受自然展开，绝不能补充新的事件或细节。
+3. 正文：严格 60–160 个中文字符，写 3–7 句，分 1–3 个短段落，空行隔开。信息少就短一点，不为了凑字数重复同一个感受。使用中国人日常分享会说的短句和自然语序，不写说明文，不写翻译腔。英文顾客原话只提炼事实和感受后自然转述，绝不逐句翻译。地点如需出现，把 “Baltimore, MD” 写成“巴尔的摩”，禁止出现“这次在Baltimore, MD的MS BEAUTY”一类中英夹杂句式。
 4. 账号提及：${xhsAccountRule}
 5. 门店名：正文必须原样出现“${input.merchantName}”，不得翻译、省略或只写“这家店”。
 6. 话题标签：文末附带 3–8 个话题标签；标签只能使用门店名、地点、已选项目和已选感受。
-7. 内容边界：只可使用输入中明确提供的项目、标签与顾客原话；不可补充环境、员工、流程、效果或任何未提供细节。尤其不得自行写“躺下/椅子/睡着/手法/一小时/赶时间/看手机”等场景；这些词除非顾客原话中出现，否则一律不用。
+7. 内容边界：只可使用输入中明确提供的项目、标签与顾客原话；不可补充环境、员工、流程、效果或任何未提供细节。尤其不得自行写“躺下/椅子/睡着/手法/一小时/赶时间/看手机”等场景；这些词除非顾客原话中出现，否则一律不用。顾客写“一般、不好、失望、贵、慢”等评价时必须如实保留，不能改成好评；像“店家一般，服务员不错”这样的混合评价，要把优点和不足都自然写出来。
 8. 合规红线：严禁极限词（如“最好”、“第一”），严禁提及“好评返现/送折扣”等违规诱导。不要写“我不想把它写成推荐”“我勾选的是”“发布前再核对”“按真实体验修改”“这条笔记记录的是”等模型说明或创作过程。
 9. 本次写作角度：${variationDirection}
 10. 不得使用“宝藏店”“体验感拉满”“闭眼冲”“姐妹们冲”“种草”“治愈”“绝绝子”等模板化表达。
@@ -266,7 +323,7 @@ async function requestCompatibleChat(
 ): Promise<string | null> {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10_000);
+    const timeoutId = setTimeout(() => controller.abort(), 4_500);
 
     const response = await fetch(provider.endpoint, {
       method: 'POST',
@@ -312,7 +369,10 @@ async function generateWithRemoteProvider(input: ReviewDraftInput, provider: Com
 
   const temperature = input.voice === 'concise' ? 0.8 : 0.95;
 
-  const attempts = input.platform === 'xiaohongshu' ? 10 : input.platform === 'instagram' ? 8 : 5;
+  // Keep response time predictable on a phone. One initial attempt plus one
+  // format-correction attempt is enough for social captions; deterministic,
+  // source-bound fallbacks handle provider variance without a long retry tail.
+  const attempts = 2;
   let formatFeedback = '';
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     const retryRequirement = input.platform === 'instagram'
@@ -351,8 +411,8 @@ function getXiaohongshuFormatFeedback(content: string): string {
   const hashtags = content.match(/#[^\s#]+/g)?.length ?? 0;
   const issues: string[] = [];
   if (Array.from(title).length > 20) issues.push('标题超过 20 字');
-  if (chineseCharacters < 100) issues.push(`正文只有 ${chineseCharacters} 个中文字符，必须扩写到 100–180 个`);
-  if (chineseCharacters > 200) issues.push(`正文有 ${chineseCharacters} 个中文字符，必须缩到 100–180 个`);
+  if (chineseCharacters < 60) issues.push(`正文只有 ${chineseCharacters} 个中文字符，必须扩写到 60–160 个`);
+  if (chineseCharacters > 180) issues.push(`正文有 ${chineseCharacters} 个中文字符，必须缩到 60–160 个`);
   if (hashtags < 3 || hashtags > 8) issues.push(`标签数量为 ${hashtags}，必须是 3–8 个`);
   return `刚才的成稿未通过检查：${issues.join('；') || '格式或内容不合格'}。请重写一篇合格成稿。只能围绕已选项目和感受，把这些已选感受写得更完整；不得补充门店环境、员工、流程、时间、价格或其他未提供事实。只输出成稿，不要解释。`;
 }
@@ -488,6 +548,7 @@ function isGroundedRemoteDraft(content: string, input: ReviewDraftInput): boolea
   if (alwaysBlocked.some((pattern) => pattern.test(content))) return false;
   if (input.platform === 'xiaohongshu' && hasUnprovidedXiaohongshuScene(content, input)) return false;
   if (input.platform === 'xiaohongshu' && /@|MSBEAUTY_BALTIMORE/i.test(content)) return false;
+  if (!preservesCustomerSentiment(content, input)) return false;
   if (input.platform === 'instagram') {
     const expectedMention = input.socialHandles?.instagram
       ? `@${input.socialHandles.instagram.replace(/^@/, '')}`.toLowerCase()
@@ -505,9 +566,39 @@ function hasUnprovidedXiaohongshuScene(content: string, input: ReviewDraftInput)
   const suppliedFacts = [input.experience, ...input.serviceNames, ...input.tags].join('');
   const sceneTerms = [
     '躺', '椅子', '睡', '手法', '流程', '环境', '房间', '一小时', '上班', '赶时间', '看手机',
-    '傍晚', '天黑', '天已经暗', '天气', '有点凉', '下雨', '进门', '出门', '出来', '预约', '等待',
+    '傍晚', '天黑', '天已经黑', '天已经暗', '天气', '有点凉', '下雨', '进门', '出门', '出来', '预约', '等待', '安静',
   ];
   return sceneTerms.some((term) => content.includes(term) && !suppliedFacts.includes(term));
+}
+
+function preservesCustomerSentiment(content: string, input: ReviewDraftInput): boolean {
+  const source = input.experience.trim();
+  if (!source) return true;
+
+  const sourceHasChineseCriticism = /一般|普通|还行|不好|不太好|差|失望|不满意|没惊喜|没有惊喜|贵|太慢|等(?:了|得)?(?:有点|比较|很|太)?久/.test(source);
+  if (sourceHasChineseCriticism) {
+    if (input.platform === 'xiaohongshu') {
+      if (!/一般|普通|不好|差|失望|不满意|没惊喜|没有惊喜|贵|慢|等/.test(content)) return false;
+    } else if (!/average|ordinary|not\s+(?:good|great|impressed|satisfied)|disappoint|underwhelm|expensive|pricey|slow|wait|mixed/i.test(content)) {
+      return false;
+    }
+  }
+
+  const sourcePraisesStaff = /(?:服务员|员工|工作人员|店员)[^。！？]{0,10}(?:不错|很好|挺好|友好|耐心|专业)/.test(source);
+  if (sourcePraisesStaff) {
+    if (input.platform === 'xiaohongshu') {
+      if (!/(?:服务员|员工|工作人员|店员)[^。！？]{0,16}(?:不错|好|友好|耐心|专业|加分)/.test(content)) return false;
+    } else if (!/(?:staff|employee|team|server)[^.?!]{0,30}(?:nice|good|friendly|patient|professional|helpful)/i.test(content)) {
+      return false;
+    }
+  }
+
+  const sourcePraisesStaffInEnglish = /(?:staff member|staff|employee|team|server)[^.?!]{0,30}(?:nice|good|friendly|patient|professional|helpful)/i.test(source);
+  if (sourcePraisesStaffInEnglish && !/(?:staff member|staff|employee|team|server)[^.?!]{0,40}(?:nice|good|friendly|patient|professional|helpful|positive)/i.test(content)) {
+    return false;
+  }
+
+  return true;
 }
 
 function hasPlatformAppropriateLength(content: string, platform: ReviewPlatform): boolean {
@@ -517,7 +608,7 @@ function hasPlatformAppropriateLength(content: string, platform: ReviewPlatform)
     const hashtags = content.match(/#[^\s#]+/g) ?? [];
     const body = lines.slice(1).filter((line) => !line.startsWith('#')).join('');
     const chineseCharacters = body.match(/[\u4e00-\u9fff]/g)?.length ?? 0;
-    return Array.from(title).length <= 20 && chineseCharacters >= 100 && chineseCharacters <= 200 && hashtags.length >= 3 && hashtags.length <= 8;
+    return Array.from(title).length <= 20 && chineseCharacters >= 60 && chineseCharacters <= 180 && hashtags.length >= 3 && hashtags.length <= 8;
   }
 
   if (platform === 'google' || platform === 'yelp') {
@@ -549,12 +640,19 @@ export async function generateReviewDraft(input: ReviewDraftInput): Promise<Gene
     providers.push({ provider: groqProvider(groqKey), mode: 'groq' });
   }
 
-  for (const candidate of providers) {
+  if (providers.length > 0) {
     try {
-      const content = await generateWithRemoteProvider(input, candidate.provider);
-      if (content) return { content, mode: candidate.mode, platform: input.platform };
+      // Providers race each other so one slow upstream does not make every
+      // customer wait through a serial retry chain.
+      const generated = await Promise.any(providers.map(async (candidate) => {
+        const content = await generateWithRemoteProvider(input, candidate.provider);
+        if (!content) throw new Error('Provider did not return a valid draft.');
+        return { content, mode: candidate.mode, platform: input.platform } satisfies GeneratedDraft;
+      }));
+      return generated;
     } catch {
-      // Continue to next provider
+      // A validated, source-bound local result is used below when every
+      // configured provider times out or misses the platform format.
     }
   }
 
@@ -565,7 +663,12 @@ export async function generateReviewDraft(input: ReviewDraftInput): Promise<Gene
       : input.platform === 'instagram'
         ? localInstagramDraft(input)
         : localXiaohongshuDraft(input);
-  return { content, mode: 'local', platform: input.platform };
+  return {
+    content,
+    mode: 'local',
+    platform: input.platform,
+    fallbackValidated: isGroundedRemoteDraft(content, input),
+  };
 }
 
 export async function generateMerchantReply(input: {

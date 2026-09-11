@@ -32,8 +32,6 @@ type ReviewAgentProps = {
   initialServiceId?: string;
 };
 
-type FlowStep = 'customize' | 'draft' | 'handoff';
-
 type ApiDraft = {
   content?: string;
 };
@@ -113,7 +111,6 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
   const labels = getReviewLabels(platform);
   const style = PLATFORM_STYLES[platform];
   const voiceOptions = isChinese ? CHINESE_VOICES : ENGLISH_VOICES;
-  const [step, setStep] = useState<FlowStep>('customize');
   const [experience, setExperience] = useState('');
   const [isExperienceOpen, setIsExperienceOpen] = useState(false);
 
@@ -132,6 +129,8 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
   const [draft, setDraft] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [hasManualDraftEdit, setHasManualDraftEdit] = useState(false);
+  const [generationStage, setGenerationStage] = useState(0);
   const [error, setError] = useState('');
   const [variation, setVariation] = useState(0);
   const [metricId, setMetricId] = useState<string | null>(null);
@@ -190,6 +189,14 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
     }
   }, [draft, experience, hasRestoredState, selectedServiceIds, selectedTagIds, storageKey, variation, voice]);
 
+  useEffect(() => {
+    if (!isGenerating) return;
+    const timer = window.setInterval(() => {
+      setGenerationStage((current) => (current + 1) % 3);
+    }, 900);
+    return () => window.clearInterval(timer);
+  }, [isGenerating]);
+
   const toggleService = (serviceId: string) => {
     setError('');
     setSelectedServiceIds((current) => {
@@ -227,11 +234,15 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
   };
 
   const generateDraft = async (nextVariation = variation + 1) => {
+    const generationStartedAt = Date.now();
+    const customerNote = hasManualDraftEdit && draft.trim()
+      ? draft.trim()
+      : experience.trim();
+    setGenerationStage(0);
     setIsGenerating(true);
     setError('');
     setIsCopied(false);
     setVariation(nextVariation);
-    setDraft('');
     setMetricId(null);
 
     try {
@@ -248,7 +259,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
           serviceNames: selectedServices.map((service) => (isChinese ? service.name : service.englishName)),
           serviceSlugs: selectedServices.map((service) => service.id),
           tags: selectedTags.map((tag) => (isChinese ? tag.label : tag.googleLabel)),
-          experience: experience.trim(),
+          experience: customerNote,
           voice,
           seed: Date.now() + nextVariation + retry,
           avoidPhrases: draftEdgesRef.current,
@@ -277,6 +288,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
         draftHistoryRef.current.add(fingerprint);
         draftEdgesRef.current = [...draftEdgesRef.current, ...draftEdgeFragments(candidate)].slice(-6);
         setDraft(candidate);
+        setHasManualDraftEdit(false);
         setMetricId(data.metricId || null);
         return;
       }
@@ -296,6 +308,12 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
       );
       setMetricId(null);
     } finally {
+      // Very fast responses otherwise look like a missed tap. Keep the richer
+      // progress animation visible briefly while leaving slow responses alone.
+      const remainingAnimationMs = 1200 - (Date.now() - generationStartedAt);
+      if (remainingAnimationMs > 0) {
+        await new Promise((resolve) => window.setTimeout(resolve, remainingAnimationMs));
+      }
       setIsGenerating(false);
     }
   };
@@ -326,12 +344,27 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
       return;
     }
 
-    // App schemes are not consistently accepted by mobile browsers when they
-    // are assigned programmatically. Show a clear handoff first so the next
-    // tap is an actual link gesture, with an always-visible web option.
-    if (requiresMobileHandoff(platform, target)) {
-      copyDraftInBackground();
-      setStep('handoff');
+    copyDraftInBackground();
+    void trackReviewEvent(metricId, 'published');
+
+    // Keep the app launch inside the original tap. If a custom app scheme is
+    // unavailable, fall back to the configured web page without an extra
+    // intermediate screen.
+    if (!target.startsWith('http')) {
+      const fallback = merchant.platforms[platform]?.fallbackUrl;
+      let fallbackTimer: number | undefined;
+      const stopFallback = () => {
+        if (document.visibilityState === 'hidden' && fallbackTimer) {
+          window.clearTimeout(fallbackTimer);
+        }
+      };
+      document.addEventListener('visibilitychange', stopFallback, { once: true });
+      if (fallback?.startsWith('http')) {
+        fallbackTimer = window.setTimeout(() => {
+          if (document.visibilityState === 'visible') window.location.assign(fallback);
+        }, 1400);
+      }
+      window.location.assign(target);
       return;
     }
 
@@ -339,8 +372,6 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
     // Safari and Chrome. It avoids treating the platform page as a popup.
     // Desktop keeps the new-tab experience.
     if (shouldUseSameTabPlatformNavigation()) {
-      void trackReviewEvent(metricId, 'published');
-      copyDraftInBackground();
       window.location.assign(target);
       return;
     }
@@ -349,23 +380,6 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
     // a same-tab fallback for popup-blocking configurations.
     const popup = window.open(target, '_blank', 'noopener,noreferrer');
     if (!popup) window.location.assign(target);
-    void trackReviewEvent(metricId, 'published');
-    copyDraftInBackground();
-  };
-
-  if (step === 'handoff') {
-    return (
-      <main className="min-h-screen bg-[#ece5dc] px-3.5 py-6 sm:py-10 flex flex-col items-center justify-center font-sans text-[#3c342f]">
-        <div className="w-full max-w-[440px]">
-          <PublishHandoff
-            merchant={merchant}
-            platform={platform}
-            metricId={metricId}
-            onBack={() => setStep('customize')}
-          />
-        </div>
-      </main>
-    );
   }
 
   return (
@@ -553,21 +567,49 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
                 type="button"
                 onClick={() => void generateDraft(variation + 1)}
                 disabled={isGenerating}
-                className="text-[11px] font-semibold text-[#8b6147] hover:text-[#5e3c27] flex items-center gap-1 transition"
+                className={`flex min-h-7 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-semibold transition ${
+                  isGenerating
+                    ? 'bg-[#efe0d1] text-[#7b543d] shadow-inner'
+                    : 'text-[#8b6147] hover:bg-[#f3e7dc] hover:text-[#5e3c27]'
+                }`}
               >
                 <RefreshCw className={`h-3 w-3 ${isGenerating ? 'animate-spin' : ''}`} />
-                <span>{draft ? (isChinese ? '换一版' : 'Try another') : (isChinese ? '帮我润色' : 'Polish my review')}</span>
+                <span>{isGenerating ? (isChinese ? '正在换一版' : 'Creating') : draft ? (isChinese ? '换一版' : 'Try another') : (isChinese ? '帮我润色' : 'Polish my review')}</span>
               </button>
             </div>
             <div className="relative">
               <textarea
                 ref={textareaRef}
                 value={draft}
-                onChange={(e) => setDraft(e.target.value)}
+                onChange={(e) => {
+                  setDraft(e.target.value);
+                  setHasManualDraftEdit(true);
+                }}
+                aria-busy={isGenerating}
                 placeholder={getDraftPlaceholder(platform)}
                 rows={platform === 'xiaohongshu' || platform === 'instagram' ? 7 : 5}
-                className="w-full resize-none rounded-xl border border-[#dec9b5] bg-white p-3 text-xs sm:text-sm leading-relaxed text-[#3d2d24] outline-none transition focus:border-[#986a4c] focus:ring-2 focus:ring-[#986a4c]/15 shadow-inner"
+                className={`w-full resize-none rounded-xl border border-[#dec9b5] bg-white p-3 text-xs sm:text-sm leading-relaxed text-[#3d2d24] outline-none transition focus:border-[#986a4c] focus:ring-2 focus:ring-[#986a4c]/15 shadow-inner ${isGenerating ? 'select-none opacity-35 blur-[1px]' : ''}`}
               />
+              {isGenerating && (
+                <div role="status" aria-live="polite" className="absolute inset-0 flex items-center justify-center overflow-hidden rounded-xl border border-[#c99f80]/60 bg-[#fffaf3]/88 backdrop-blur-[2px]">
+                  <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/80 to-transparent" />
+                  <div className="relative flex flex-col items-center gap-2 text-[#80583f]">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f3dfcd] shadow-sm">
+                      <Sparkles className="h-5 w-5 animate-pulse" />
+                    </span>
+                    <span className="text-xs font-bold">
+                      {(isChinese
+                        ? ['正在读你的原话', '正在调整自然口吻', '正在检查发布格式']
+                        : ['Reading your note', 'Making it sound natural', 'Checking platform format'])[generationStage]}
+                    </span>
+                    <span className="flex gap-1" aria-hidden="true">
+                      {[0, 1, 2].map((dot) => (
+                        <i key={dot} className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#a97758]" style={{ animationDelay: `${dot * 140}ms` }} />
+                      ))}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
             
             {/* COMPLIANCE NOTICE (验收 #30 & #31: 内容可编辑、请自行核对、系统不会自动发布) */}
@@ -981,10 +1023,6 @@ function getPlatformDestination(merchant: PublicReviewMerchant, platform: Public
   return configured?.destinationUrl || configured?.fallbackUrl;
 }
 
-function requiresMobileHandoff(platform: PublicReviewPlatform, destination: string) {
-  return (platform === 'xiaohongshu' || platform === 'instagram') && !destination.startsWith('http');
-}
-
 function shouldUseSameTabPlatformNavigation() {
   return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 }
@@ -994,80 +1032,6 @@ function getMissingDestinationCopy(platform: PublicReviewPlatform) {
   if (platform === 'yelp') return 'Yelp review link is not configured yet. Please try again later.';
   if (platform === 'instagram') return 'Instagram destination is not configured yet. Please try again later.';
   return 'Google Maps review link is not configured yet. Please try again later.';
-}
-
-function getWebFallback(merchant: PublicReviewMerchant, platform: PublicReviewPlatform) {
-  const configuredFallback = merchant.platforms[platform]?.fallbackUrl;
-  if (configuredFallback?.startsWith('http')) return configuredFallback;
-  if (platform === 'xiaohongshu') {
-    return `https://www.xiaohongshu.com/search_result?keyword=${encodeURIComponent(merchant.name)}`;
-  }
-  return 'https://www.instagram.com/create/style/';
-}
-
-function PublishHandoff({
-  merchant,
-  platform,
-  metricId,
-  onBack,
-}: {
-  merchant: PublicReviewMerchant;
-  platform: PublicReviewPlatform;
-  metricId: string | null;
-  onBack: () => void;
-}) {
-  const destination = getPlatformDestination(merchant, platform);
-  const webFallback = getWebFallback(merchant, platform);
-  const isXiaohongshu = platform === 'xiaohongshu';
-  return (
-    <div className="flex flex-col justify-between">
-      <div className="mb-3 flex items-center justify-between">
-        <button type="button" onClick={onBack} className="inline-flex items-center gap-1.5 rounded-full border border-[#d7bfa7] bg-[#fffaf3] px-3.5 py-1.5 text-xs font-semibold text-[#795842] transition hover:bg-white active:scale-95 shadow-xs">
-          <ArrowLeft className="h-3.5 w-3.5" /> {isXiaohongshu ? '返回文案修改' : 'Back to caption'}
-        </button>
-        <PlatformBadge platform={platform} className={PLATFORM_STYLES[platform].badge} />
-      </div>
-      <section className="rounded-3xl border border-[#dec9b1] bg-[#fffaf4] p-6 text-center shadow-[0_16px_40px_rgba(103,71,48,0.1)] sm:p-8">
-        <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#ecfdf5] text-[#059669]"><Check className="h-6 w-6" /></span>
-        <h1 className="mt-5 font-serif text-3xl text-[#382a22]">{isXiaohongshu ? '文案已经复制好了' : 'Your caption is copied'}</h1>
-        <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-[#766154]">
-          {isXiaohongshu
-            ? '点击“打开小红书 App”后可直接粘贴文案；如果设备没有唤起 App，请使用网页入口。'
-            : 'Tap “Open Instagram app” to continue. If the app is unavailable, use the web entry below.'}
-        </p>
-        {destination && (
-          <a
-            href={destination}
-            onClick={() => void trackReviewEvent(metricId, 'published')}
-            className={`mt-7 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-sm font-bold text-white shadow-lg transition active:scale-[0.99] ${PLATFORM_STYLES[platform].copyButton}`}
-          >
-            {isXiaohongshu ? '打开小红书 App' : 'Open Instagram app'} <ExternalLink className="h-4 w-4" />
-          </a>
-        )}
-        {isXiaohongshu && (
-          <div className="mt-4 rounded-xl bg-amber-50 border border-amber-200/80 p-3 text-left text-xs text-amber-900 flex items-start gap-2">
-            <span className="shrink-0 text-base leading-none">💡</span>
-            <span>
-              <strong>发布提示：</strong>粘贴文案后，请在编辑页手动搜索并选择
-              “{merchant.socialHandles?.xiaohongshu || merchant.name}”。不要直接粘贴普通文字 @，否则不会关联到官方账号。
-            </span>
-          </div>
-        )}
-        <div className="mt-4 rounded-2xl border border-[#eadbc9] bg-white p-4 text-left">
-          <p className="text-xs font-semibold text-[#5b4738]">{isXiaohongshu ? '如果 App 没有打开' : 'If Instagram does not open'}</p>
-          <p className="mt-1 text-xs leading-5 text-[#8b7566]">
-            {isXiaohongshu ? '文案仍在剪贴板中。你可以手动打开 App 粘贴，或先进入网页搜索页。' : 'Your caption remains copied. Open the app manually, or continue to the web site.'}
-          </p>
-          <a href={webFallback} className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-[#8b5f44] hover:text-[#5d3e2c]">
-            {isXiaohongshu ? '打开小红书网页入口' : 'Open Instagram on the web'} <ExternalLink className="h-3.5 w-3.5" />
-          </a>
-        </div>
-        <p className="mt-4 text-[10.5px] text-[#91796a] text-center">
-          {isXiaohongshu ? 'AI 生成内容可能有误，请核对后再发布 · 内容可编辑 · 系统不会自动发布' : 'AI-generated content may be inaccurate. Please double-check before posting. You can edit anytime; the system will never publish automatically.'}
-        </p>
-      </section>
-    </div>
-  );
 }
 
 async function copyText(value: string) {

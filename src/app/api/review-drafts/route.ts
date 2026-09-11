@@ -115,10 +115,9 @@ export async function POST(request: NextRequest) {
       socialHandles: publicPage.socialHandles,
     });
 
-    // The two social-caption channels have source-bound local fallbacks, so a
-    // temporary provider miss never leaves the customer with an empty draft.
-    // Review platforms stay remote-only to avoid displaying generic reviews.
-    if (draft.mode === 'local' && platform !== 'xiaohongshu' && platform !== 'instagram') {
+    // A provider timeout may use a local result only after the same language,
+    // length, grounding, sentiment and account checks have passed.
+    if (draft.mode === 'local' && !draft.fallbackValidated) {
       return NextResponse.json(
         { error: 'This version did not meet the platform format. Please try another draft.' },
         { status: 422 },
