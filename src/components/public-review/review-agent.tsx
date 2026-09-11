@@ -1047,7 +1047,10 @@ function PublishHandoff({
         {isXiaohongshu && (
           <div className="mt-4 rounded-xl bg-amber-50 border border-amber-200/80 p-3 text-left text-xs text-amber-900 flex items-start gap-2">
             <span className="shrink-0 text-base leading-none">💡</span>
-            <span><strong>发布提示：</strong>小红书暂不支持剪贴板自动 @，粘贴文案后请在编辑页手动输入 @ 提及门店。</span>
+            <span>
+              <strong>发布提示：</strong>粘贴文案后，请在编辑页手动搜索并选择
+              “{merchant.socialHandles?.xiaohongshu || merchant.name}”。不要直接粘贴普通文字 @，否则不会关联到官方账号。
+            </span>
           </div>
         )}
         <div className="mt-4 rounded-2xl border border-[#eadbc9] bg-white p-4 text-left">

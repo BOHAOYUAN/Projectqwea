@@ -26,9 +26,9 @@ const inputs = {
     experience: 'I came in for a facial and scalp spa after work. The pace felt calm and I could take a breath before heading home.',
   },
   xiaohongshu: {
-    serviceSlugs: ['facial-spa', 'scalp-spa', 'back-spa'],
-    tags: ['放松舒服', '细心专业', '环境整洁', '节奏不赶'],
-    experience: '下班后做了面部、头疗和背部护理，整个过程不赶时间，坐下来以后慢慢放松下来。',
+    serviceSlugs: ['facial-spa', 'scalp-spa'],
+    tags: ['肩颈松了', '终于慢下来', '没有推销', '值得再来'],
+    experience: '下班后做了面部和头疗，整个过程不赶时间，坐下来以后慢慢放松下来。',
   },
 };
 
@@ -59,8 +59,11 @@ function validate(platform, content) {
     const tags = content.match(/#[^\s#]+/g) ?? [];
     const body = lines.slice(1).filter((line) => !line.startsWith('#')).join('');
     if ([...title].length > 20) issues.push(`title length ${[...title].length}`);
-    if ([...body].length < 100 || [...body].length > 200) issues.push(`body length ${[...body].length}`);
+    const chineseCharacters = body.match(/[\u4e00-\u9fff]/g)?.length ?? 0;
+    if (chineseCharacters < 100 || chineseCharacters > 200) issues.push(`Chinese character count ${chineseCharacters}`);
     if (tags.length < 3 || tags.length > 8) issues.push(`hashtag count ${tags.length}`);
+    if (/@|MSBEAUTY_BALTIMORE/i.test(content)) issues.push('invalid Xiaohongshu mention');
+    if (/我不想把.*写成|我勾选的是|发布前.*核对|按.*真实.*修改|这条笔记记录的是/.test(content)) issues.push('meta writing language');
   }
   return issues;
 }

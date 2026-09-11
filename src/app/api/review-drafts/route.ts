@@ -115,11 +115,10 @@ export async function POST(request: NextRequest) {
       socialHandles: publicPage.socialHandles,
     });
 
-    // A source-bound Xiaohongshu draft is safe to show if a provider is
-    // temporarily unavailable: it uses only the customer's selections and
-    // keeps the platform's title, body-length, and hashtag structure. Other
-    // platforms remain remote-only to avoid showing generic English reviews.
-    if (draft.mode === 'local' && platform !== 'xiaohongshu') {
+    // The two social-caption channels have source-bound local fallbacks, so a
+    // temporary provider miss never leaves the customer with an empty draft.
+    // Review platforms stay remote-only to avoid displaying generic reviews.
+    if (draft.mode === 'local' && platform !== 'xiaohongshu' && platform !== 'instagram') {
       return NextResponse.json(
         { error: 'This version did not meet the platform format. Please try another draft.' },
         { status: 422 },

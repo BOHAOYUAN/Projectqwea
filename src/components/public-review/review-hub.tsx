@@ -1,11 +1,9 @@
 "use client";
 
-import { useMemo, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import {
-  MapPin,
-  ChevronRight,
-} from 'lucide-react';
+import Link from 'next/link';
+import { useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { MapPin } from 'lucide-react';
 import {
   publicReviewPlatformPath,
   type PublicReviewMerchant,
@@ -19,11 +17,7 @@ type ReviewHubProps = {
 type PlatformCardInfo = {
   key: PublicReviewPlatform;
   name: string;
-  sublabel: string;
   ctaLabel: string;
-  iconBg: string;
-  iconColor: string;
-  iconText: string;
   iconUrl: string;
 };
 
@@ -31,51 +25,31 @@ const PLATFORMS: PlatformCardInfo[] = [
   {
     key: 'google',
     name: 'Google',
-    sublabel: 'Google review',
     ctaLabel: 'Write a review',
-    iconBg: 'bg-white',
-    iconColor: 'text-[#4285F4]',
-    iconText: 'G',
     iconUrl: '/platforms/google-official.png',
   },
   {
     key: 'xiaohongshu',
     name: 'RedNote',
-    sublabel: 'RedNote post',
     ctaLabel: 'Create a post',
-    iconBg: 'bg-[#FF2442]',
-    iconColor: 'text-white',
-    iconText: 'R',
     iconUrl: '/platforms/xiaohongshu-official.png',
   },
   {
     key: 'yelp',
     name: 'Yelp',
-    sublabel: 'Yelp review',
     ctaLabel: 'Write a review',
-    iconBg: 'bg-[#ed4057]',
-    iconColor: 'text-white',
-    iconText: 'Y',
     iconUrl: '/platforms/yelp-official.png',
   },
   {
     key: 'instagram',
     name: 'Instagram',
-    sublabel: 'Instagram post',
     ctaLabel: 'Create a post',
-    iconBg: 'bg-gradient-to-tr from-[#FD1D1D] to-[#833AB4]',
-    iconColor: 'text-white',
-    iconText: 'IG',
     iconUrl: '/platforms/instagram-official.png',
   },
 ];
 
 export function ReviewHub({ merchant }: ReviewHubProps) {
-  const router = useRouter();
   const searchParams = useSearchParams();
-
-  // Selected platform: null by default per acceptance #9 ("未选平台时底部按钮置灰不可点")
-  const [selectedPlatform, setSelectedPlatform] = useState<PublicReviewPlatform | null>(null);
 
   // Theme support: default to merchant.theme, allow query override ?theme=dark / ?theme=light or manual toggle
   const theme = searchParams?.get('theme') === 'light' || searchParams?.get('theme') === 'dark'
@@ -99,22 +73,6 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
   const enabledPlatforms = useMemo(() => {
     return PLATFORMS.filter((p) => merchant.platforms[p.key]?.enabled !== false);
   }, [merchant.platforms]);
-
-  const handleSelectPlatform = (platformKey: PublicReviewPlatform) => {
-    setSelectedPlatform(platformKey);
-  };
-
-  const handleContinue = () => {
-    if (!selectedPlatform) return;
-    const target = publicReviewPlatformPath(merchant, selectedPlatform);
-    router.push(target);
-  };
-
-  const selectedPlatformName = useMemo(() => {
-    if (!selectedPlatform) return '';
-    const found = PLATFORMS.find((p) => p.key === selectedPlatform);
-    return found ? found.name : '';
-  }, [selectedPlatform]);
 
   return (
     <main
@@ -177,77 +135,25 @@ export function ReviewHub({ merchant }: ReviewHubProps) {
 
           {/* 2x2 Platform Grid (Only shows enabled platforms per acceptance #5) */}
           <div className="grid grid-cols-2 gap-2.5">
-            {enabledPlatforms.map((p) => {
-              const isSelected = selectedPlatform === p.key;
-
-              return (
-                <button
+            {enabledPlatforms.map((p) => (
+                <Link
                   key={p.key}
-                  type="button"
-                  onClick={() => handleSelectPlatform(p.key)}
-                  className={`relative flex h-[103px] flex-col items-center justify-between rounded-[19px] border px-2 py-2.5 text-center transition active:scale-[0.98] ${
+                  href={publicReviewPlatformPath(merchant, p.key)}
+                  aria-label={`${p.ctaLabel} on ${p.name}`}
+                  className={`relative flex h-[94px] flex-col items-center justify-between rounded-[19px] border px-2 py-2.5 text-center transition hover:-translate-y-0.5 active:scale-[0.98] ${
                     isDark
-                      ? isSelected
-                        ? 'border-[#ffd13f] bg-[radial-gradient(circle_at_50%_0%,#777b4d,#383a2d_58%,#242527)] ring-1 ring-[#ffd13f]/70'
-                        : 'border-white/5 bg-[radial-gradient(circle_at_50%_0%,#777b4d,#34352d_55%,#252629)] hover:border-[#ffd13f]/50'
-                      : isSelected
-                        ? 'border-[#e6ae19] bg-[#fff9df] ring-1 ring-[#e6ae19]/60'
-                        : 'border-[#dedbd0] bg-white hover:border-[#e6ae19]/60 shadow-[0_2px_5px_rgba(67,55,22,0.06)]'
+                      ? 'border-white/5 bg-[radial-gradient(circle_at_50%_0%,#777b4d,#34352d_55%,#252629)] hover:border-[#ffd13f]/70'
+                      : 'border-[#dedbd0] bg-white hover:border-[#e6ae19]/70 shadow-[0_2px_5px_rgba(67,55,22,0.06)]'
                   }`}
                 >
-                  <div className="flex flex-col items-center gap-1">
-                    {/* Platform Icon Badge */}
-                    <div
-                      className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[11px] drop-shadow-[0_1px_2px_rgba(0,0,0,0.22)]"
-                    >
-                      <img
-                        src={p.iconUrl}
-                        alt={p.name}
-                        className="h-full w-full object-contain"
-                      />
-                    </div>
-                    <div className="min-w-0">
-                      <span className={`block truncate text-[9px] font-medium ${isDark ? 'text-[#f8f6ef]' : 'text-zinc-900'}`}>
-                        {p.name}
-                      </span>
-                      <span className={`block truncate text-[8px] ${isDark ? 'text-[#e6e6e0]' : 'text-zinc-500'}`}>
-                        {p.sublabel}
-                      </span>
-                    </div>
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[11px] drop-shadow-[0_1px_2px_rgba(0,0,0,0.22)]">
+                    <img src={p.iconUrl} alt="" className="h-full w-full object-contain" />
                   </div>
-                  <span className={`inline-flex w-full items-center justify-center rounded-full px-3 py-[4px] text-[8px] font-medium ${
-                    isDark ? 'bg-[#ffd13f] text-[#15150f]' : 'bg-[#ffd13f] text-[#15150f]'
-                  }`}>
+                  <span className="inline-flex min-h-6 w-full items-center justify-center rounded-full bg-[#ffd13f] px-3 py-1 text-[9px] font-semibold text-[#15150f]">
                     {p.ctaLabel}
                   </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Primary action: disabled until a platform is selected. */}
-          <div className="pt-2">
-            <button
-              type="button"
-              disabled={!selectedPlatform}
-              onClick={handleContinue}
-              className={`flex w-full items-center justify-center gap-2 rounded-full px-4 py-3 text-center text-[12px] font-medium transition ${
-                !selectedPlatform
-                  ? isDark
-                    ? 'cursor-not-allowed bg-[linear-gradient(90deg,#303238,#424537,#69623c)] text-[#e8e7e0] shadow-none'
-                    : 'cursor-not-allowed bg-[#e5e3dc] text-[#aaa79f] shadow-none'
-                  : isDark
-                    ? 'bg-[#ffd13f] text-[#171711] hover:brightness-105 active:scale-[0.99]'
-                    : 'bg-[#11120f] text-white hover:bg-black active:scale-[0.99]'
-              }`}
-            >
-              <span>
-                {selectedPlatform
-                  ? `Continue to ${selectedPlatformName}`
-                  : 'Select a platform'}
-              </span>
-              <ChevronRight className="h-4 w-4" />
-            </button>
+                </Link>
+            ))}
           </div>
         </section>
 

@@ -49,9 +49,9 @@ function localGoogleDraft(input: ReviewDraftInput): string {
   const experience = sentenceCase(input.experience) || input.tags.join(', ');
   const seed = input.seed ?? Date.now();
   return pick([
-    `My visit to ${input.merchantName} in ${input.location} was for ${service}. The part I want to share is this: ${experience}. That is the detail I noticed during this visit, and it is why I wanted to leave a note. I am keeping this review focused on my own selected service and experience. For anyone considering ${input.merchantName}, this is simply my personal perspective from that appointment.`,
-    `At ${input.merchantName} in ${input.location}, I chose ${service}. ${experience}. I wanted my review to stay specific to what I selected and experienced, rather than add general claims. These points describe my visit in the clearest way I can: the service I chose and the feeling I took away from it. This is my own review of that visit to ${input.merchantName}.`,
-    `I visited ${input.merchantName} in ${input.location} for ${service}. My note from the visit is: ${experience}. I am sharing that exact part because it stood out to me personally. Nothing else needs to be added to make the point—the selected service and this experience are the full basis for my review. That was my experience with ${input.merchantName}.`,
+    `I went to ${input.merchantName} in ${input.location} for ${service}. ${experience}. The visit gave me room to pay attention to how I actually felt instead of rushing on to the next thing. What stayed with me afterward was the simple sense that the time had been well spent. It was an easy experience to describe because those details were the parts that genuinely stood out to me.`,
+    `${input.merchantName} was where I booked ${service} during my visit to ${input.location}. ${experience}. I noticed those things without having to think too hard about them, which made the appointment feel straightforward and comfortable. By the time I left, that was still the clearest impression I had. It felt worth taking a moment to write down while the visit was still fresh.`,
+    `I booked ${service} at ${input.merchantName} in ${input.location}. ${experience}. That combination is what I remember most clearly from the appointment. The experience felt easy to settle into, and I appreciated being able to take the visit at face value. When I thought about it later, the same details came back first, so they are the most honest way for me to describe it.`,
   ], seed);
 }
 
@@ -60,9 +60,9 @@ function localYelpDraft(input: ReviewDraftInput): string {
   const experience = sentenceCase(input.experience) || input.tags.join(', ');
   const seed = (input.seed ?? Date.now()) + 11;
   return pick([
-    `I went to ${input.merchantName} in ${input.location} for ${service}. The specific things I selected to describe the visit are: ${experience}. I am writing this review around those points because they are the parts I actually experienced. I do not want to turn a personal note into a generic description of the business. If those details are useful to another visitor, that is the most accurate way I can share my visit to ${input.merchantName}.`,
-    `For my visit to ${input.merchantName}, I chose ${service}. ${experience}. This is the part of the appointment I wanted to document, and it is the basis for this review. I prefer to keep the description tied to the service and the details I selected, without filling it with assumptions. That makes this a straightforward account of my experience at ${input.merchantName} in ${input.location}.`,
-    `${input.merchantName} in ${input.location} was where I had ${service}. My own note is: ${experience}. That is what I would highlight from the visit. I am deliberately keeping this review close to the facts I selected, so it reads as a real customer note rather than a broad promotional statement. This is my perspective on the service I chose at ${input.merchantName}.`,
+    `I visited ${input.merchantName} in ${input.location} for ${service}. ${experience}. I had enough time during the appointment to notice what felt different instead of moving through it on autopilot. The details that stayed with me were small but clear, and they shaped the whole visit for me. Looking back, the experience felt consistent with what I had hoped for when I booked the service, and I left with a calm, straightforward impression of the appointment.`,
+    `For this visit to ${input.merchantName}, I booked ${service}. ${experience}. Those parts of the appointment stood out naturally and did not need much embellishment. I found myself thinking about them again later because they made the visit feel easy to remember. The experience in ${input.location} was simple in a good way: I knew what I had come in for, had the time to take it in, and left with a clear sense of the visit.`,
+    `${input.merchantName} in ${input.location} was where I tried ${service}. ${experience}. What I liked most was being able to notice those details as the visit unfolded rather than only thinking about them afterward. They made the appointment feel settled and gave me a clear takeaway from the time I spent there. It was the kind of experience that was easy to remember later for a few specific, personal reasons.`,
   ], seed);
 }
 
@@ -75,7 +75,7 @@ function localInstagramDraft(input: ReviewDraftInput): string {
   const typedExperience = sentenceCase(input.experience);
   const service = formatList(input.serviceNames, 'and');
   const tagList = input.tags.join(', ');
-  const note = typedExperience || tagList;
+  const note = (typedExperience || tagList).replace(/[.!?。！？]+$/, '');
   const seed = input.seed ?? Date.now();
 
   const mention = input.socialHandles?.instagram
@@ -92,33 +92,37 @@ function localInstagramDraft(input: ReviewDraftInput): string {
   ].filter(Boolean).slice(0, 10).join(' ');
 
   return pick([
-    `A note from ${input.merchantName}${mention} ✨\n\nI chose ${service}. My own words from the visit: ${note}\n\nI am keeping this post close to the selected service and details, without adding a broader description. This is my personal note from ${input.merchantName} in ${input.location}. 🤍\n\n${hashtags}`,
-    `${input.merchantName}${mention} — a short visit note ✨\n\nSelected service: ${service}. What I wrote down was: ${note}\n\nPosting the details that mattered to me from this visit, and leaving out anything I did not experience or choose. That is my own record from ${input.merchantName}. 🤍\n\n${hashtags}`,
-    `Sharing one specific note from ${input.merchantName}${mention} ✨\n\nFor ${service}, the part I wanted to remember was: ${note}\n\nThis caption stays with those selected details only. It is a small personal record from my visit in ${input.location}, written in my own words. 🤍\n\n${hashtags}`,
+    `${input.merchantName}${mention} ✨\n\nI stopped in for ${service}, and this is what stayed with me afterward: ${note}. It was nice to give the visit its own space instead of rushing through the moment. A simple pause in ${input.location}, and one I was glad I made time for. 🤍\n\n${hashtags}`,
+    `A little time at ${input.merchantName}${mention} 💆\n\nI booked ${service}. ${note}. Those were the details I noticed most, and they made the visit easy to remember later. Sometimes a straightforward appointment is exactly enough. This one in ${input.location} left a clear impression without needing a big story around it. ✨\n\n${hashtags}`,
+    `${service} at ${input.merchantName}${mention} 🤍\n\n${note}. That was the part of the visit that stayed in my mind afterward. I liked being able to slow the moment down and simply notice how it felt. A small piece of my day in ${input.location}, but one that was worth remembering. ✨\n\n${hashtags}`,
+    `After work at ${input.merchantName}${mention} ✨\n\nI made time for ${service}. ${note}. The calm pace was what I noticed most, and it stayed with me after I headed home. Nothing dramatic, just a visit that gave the day a quieter ending and felt easy to remember later. 🤍\n\n${hashtags}`,
+    `${input.merchantName}${mention}, one small pause in the day 💆\n\nI came in for ${service}. ${note}. Once I had time to settle, the rest of the day felt less hurried. That simple change in pace is what I remember from the visit in ${input.location}. ✨\n\n${hashtags}`,
   ], seed);
 }
 
 function localXiaohongshuDraft(input: ReviewDraftInput): string {
   const service = formatList(input.serviceNames, '和');
-  const tagsStr = input.tags.join('、');
   const experience = sentenceCase(input.experience);
   const seed = input.seed ?? Date.now();
 
-  const mention = input.socialHandles?.xiaohongshu
-    ? ` @${input.socialHandles.xiaohongshu.replace(/^@/, '')}`
-    : '';
-
-  const title = pick([
-    `${input.merchantName}体验记录`,
-    `${service}的一次记录`,
-    `今天只记这次${service}`,
-  ], seed);
-  const ownWords = experience ? `我自己补充的一句是：“${experience}”。` : '';
-  const body = pick([
-    `这次在${input.location}的${input.merchantName}${mention}选了${service}。我不想把它写成一段夸张的推荐，只想把自己确认过的项目和感受认真记下来。\n\n我勾选的是${tagsStr}。这几个词听起来很简单，却是我这次最想留下的部分。${ownWords}发布前我也会按当天的真实体验再核对一遍。`,
-    `这条笔记记录的是${input.merchantName}${mention}的一次${service}，地点在${input.location}。没有打算延伸成别的故事，重点就放在我实际选择的项目和感受上。\n\n这次我选了${tagsStr}。对我来说，这些感受已经足够具体；${ownWords}剩下的内容，发布前会再按自己的真实情况修改。`,
-    `在${input.location}的${input.merchantName}${mention}，这次我选择了${service}。写下来时，我更想保留那些确实属于这次体验的感受，而不是补进没有发生过的细节。\n\n我勾选的是${tagsStr}。这就是我现在最直接的记录。${ownWords}等准备发布时，我会再把文字改得更贴近当天的真实感受。`,
-  ], seed);
+  const title = Array.from(pick([
+    `在${input.merchantName}放松一下`,
+    `${service}体验随记`,
+    `给自己慢下来的时间`,
+    `巴尔的摩护理随记`,
+    `今天的放松安排`,
+  ], seed)).slice(0, 20).join('');
+  const location = input.location.replace(/Baltimore(?:,\s*MD)?/i, '巴尔的摩');
+  const tagSentences = input.tags.map(xiaohongshuFeelingSentence).filter(Boolean).join('');
+  const ownWords = experience && /[\u4e00-\u9fff]/.test(experience) ? `${experience.replace(/[。！？!?]+$/, '')}。` : '';
+  const opening = ownWords
+    ? `这次去的是${location}的 ${input.merchantName}。${ownWords}`
+    : `在${location}的 ${input.merchantName} 做了${service}。`;
+  const body = extendShortXiaohongshuBody(
+    `${opening}${tagSentences}`,
+    input,
+    180,
+  );
   const tagList = [
     hashtag(input.merchantName),
     hashtag(input.location),
@@ -127,6 +131,20 @@ function localXiaohongshuDraft(input: ReviewDraftInput): string {
   ].filter(Boolean).slice(0, 8).join(' ');
 
   return `${title}\n\n${body}\n\n${tagList}`;
+}
+
+function xiaohongshuFeelingSentence(tag: string): string {
+  const copy: Record<string, string> = {
+    '肩颈松了': '做完后最明显的是肩颈没那么紧了，身体跟着轻松了一些。',
+    '终于慢下来': '难得把节奏放慢一点，整个人也慢慢松了下来。',
+    '没有推销': '过程中没有推销，待着会更自在，不用分心应付别的事情。',
+    '值得再来': '这次留下的感受不错，以后有需要时我还会再考虑。',
+    '放松舒服': '整个感受比较放松，身体和心情都没有那么绷着。',
+    '细心专业': '让我印象比较深的是细致和专业，体验起来很踏实。',
+    '环境整洁': '环境收拾得很整洁，看着清爽，待着也舒服。',
+    '节奏不赶': '节奏安排得不赶，可以按自己的状态慢慢来。',
+  };
+  return copy[tag] ?? '';
 }
 
 function buildSystemPrompt(input: ReviewDraftInput): string {
@@ -165,9 +183,9 @@ function buildSystemPrompt(input: ReviewDraftInput): string {
     ? `Naturally mention @${input.socialHandles.instagram.replace(/^@/, '')} in the caption.`
     : 'Do not invent any social media handles.';
 
-  const xhsMentionRule = input.socialHandles?.xiaohongshu
-    ? `在正文中自然提及 @${input.socialHandles.xiaohongshu.replace(/^@/, '')}。`
-    : '不要虚构账号。';
+  const xhsAccountRule = input.socialHandles?.xiaohongshu
+    ? `正文只写门店名“${input.merchantName}”，不要输出 @ 账号。发布页会另行提示顾客手动选择官方账号“${input.socialHandles.xiaohongshu}”。`
+    : `正文只写门店名“${input.merchantName}”，不要输出或虚构 @ 账号。`;
 
   if (input.platform === 'google') {
     return `You are a genuine customer writing a Google review for "${input.merchantName}" in ${input.location}.
@@ -215,18 +233,18 @@ ${editorialPrinciples}
   }
 
   // Xiaohongshu
-  return `你是一位在美华人顾客，刚在 ${input.location} 的【${input.merchantName}】体验完项目，写一篇真实、有生活气息的小红书打卡笔记。
+  return `你是一位中文母语顾客，为【${input.merchantName}】写一篇自然、克制、有生活气息的小红书体验笔记。
 严格格式与合规要求：
 编辑原则：
 ${editorialPrinciples}
 1. 语言：中文。
 2. 标题：第1行必须是简短、自然的标题，长度严格控制在 20 字以内（可带合适 Emoji）。
-3. 正文：严格 120–160 个中文字符，分 2–3 个短段落，空行隔开，语气自然舒服，适量 Emoji。把英文顾客原话自然翻成中文，不要逐句引用英文。这个字数是硬性要求：输出前请只计算正文中的汉字；不足 120 字时，只能用顾客已给出的感受做一两句自然回想补足，绝不能补充新的事件或细节。
-4. 账号提及：${xhsMentionRule}
+3. 正文：严格 120–160 个中文字符，写 6–8 句，分 2–3 个短段落，空行隔开。使用中国人日常分享会说的短句和自然语序，不写说明文，不写翻译腔，不重复同一个感受。英文顾客原话只提炼事实和感受后自然转述，绝不逐句翻译。地点如需出现，把 “Baltimore, MD” 写成“巴尔的摩”，禁止出现“这次在Baltimore, MD的MS BEAUTY”一类中英夹杂句式。字数不足时，只能围绕已提供的感受自然展开，绝不能补充新的事件或细节。
+4. 账号提及：${xhsAccountRule}
 5. 门店名：正文必须原样出现“${input.merchantName}”，不得翻译、省略或只写“这家店”。
 6. 话题标签：文末附带 3–8 个话题标签；标签只能使用门店名、地点、已选项目和已选感受。
 7. 内容边界：只可使用输入中明确提供的项目、标签与顾客原话；不可补充环境、员工、流程、效果或任何未提供细节。尤其不得自行写“躺下/椅子/睡着/手法/一小时/赶时间/看手机”等场景；这些词除非顾客原话中出现，否则一律不用。
-8. 合规红线：严禁极限词（如“最好”、“第一”），严禁提及“好评返现/送折扣”等违规诱导。无生硬套话与AI感。
+8. 合规红线：严禁极限词（如“最好”、“第一”），严禁提及“好评返现/送折扣”等违规诱导。不要写“我不想把它写成推荐”“我勾选的是”“发布前再核对”“按真实体验修改”“这条笔记记录的是”等模型说明或创作过程。
 9. 本次写作角度：${variationDirection}
 10. 不得使用“宝藏店”“体验感拉满”“闭眼冲”“姐妹们冲”“种草”“治愈”“绝绝子”等模板化表达。
 11. 只输出纯文本笔记。`;
@@ -294,11 +312,11 @@ async function generateWithRemoteProvider(input: ReviewDraftInput, provider: Com
 
   const temperature = input.voice === 'concise' ? 0.8 : 0.95;
 
-  const attempts = input.platform === 'xiaohongshu' ? 10 : input.platform === 'instagram' ? 6 : 5;
+  const attempts = input.platform === 'xiaohongshu' ? 10 : input.platform === 'instagram' ? 8 : 5;
   let formatFeedback = '';
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     const retryRequirement = input.platform === 'instagram'
-      ? 'The last caption was invalid. Return only 50–100 English non-hashtag words followed by exactly 5–10 end hashtags; no explanation.'
+      ? 'The last caption was invalid. Return 60–85 English non-hashtag words followed by exactly 5–10 end hashtags. Include the exact supplied Instagram handle and no other @ handle. Use only supplied facts; no explanation.'
       : input.platform === 'xiaohongshu'
         ? formatFeedback || '上一次格式不合格。请这次只输出符合全部长度、标题和标签要求的成稿，不要解释。'
         : 'The last draft was invalid. Return only a finished draft that satisfies every required length and formatting rule; no explanation.';
@@ -342,6 +360,13 @@ function getXiaohongshuFormatFeedback(content: string): string {
 function normalizeRemoteDraft(content: string, input: ReviewDraftInput): string {
   let normalized = content.replace(/\r\n/g, '\n').trim();
   if (input.platform === 'instagram') {
+    const configuredMention = input.socialHandles?.instagram
+      ? `@${input.socialHandles.instagram.replace(/^@/, '')}`
+      : '';
+    normalized = normalized.replace(/@[\w.-]+/gu, '').replace(/[ \t]{2,}/g, ' ').trim();
+    if (configuredMention) {
+      normalized = normalized.replace(input.merchantName, `${input.merchantName} ${configuredMention}`);
+    }
     const allowedHashtags = Array.from(new Set([
       hashtag(input.merchantName),
       ...input.serviceNames.map(hashtag),
@@ -383,21 +408,15 @@ function normalizeRemoteDraft(content: string, input: ReviewDraftInput): string 
   const rawBody = lines
     .filter((line) => !line.startsWith('#'))
     .join('\n')
+    .replace(/@MS\s*BEAUTY(?:（[^）]+）)?/gi, input.merchantName)
     .replace(/(?:^|\s)@[\w.-]+的?/gu, ' ')
     .replace(/\s{2,}/g, ' ')
     .trim();
-  const configuredMention = input.socialHandles?.xiaohongshu
-    ? `@${input.socialHandles.xiaohongshu.replace(/^@/, '')}`
-    : '';
   // Only shorten an overlong model response; never pad or add fictional
   // customer details merely to meet a target length.
-  const bodyLimit = configuredMention ? 180 - Array.from(configuredMention).length - 1 : 180;
+  const bodyLimit = 180;
   const bodyBase = Array.from(rawBody).slice(0, bodyLimit).join('').trim();
-  const bodyWithoutConfiguredMention = configuredMention
-    ? bodyBase.replaceAll(configuredMention, '').replace(/\s{2,}/g, ' ').trim()
-    : bodyBase;
-  const bodyWithReflection = extendShortXiaohongshuBody(bodyWithoutConfiguredMention, input, bodyLimit);
-  const body = configuredMention && bodyWithReflection ? `${bodyWithReflection} ${configuredMention}` : bodyWithReflection;
+  const body = extendShortXiaohongshuBody(bodyBase, input, bodyLimit);
   const safeTags = Array.from(new Set([
     hashtag(input.merchantName),
     hashtag(input.location),
@@ -412,20 +431,30 @@ function normalizeRemoteDraft(content: string, input: ReviewDraftInput): string 
 }
 
 function extendShortXiaohongshuBody(body: string, input: ReviewDraftInput, limit: number): string {
-  const chineseCharacters = body.match(/[\u4e00-\u9fff]/g)?.length ?? 0;
-  if (chineseCharacters >= 100) return body;
+  let extended = body;
+  const additions = input.tags
+    .map((tag) => ({ tag, text: xiaohongshuFeelingSentence(tag) }))
+    .filter((item) => Boolean(item.text));
 
-  // Keep a short remote draft usable without fabricating a setting, person,
-  // process, or outcome. The added line is only a natural restatement of the
-  // customer’s own note (or, if they gave none, of the selected feelings).
-  const note = input.experience.replace(/\s+/g, ' ').trim();
-  const noteAlreadyUsed = note.length >= 8 && body.includes(note.slice(0, 8));
-  const reflection = noteAlreadyUsed
-    ? '这次就想把这种松一点、慢一点的状态记下来。'
-    : note && /[\u4e00-\u9fff]/.test(note)
-    ? `离开后再想起这件事，还是会记得：${note}`
-    : '这几个感受放在一起，就是这次最想留下的一笔。';
-  return Array.from(`${body} ${reflection}`).slice(0, limit).join('').trim();
+  for (const { tag, text } of additions) {
+    const chineseCharacters = extended.match(/[\u4e00-\u9fff]/g)?.length ?? 0;
+    if (chineseCharacters >= 100) break;
+    if (isXiaohongshuFeelingCovered(extended, tag)) continue;
+    if (!extended.includes(text)) extended = `${extended}${text}`;
+  }
+  return Array.from(extended).slice(0, limit).join('').trim();
+}
+
+function isXiaohongshuFeelingCovered(body: string, tag: string): boolean {
+  if (tag === '肩颈松了') return /肩颈[^。！？]{0,12}(?:松|轻)/.test(body);
+  if (tag === '终于慢下来') return /慢下来|节奏[^。！？]{0,10}(?:慢|不赶)/.test(body);
+  if (tag === '没有推销') return /没有推销|不推销/.test(body);
+  if (tag === '值得再来') return /值得再来|还会再来|愿意再来/.test(body);
+  if (tag === '放松舒服') return /放松|舒服/.test(body);
+  if (tag === '细心专业') return /细心|细致|专业/.test(body);
+  if (tag === '环境整洁') return /环境[^。！？]{0,10}(?:整洁|干净|清爽)/.test(body);
+  if (tag === '节奏不赶') return /不赶|节奏[^。！？]{0,10}(?:慢|松)/.test(body);
+  return false;
 }
 
 function groqProvider(apiKey: string): CompatibleChatProvider {
@@ -453,9 +482,20 @@ function isGroundedRemoteDraft(content: string, input: ReviewDraftInput): boolea
     /\b(best|perfect|number\s*one|#1)\b/i, /\b(great experience|highly recommend|look forward to coming back|from start to finish|my new sanctuary|much needed reset|this is your sign)\b/i,
     /最好|第一|顶级|完美|拉满|彻底|宝藏店|闭眼冲|姐妹们冲|种草|治愈|绝绝子/,
     /包治/, /彻底根除/, /神医/, /百病/, /保修/, /好评返现|好评.*折扣/,
+    /I am keeping|this review is based on|selected (?:service|details)|basis for (?:this|my) review|personal perspective/i,
+    /我不想把.*写成|只想把.*记下来|我勾选的是|发布前.*核对|按.*真实.*修改|这条笔记记录的是|没有打算延伸成/,
   ];
   if (alwaysBlocked.some((pattern) => pattern.test(content))) return false;
   if (input.platform === 'xiaohongshu' && hasUnprovidedXiaohongshuScene(content, input)) return false;
+  if (input.platform === 'xiaohongshu' && /@|MSBEAUTY_BALTIMORE/i.test(content)) return false;
+  if (input.platform === 'instagram') {
+    const expectedMention = input.socialHandles?.instagram
+      ? `@${input.socialHandles.instagram.replace(/^@/, '')}`.toLowerCase()
+      : '';
+    const mentions = content.match(/@[\w.-]+/g)?.map((mention) => mention.toLowerCase()) ?? [];
+    if (expectedMention && !mentions.includes(expectedMention)) return false;
+    if (mentions.some((mention) => mention !== expectedMention)) return false;
+  }
   if (!content.toLowerCase().includes(input.merchantName.toLowerCase())) return false;
 
   return hasPlatformAppropriateLength(content, input.platform);
@@ -463,7 +503,10 @@ function isGroundedRemoteDraft(content: string, input: ReviewDraftInput): boolea
 
 function hasUnprovidedXiaohongshuScene(content: string, input: ReviewDraftInput): boolean {
   const suppliedFacts = [input.experience, ...input.serviceNames, ...input.tags].join('');
-  const sceneTerms = ['躺', '椅子', '睡', '手法', '流程', '环境', '房间', '一小时', '上班', '赶时间', '看手机'];
+  const sceneTerms = [
+    '躺', '椅子', '睡', '手法', '流程', '环境', '房间', '一小时', '上班', '赶时间', '看手机',
+    '傍晚', '天黑', '天已经暗', '天气', '有点凉', '下雨', '进门', '出门', '出来', '预约', '等待',
+  ];
   return sceneTerms.some((term) => content.includes(term) && !suppliedFacts.includes(term));
 }
 

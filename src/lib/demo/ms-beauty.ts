@@ -47,9 +47,9 @@ export const MS_BEAUTY_PLATFORM_LINKS: PublicPlatformLink[] = [
   {
     platform: 'xiaohongshu',
     destinationUrl: 'xhsdiscover://post',
-    fallbackUrl: 'https://www.xiaohongshu.com/search_result?keyword=MS%20BEAUTY%20Baltimore',
+    fallbackUrl: 'https://www.xiaohongshu.com/user/profile/67c81f05000000000a03cf46',
     ctaLabel: '去小红书发布',
-    publishHint: '文案已复制，进入小红书直接粘贴发布即可。',
+    publishHint: '文案已复制。发布时请手动选择“MS BEAUTY”（小红书号 27715513627）。',
   },
   {
     platform: 'yelp',
@@ -61,7 +61,7 @@ export const MS_BEAUTY_PLATFORM_LINKS: PublicPlatformLink[] = [
   {
     platform: 'instagram',
     destinationUrl: 'instagram://camera',
-    fallbackUrl: 'https://www.instagram.com/create/style/',
+    fallbackUrl: 'https://www.instagram.com/msbeauty_baltimore/',
     ctaLabel: 'Post on Instagram',
     publishHint: 'Caption copied! Opening Instagram to share your post.',
   },
@@ -111,8 +111,9 @@ export const MS_BEAUTY_PUBLIC_PAGE: PublicReviewPage = {
   socialLinks: [
     {
       platform: 'xiaohongshu',
-      handle: 'MSBEAUTY_BALTIMORE',
-      url: 'https://www.xiaohongshu.com/user/profile/67c81f05000000000a03cf46?xsec_token=YB5Tz7Ls2iePJ1Peg1iHJNszPDqkHSiTPXNoaHWRzLKSM=&xsec_source=app_share&xhsshare=WeixinSession&appuid=67c81f05000000000a03cf46&apptime=1775356236',
+      handle: '小红书号 27715513627',
+      url: 'https://www.xiaohongshu.com/user/profile/67c81f05000000000a03cf46',
+      label: 'MS BEAUTY',
     },
     {
       platform: 'instagram',
@@ -131,7 +132,7 @@ export const MS_BEAUTY_PUBLIC_PAGE: PublicReviewPage = {
   ],
   socialHandles: {
     instagram: '@msbeauty_baltimore',
-    xiaohongshu: 'MSBEAUTY_BALTIMORE',
+    xiaohongshu: 'MS BEAUTY（小红书号 27715513627）',
   },
   suggestedTags: ['Shoulders felt lighter', 'I could finally slow down', 'No sales pressure', 'Worth doing again'],
   services: MS_BEAUTY_SERVICES,
