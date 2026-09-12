@@ -693,6 +693,8 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
 export function ReviewPublish({ merchant, platform }: ReviewAgentProps) {
   const isChinese = platform === 'xiaohongshu';
   const isGoogle = platform === 'google';
+  const isInstagram = platform === 'instagram';
+  const supportsPhotoPreview = platform === 'xiaohongshu' || isInstagram;
   const style = PLATFORM_STYLES[platform];
   const [draft, setDraft] = useState('');
   const [isReady, setIsReady] = useState(false);
@@ -800,44 +802,48 @@ export function ReviewPublish({ merchant, platform }: ReviewAgentProps) {
               {isChinese ? '文案已经整理好了' : 'Your draft is ready'}
             </h1>
             <p className="mt-1.5 text-xs leading-5 text-[#8c7465]">
-              {isChinese ? '核对并修改草稿；图片仅在本页预览，发布时请在平台重新上传。' : 'Review the draft. Photos are previewed here only — upload them again in the destination app.'}
+              {supportsPhotoPreview
+                ? (isChinese ? '核对并修改草稿；图片仅在本页预览，发布时请在平台重新上传。' : 'Review the draft. Photos are previewed here only — upload them again in the destination app.')
+                : 'Review and edit the draft, then copy it into the destination review form.'}
             </p>
           </div>
 
           <div className="space-y-5 p-4 sm:p-6">
-            <div>
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <p className="text-xs font-bold text-[#503b2e]">{isChinese ? '最多上传 3 张配图（可选）' : 'Add up to three photos (optional)'}</p>
-                <span className="text-[11px] text-[#9a8577]">{images.length}/3</span>
+            {supportsPhotoPreview && (
+              <div>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className="text-xs font-bold text-[#503b2e]">{isChinese ? '最多上传 3 张配图（可选）' : 'Add up to three photos (optional)'}</p>
+                  <span className="text-[11px] text-[#9a8577]">{images.length}/3</span>
+                </div>
+                <label className="flex min-h-24 cursor-pointer items-center justify-center rounded-2xl border border-dashed border-[#d9c7b5] bg-[#fffaf5] p-3 transition hover:border-[#ad7c5b] hover:bg-[#fdf6ee]">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="sr-only"
+                    onChange={(event) => {
+                      chooseImages(event.target.files);
+                      event.currentTarget.value = '';
+                    }}
+                  />
+                  {images.length === 0 ? (
+                    <span className="flex flex-col items-center gap-1.5 text-[#8d6d55]">
+                      <ImagePlus className="h-6 w-6" />
+                      <span className="text-xs font-semibold">{isChinese ? '选择图片预览' : 'Choose photos to preview'}</span>
+                    </span>
+                  ) : (
+                    <span className="grid w-full grid-cols-3 gap-2">
+                      {images.map((image) => (
+                        <span key={image.url} className="relative aspect-square overflow-hidden rounded-xl bg-[#eee5dc]">
+                          {/* Native preview is intentionally local only; no customer photo is uploaded by this page. */}
+                          <img src={image.url} alt={image.name} className="h-full w-full object-cover" />
+                        </span>
+                      ))}
+                    </span>
+                  )}
+                </label>
               </div>
-              <label className="flex min-h-24 cursor-pointer items-center justify-center rounded-2xl border border-dashed border-[#d9c7b5] bg-[#fffaf5] p-3 transition hover:border-[#ad7c5b] hover:bg-[#fdf6ee]">
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="sr-only"
-                  onChange={(event) => {
-                    chooseImages(event.target.files);
-                    event.currentTarget.value = '';
-                  }}
-                />
-                {images.length === 0 ? (
-                  <span className="flex flex-col items-center gap-1.5 text-[#8d6d55]">
-                    <ImagePlus className="h-6 w-6" />
-                    <span className="text-xs font-semibold">{isChinese ? '选择图片预览' : 'Choose photos to preview'}</span>
-                  </span>
-                ) : (
-                  <span className="grid w-full grid-cols-3 gap-2">
-                    {images.map((image) => (
-                      <span key={image.url} className="relative aspect-square overflow-hidden rounded-xl bg-[#eee5dc]">
-                        {/* Native preview is intentionally local only; no customer photo is uploaded by this page. */}
-                        <img src={image.url} alt={image.name} className="h-full w-full object-cover" />
-                      </span>
-                    ))}
-                  </span>
-                )}
-              </label>
-            </div>
+            )}
 
             <div>
               <div className="mb-2 flex items-center justify-between gap-2">
@@ -864,6 +870,16 @@ export function ReviewPublish({ merchant, platform }: ReviewAgentProps) {
                 <div className="space-y-0.5 text-[11px] leading-5 text-[#536c94]">
                   <p className="font-bold text-[#315b9c]">Open Google Maps App to write your review</p>
                   <p>On a phone, the button below opens the Google Maps review page in the app when it is installed. Sign in to your Google account there if asked.</p>
+                </div>
+              </div>
+            )}
+
+            {isInstagram && (
+              <div className="flex items-start gap-3 rounded-2xl border border-[#f1c9e5] bg-[#fff4fc] px-3.5 py-3 text-left">
+                <ImagePlus className="mt-0.5 h-4 w-4 shrink-0 text-[#a9448d]" />
+                <div className="space-y-0.5 text-[11px] leading-5 text-[#8b4a7d]">
+                  <p className="font-bold text-[#9a3f83]">Open Instagram, then choose Post and paste</p>
+                  <p>The button below copies your caption first and opens Instagram’s creation screen on phones. Select Post, then paste the caption; this page cannot fill Instagram’s editor automatically.</p>
                 </div>
               </div>
             )}
@@ -1208,6 +1224,7 @@ function getPlatformName(platform: PublicReviewPlatform) {
 function getPublishActionLabel(platform: PublicReviewPlatform) {
   if (platform === 'google') return 'Copy & open Google Maps App';
   if (platform === 'xiaohongshu') return '复制并发布到小红书';
+  if (platform === 'instagram') return 'Copy & open Instagram App';
   return `Copy & open ${getPlatformName(platform)}`;
 }
 
@@ -1259,6 +1276,9 @@ function getPlatformDestination(merchant: PublicReviewMerchant, platform: Public
   // Maps app when available, and otherwise keep the customer in the browser.
   // The configured Google URL is the verified write-review route, so keep it
   // intact instead of reducing it to a generic place-search link.
+  // Instagram uses the verified instagram://camera handoff. It opens the
+  // phone's native creation screen; copied text still must be pasted by the
+  // customer because third-party pages cannot populate Instagram's editor.
   return configured?.destinationUrl || configured?.fallbackUrl;
 }
 
