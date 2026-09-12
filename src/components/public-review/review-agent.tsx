@@ -692,6 +692,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
  */
 export function ReviewPublish({ merchant, platform }: ReviewAgentProps) {
   const isChinese = platform === 'xiaohongshu';
+  const isGoogle = platform === 'google';
   const style = PLATFORM_STYLES[platform];
   const [draft, setDraft] = useState('');
   const [isReady, setIsReady] = useState(false);
@@ -857,13 +858,23 @@ export function ReviewPublish({ merchant, platform }: ReviewAgentProps) {
               <span>{isChinese ? '请只发布符合自己真实体验的内容。系统不会自动发布，也不会上传你的图片。' : 'Only share text that reflects your real experience. This page never posts or uploads photos for you.'}</span>
             </p>
 
+            {isGoogle && (
+              <div className="flex items-start gap-3 rounded-2xl border border-[#c9daf8] bg-[#f2f7ff] px-3.5 py-3 text-left">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#376ec6]" />
+                <div className="space-y-0.5 text-[11px] leading-5 text-[#536c94]">
+                  <p className="font-bold text-[#315b9c]">Open Google Maps App to write your review</p>
+                  <p>On a phone, the button below opens the Google Maps review page in the app when it is installed. Sign in to your Google account there if asked.</p>
+                </div>
+              </div>
+            )}
+
             {error && <p role="alert" className="rounded-xl border border-[#eac2bb] bg-[#fff1ee] px-3 py-2 text-xs leading-5 text-[#a04339]">{error}</p>}
           </div>
 
           <div className="border-t border-[#eee5dc] bg-[#fffdfa] p-4 sm:p-5">
             <button type="button" onClick={() => void copyAndOpen()} disabled={!isReady || !draft.trim()} className={`flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 ${style.copyButton}`}>
               {isCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-              <span>{isChinese ? `复制并发布到${getPlatformName(platform)}` : `Copy & open ${getPlatformName(platform)}`}</span>
+              <span>{getPublishActionLabel(platform)}</span>
               <ExternalLink className="h-3.5 w-3.5 opacity-80" />
             </button>
           </div>
@@ -1194,6 +1205,12 @@ function getPlatformName(platform: PublicReviewPlatform) {
   return 'Instagram';
 }
 
+function getPublishActionLabel(platform: PublicReviewPlatform) {
+  if (platform === 'google') return 'Copy & open Google Maps App';
+  if (platform === 'xiaohongshu') return '复制并发布到小红书';
+  return `Copy & open ${getPlatformName(platform)}`;
+}
+
 function getDraftPlaceholder(platform: PublicReviewPlatform) {
   if (platform === 'xiaohongshu') return '生成后，你的笔记会显示在这里。';
   if (platform === 'instagram') return 'Your caption will appear here.';
@@ -1238,6 +1255,10 @@ function getUnavailableCopy(platform: PublicReviewPlatform) {
 
 function getPlatformDestination(merchant: PublicReviewMerchant, platform: PublicReviewPlatform) {
   const configured = merchant.platforms[platform];
+  // Google Maps URLs are Universal Links: on Android and iOS they open the
+  // Maps app when available, and otherwise keep the customer in the browser.
+  // The configured Google URL is the verified write-review route, so keep it
+  // intact instead of reducing it to a generic place-search link.
   return configured?.destinationUrl || configured?.fallbackUrl;
 }
 
