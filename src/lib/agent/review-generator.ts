@@ -81,9 +81,9 @@ function localYelpDraft(input: ReviewDraftInput): string {
     ], seed);
   }
   return pick([
-    `I visited ${input.merchantName} in ${input.location} for ${service}. ${experience}. I had enough time during the appointment to notice what felt different instead of moving through it on autopilot. The details that stayed with me were small but clear, and they shaped the whole visit for me. Looking back, the experience felt consistent with what I had hoped for when I booked the service, and I left with a calm, straightforward impression of the appointment.`,
-    `For this visit to ${input.merchantName}, I booked ${service}. ${experience}. Those parts of the appointment stood out naturally and did not need much embellishment. I found myself thinking about them again later because they made the visit feel easy to remember. The experience in ${input.location} was simple in a good way: I knew what I had come in for, had the time to take it in, and left with a clear sense of the visit.`,
-    `${input.merchantName} in ${input.location} was where I tried ${service}. ${experience}. What I liked most was being able to notice those details as the visit unfolded rather than only thinking about them afterward. They made the appointment feel settled and gave me a clear takeaway from the time I spent there. It was the kind of experience that was easy to remember later for a few specific, personal reasons.`,
+    `I visited ${input.merchantName} in ${input.location} for ${service}. ${experience}. I had enough time during the appointment to notice what felt different instead of moving through it on autopilot. The details that stayed with me were small but clear, and they shaped the whole visit for me. Looking back, the experience felt consistent with what I had hoped for when I booked the service, and I left with a calm, straightforward impression of the appointment. Those were the points that genuinely stayed with me.`,
+    `For this visit to ${input.merchantName}, I booked ${service}. ${experience}. Those parts of the appointment stood out naturally and did not need much embellishment. I found myself thinking about them again later because they made the visit feel easy to remember. The experience in ${input.location} was simple in a good way: I knew what I had come in for, had the time to take it in, and left with a clear sense of the visit. Those are the details I would keep in mind.`,
+    `${input.merchantName} in ${input.location} was where I tried ${service}. ${experience}. What I liked most was being able to notice those details as the visit unfolded rather than only thinking about them afterward. They made the appointment feel settled and gave me a clear takeaway from the time I spent there. It was the kind of experience that was easy to remember later for a few specific, personal reasons. Those are still the details I would remember from it.`,
   ], seed);
 }
 
@@ -191,14 +191,14 @@ function xiaohongshuExperienceExpansion(experience: string): string {
 
 function xiaohongshuFeelingSentence(tag: string): string {
   const copy: Record<string, string> = {
-    '肩颈松了': '做完以后肩颈确实松了一点，离开时身体没那么绷着。说不上多夸张，但这个变化自己能感觉到。',
-    '终于慢下来': '难得不用赶时间，坐下来以后节奏就慢了。那种终于能缓一口气的感觉，我还挺喜欢。',
-    '没有推销': '全程没有被推销，整个人会轻松很多。能顺顺当当做完自己选的项目，这一点挺加分。',
-    '值得再来': '这次感受不错，下次有需要我会再考虑。不是那种很夸张的惊喜，但整体符合这次的期待。',
-    '放松舒服': '整个感受比较放松，身体和心情都没有那么绷着。',
-    '细心专业': '让我印象比较深的是细致和专业，体验起来很踏实。',
-    '环境整洁': '环境收拾得很整洁，看着清爽，待着也舒服。',
-    '节奏不赶': '节奏安排得不赶，可以按自己的状态慢慢来。',
+    '肩颈松了': '做完以后肩颈确实松了一点，原本绷着的感觉缓下来一些。不是特别夸张的变化，但自己当下能感觉到，后来想起来也会记得这个小变化。',
+    '终于慢下来': '这次的节奏让我慢下来一点，整个人没那么着急。能缓一口气的感觉，我还挺喜欢。不是一下子就完全放空，但那种慢一点的状态自己能感觉到。',
+    '没有推销': '全程没有被推销，整个人会轻松很多。能顺顺当当做完自己选的项目，这一点挺加分。不用一直考虑要不要回应，对我来说这种轻松感很重要。',
+    '值得再来': '这次感受不错，下次有需要我会再考虑。不是那种很夸张的惊喜，但整体符合这次的期待。回想起来没有什么让我纠结的地方，所以愿意把它留在下次的选择里。',
+    '放松舒服': '整个感受比较放松，身体和心情都没有那么绷着。不是很夸张的改变，但能有一段不需要紧着的时间，对我来说已经挺舒服了。',
+    '细心专业': '让我印象比较深的是细致和专业，体验起来很踏实。很多感受不需要说得太满，能感觉到对方做事认真，就会让人比较安心。',
+    '环境整洁': '环境收拾得很整洁，看着清爽，待着也舒服。对我来说，整洁不是额外的惊喜，但它会让整个体验更容易放松下来，也会更愿意把注意力留在当下。',
+    '节奏不赶': '节奏安排得不赶，可以按自己的状态慢慢来。没有被催着往下走的时候，人会更容易放松一点，这种不着急的感觉让我印象很深。',
   };
   return copy[tag] ?? '';
 }

@@ -322,8 +322,8 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
         rateLimited
           ? (isChinese ? '生成次数较多，请几分钟后再试。' : 'You have created several drafts. Please wait a few minutes and try again.')
           : formatRejected
-            ? (isChinese ? '这一版没有通过平台格式检查。请补充一个真实细节后重试。' : 'This version did not meet the platform format. Add one real detail and try again.')
-            : (isChinese ? '暂时无法生成草稿。请补充一个真实细节后重试；系统不会用默认模板替代。' : 'A draft could not be created yet. Add one real detail and try again; we will not substitute a default template.'),
+            ? (isChinese ? '这一版暂未通过格式检查，请点“换一个写法”再试一次。' : 'This version did not meet the platform format. Please try another version.')
+            : (isChinese ? '暂时无法生成草稿，请直接再试一次或换一个写法。' : 'A draft could not be created yet. Please try again or choose another version.'),
       );
       setMetricId(null);
     } finally {
@@ -559,14 +559,14 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
                   onChange={(e) => handleExperienceChange(e.target.value)}
                   placeholder={
                     isChinese
-                      ? '先写下你的真实体验，我们会帮你整理成可编辑草稿。'
-                      : 'Write your real experience first; we will help polish it into an editable draft.'
+                      ? '选填：写下你的真实体验，我们会帮你整理成可编辑草稿。'
+                      : 'Optional: add your real experience and we will polish it into an editable draft.'
                   }
                   rows={3}
                   className="w-full resize-none rounded-xl border border-[#dec9b5] bg-white p-3 text-xs sm:text-sm text-[#46352a] placeholder:text-[#b49f8f] outline-none transition focus:border-[#986a4c] focus:ring-2 focus:ring-[#986a4c]/15 shadow-inner"
                 />
                 <div className="flex justify-between items-center text-[10.5px] text-[#9c8475] px-1">
-                  <span>{isChinese ? '具体细节会让每一版更像你本人' : 'A concrete detail makes each version sound more like you'}</span>
+                  <span>{isChinese ? '不填写也能一键生成；具体细节会让每一版更像你本人' : 'You can generate with one tap; a concrete detail makes it sound more like you'}</span>
                   <span className="font-mono">{experience.length}/500</span>
                 </div>
               </div>
@@ -1119,13 +1119,13 @@ function getReviewLabels(platform: PublicReviewPlatform): ReviewLabels {
   if (platform === 'xiaohongshu') {
     return {
       heading: '把这次体验好好说出来吧。',
-      subheading: '我们只根据你的真实感受，整理成一篇自然、有温度的小红书笔记。',
+      subheading: '勾选项目和感受即可一键生成；补充细节会让笔记更像你本人。',
       experienceLabel: '这次最想分享什么？',
       experienceHint: '例如：哪一个细节让你觉得舒服、放松或被照顾到？',
       serviceLabel: '这次体验了什么项目？',
       tagLabel: '可多选，挑选贴近你的感受',
       voiceLabel: '想用什么口吻？',
-      generate: '帮我润色',
+      generate: '一键生成草稿',
       refresh: '换一个写法',
       draftLabel: '你的笔记草稿',
       draftHint: '可以直接修改，让它更像你本人。',
