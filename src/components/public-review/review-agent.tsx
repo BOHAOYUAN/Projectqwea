@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
@@ -10,6 +11,7 @@ import {
   Copy,
   ExternalLink,
   Globe2,
+  ImagePlus,
   Loader2,
   MapPin,
   RefreshCw,
@@ -107,6 +109,7 @@ const PLATFORM_STYLES: Record<PublicReviewPlatform, {
 };
 
 export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgentProps) {
+  const router = useRouter();
   const isChinese = platform === 'xiaohongshu';
   const labels = getReviewLabels(platform);
   const style = PLATFORM_STYLES[platform];
@@ -290,6 +293,22 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
         setDraft(candidate);
         setHasManualDraftEdit(false);
         setMetricId(data.metricId || null);
+        try {
+          window.sessionStorage.setItem(storageKey, JSON.stringify({
+            serviceIds: selectedServiceIds,
+            tagIds: selectedTagIds,
+            experience,
+            draft: candidate,
+            voice,
+            variation: nextVariation,
+          } satisfies PersistedReviewState));
+        } catch {
+          // The publish page will gracefully ask the customer to return if
+          // browser storage is unavailable.
+        }
+        window.setTimeout(() => {
+          router.push(`${publicReviewPath(merchant)}/review/${platform}/publish`);
+        }, 720);
         return;
       }
       throw new Error('The model repeated a previous draft.');
@@ -666,6 +685,194 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
   );
 }
 
+/**
+ * The second half of the public flow. The intake page keeps the customer's
+ * actual input focused; this page is reserved for checking the draft, choosing
+ * up to three photos locally, and opening the destination platform.
+ */
+export function ReviewPublish({ merchant, platform }: ReviewAgentProps) {
+  const isChinese = platform === 'xiaohongshu';
+  const style = PLATFORM_STYLES[platform];
+  const [draft, setDraft] = useState('');
+  const [isReady, setIsReady] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+  const [error, setError] = useState('');
+  const [images, setImages] = useState<Array<{ name: string; url: string }>>([]);
+  const storageKey = `pointhub-review:${merchant.merchantSlug}:${merchant.locationSlug}:${platform}`;
+
+  useEffect(() => {
+    const restore = window.setTimeout(() => {
+      try {
+        const raw = window.sessionStorage.getItem(storageKey);
+        const saved = raw ? JSON.parse(raw) as PersistedReviewState : null;
+        if (typeof saved?.draft === 'string') setDraft(saved.draft);
+      } catch {
+        // The empty state below gives the customer a safe route back to the form.
+      } finally {
+        setIsReady(true);
+      }
+    }, 0);
+    return () => window.clearTimeout(restore);
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (!isReady) return;
+    try {
+      const raw = window.sessionStorage.getItem(storageKey);
+      const saved = raw ? JSON.parse(raw) as PersistedReviewState : {};
+      window.sessionStorage.setItem(storageKey, JSON.stringify({ ...saved, draft } satisfies PersistedReviewState));
+    } catch {
+      // Editing remains available even when a browser blocks session storage.
+    }
+  }, [draft, isReady, storageKey]);
+
+  useEffect(() => () => {
+    images.forEach((image) => URL.revokeObjectURL(image.url));
+  }, [images]);
+
+  const chooseImages = (files: FileList | null) => {
+    const picked = Array.from(files || []).filter((file) => file.type.startsWith('image/'));
+    if (picked.length === 0) return;
+    if (picked.length > 3) {
+      setError(isChinese ? '一次最多选择 3 张图片。' : 'Choose up to three photos at a time.');
+    } else {
+      setError('');
+    }
+    setImages(picked.slice(0, 3).map((file) => ({ name: file.name, url: URL.createObjectURL(file) })));
+  };
+
+  const copyAndOpen = async () => {
+    if (!draft.trim()) {
+      setError(isChinese ? '草稿为空，请返回上一页重新生成。' : 'The draft is empty. Return to create it first.');
+      return;
+    }
+    const target = getPlatformDestination(merchant, platform);
+    if (!target) {
+      setError(getMissingDestinationCopy(platform));
+      return;
+    }
+
+    try {
+      await copyText(draft);
+      setIsCopied(true);
+      window.setTimeout(() => setIsCopied(false), 3000);
+    } catch {
+      setError(isChinese ? '没有自动复制成功，请长按草稿手动复制；仍会继续打开平台。' : 'Copy was unavailable. Select the editable draft to copy it manually; the platform will still open.');
+    }
+
+    if (!target.startsWith('http')) {
+      const fallback = merchant.platforms[platform]?.fallbackUrl;
+      if (fallback?.startsWith('http')) {
+        window.setTimeout(() => {
+          if (document.visibilityState === 'visible') window.location.assign(fallback);
+        }, 1400);
+      }
+      window.location.assign(target);
+      return;
+    }
+
+    if (shouldUseSameTabPlatformNavigation()) {
+      window.location.assign(target);
+      return;
+    }
+    const popup = window.open(target, '_blank', 'noopener,noreferrer');
+    if (!popup) window.location.assign(target);
+  };
+
+  return (
+    <main className="min-h-screen bg-[#f5f1eb] px-3 py-5 font-sans text-[#3c342f] sm:px-6 sm:py-10">
+      <div className="mx-auto flex w-full max-w-[720px] flex-col gap-4">
+        <div className="flex items-center justify-between gap-3">
+          <Link href={`${publicReviewPath(merchant)}/review/${platform}`} className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-[#dfd2c4] bg-white px-3 text-xs font-bold text-[#735846] shadow-sm transition hover:bg-[#fffaf4]">
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>{isChinese ? '返回文案修改' : 'Back to edit'}</span>
+          </Link>
+          <PlatformBadge platform={platform} className={style.badge} />
+        </div>
+
+        <section className="overflow-hidden rounded-[28px] border border-[#ded3c7] bg-white shadow-[0_12px_35px_rgba(83,62,44,0.08)]">
+          <div className="border-b border-[#eee5dc] px-5 py-6 text-center sm:px-8 sm:py-8">
+            <span className={`mx-auto flex h-12 w-12 items-center justify-center rounded-2xl ${style.badge}`}>
+              <Check className="h-6 w-6" />
+            </span>
+            <h1 className="mt-3 text-xl font-bold tracking-tight text-[#34271f]">
+              {isChinese ? '文案已经整理好了' : 'Your draft is ready'}
+            </h1>
+            <p className="mt-1.5 text-xs leading-5 text-[#8c7465]">
+              {isChinese ? '核对并修改草稿；图片仅在本页预览，发布时请在平台重新上传。' : 'Review the draft. Photos are previewed here only — upload them again in the destination app.'}
+            </p>
+          </div>
+
+          <div className="space-y-5 p-4 sm:p-6">
+            <div>
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <p className="text-xs font-bold text-[#503b2e]">{isChinese ? '最多上传 3 张配图（可选）' : 'Add up to three photos (optional)'}</p>
+                <span className="text-[11px] text-[#9a8577]">{images.length}/3</span>
+              </div>
+              <label className="flex min-h-24 cursor-pointer items-center justify-center rounded-2xl border border-dashed border-[#d9c7b5] bg-[#fffaf5] p-3 transition hover:border-[#ad7c5b] hover:bg-[#fdf6ee]">
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="sr-only"
+                  onChange={(event) => {
+                    chooseImages(event.target.files);
+                    event.currentTarget.value = '';
+                  }}
+                />
+                {images.length === 0 ? (
+                  <span className="flex flex-col items-center gap-1.5 text-[#8d6d55]">
+                    <ImagePlus className="h-6 w-6" />
+                    <span className="text-xs font-semibold">{isChinese ? '选择图片预览' : 'Choose photos to preview'}</span>
+                  </span>
+                ) : (
+                  <span className="grid w-full grid-cols-3 gap-2">
+                    {images.map((image) => (
+                      <span key={image.url} className="relative aspect-square overflow-hidden rounded-xl bg-[#eee5dc]">
+                        {/* Native preview is intentionally local only; no customer photo is uploaded by this page. */}
+                        <img src={image.url} alt={image.name} className="h-full w-full object-cover" />
+                      </span>
+                    ))}
+                  </span>
+                )}
+              </label>
+            </div>
+
+            <div>
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <p className="text-xs font-bold text-[#503b2e]">{isChinese ? '可编辑草稿' : 'Editable draft'}</p>
+                {isCopied && <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#21845e]"><Check className="h-3.5 w-3.5" />{isChinese ? '已复制' : 'Copied'}</span>}
+              </div>
+              <textarea
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                placeholder={isChinese ? '草稿会显示在这里。' : 'Your draft will appear here.'}
+                rows={platform === 'xiaohongshu' || platform === 'instagram' ? 11 : 8}
+                className="w-full resize-y rounded-2xl border border-[#ded1c4] bg-[#fffdfa] p-4 text-sm leading-7 text-[#3d2d24] outline-none transition focus:border-[#9c6e50] focus:ring-2 focus:ring-[#9c6e50]/15"
+              />
+            </div>
+
+            <p className="flex items-start gap-1.5 text-[11px] leading-5 text-[#8e7566]">
+              <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#a1795c]" />
+              <span>{isChinese ? '请只发布符合自己真实体验的内容。系统不会自动发布，也不会上传你的图片。' : 'Only share text that reflects your real experience. This page never posts or uploads photos for you.'}</span>
+            </p>
+
+            {error && <p role="alert" className="rounded-xl border border-[#eac2bb] bg-[#fff1ee] px-3 py-2 text-xs leading-5 text-[#a04339]">{error}</p>}
+          </div>
+
+          <div className="border-t border-[#eee5dc] bg-[#fffdfa] p-4 sm:p-5">
+            <button type="button" onClick={() => void copyAndOpen()} disabled={!isReady || !draft.trim()} className={`flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 ${style.copyButton}`}>
+              {isCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              <span>{isChinese ? `复制并发布到${getPlatformName(platform)}` : `Copy & open ${getPlatformName(platform)}`}</span>
+              <ExternalLink className="h-3.5 w-3.5 opacity-80" />
+            </button>
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
+
 export function ReviewPlatformUnavailable({ merchant, platform }: ReviewAgentProps) {
   const copy = getUnavailableCopy(platform);
   return (
@@ -918,7 +1125,7 @@ function getReviewLabels(platform: PublicReviewPlatform): ReviewLabels {
       serviceLabel: '这次体验了什么项目？',
       tagLabel: '可多选，挑选贴近你的感受',
       voiceLabel: '想用什么口吻？',
-      generate: '生成我的笔记草稿',
+      generate: '帮我润色',
       refresh: '换一个写法',
       draftLabel: '你的笔记草稿',
       draftHint: '可以直接修改，让它更像你本人。',
