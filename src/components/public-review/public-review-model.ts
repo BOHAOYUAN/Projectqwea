@@ -154,7 +154,7 @@ const DEFAULT_PLATFORM_CONFIGS: Record<
   yelp: { destinationUrl: '', fallbackUrl: '', publishHint: 'Yelp review link is unavailable.' },
   instagram: {
     destinationUrl: 'instagram://camera',
-    fallbackUrl: 'https://www.instagram.com/',
+    fallbackUrl: 'https://www.instagram.com/create/style/',
     publishHint: 'Caption copied! Opening Instagram to share your post.',
   },
 };

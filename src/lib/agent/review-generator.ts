@@ -146,8 +146,8 @@ function localXiaohongshuDraft(input: ReviewDraftInput): string {
     : input.tags;
 
   const titleOptions = hasCriticalNote
-    ? [`${input.merchantName}体验随记`, `${service}真实感受`, '这次体验简单说说', '巴尔的摩护理随记', '一次普通的体验', '说说这次真实感受', '这次体验不硬夸']
-    : [`在${input.merchantName}放松一下`, `${service}体验随记`, '给自己慢下来的时间', '巴尔的摩护理随记', '今天的放松安排', '这次护理简单记录', '慢下来的一次体验'];
+    ? ['这次体验记两句', `${service}做完之后`, '巴尔的摩护理小记', '这次没有惊喜', '普通的一次体验', '今天的感受', '说说这次体验']
+    : ['今天的护理记录', `${service}做完之后`, '给自己留点空白', '巴尔的摩护理小记', '今天的放松安排', '这次护理记一下', '慢下来的一次体验'];
   const title = Array.from(pick(titleOptions, seed)).slice(0, 20).join('');
   const location = input.location.replace(/Baltimore(?:,\s*MD)?/i, '巴尔的摩');
   const tagSentences = effectiveTags.map(xiaohongshuFeelingSentence).filter(Boolean).join('');
@@ -177,24 +177,24 @@ function xiaohongshuExperienceExpansion(experience: string): string {
   if (!experience) return '';
   const parts: string[] = [];
   if (/一般|普通|还行|没惊喜|没有惊喜/.test(experience)) {
-    parts.push('整体感觉比较普通，没有特别惊喜。不是很差，但也没有什么让我特别记住的地方。做完以后再回想，感受还是平平的，对我来说就是一次很正常的体验。');
+    parts.push('整体给我的感觉比较普通，没留下太多印象。不是特别差，就是没有到让我惊喜的程度。总之就是一次普通的体验，没有别的地方让我记住。');
   } else if (/不好|差|失望|不满意/.test(experience)) {
-    parts.push('这次确实有不太满意的地方，整体感受没有达到自己的预期。优点和不足放在一起看，感受还是偏失望。');
+    parts.push('这次确实有不太满意的地方，整体没有达到我的预期。优点和不足放在一起看，感受还是偏失望。');
   }
   if (/(?:服务员|员工|工作人员|店员)[^。！？]{0,10}(?:不错|很好|挺好|友好|耐心|专业)/.test(experience)) {
-    parts.push('不过服务员人挺好，这一点我觉得应该说一下。');
+    parts.push('服务员态度倒是不错，沟通起来挺舒服。');
   }
-  if (/贵|价格高|有点贵/.test(experience)) parts.push('价格确实有点贵，这一点会直接影响我的整体感受。其他方面没有特别想夸或吐槽的，但这个价格还是让我有些在意。算下来值不值，每个人可能感受不一样，我这里只说自己的真实想法。');
-  if (/等(?:了|得)?(?:有点|比较|很|太)?久|等待时间(?:长|久)|速度太慢|服务太慢/.test(experience)) parts.push('这次确实等得有点久，时间拖长以后多少会影响心情。其他方面我先不多评价，单说等候这件事，和我原本预想的不太一样。要是这部分能更利落一点，整体感受会好不少。');
+  if (/贵|价格高|有点贵/.test(experience)) parts.push('价格比我预期高一些，所以会犹豫下次还要不要选。这个点对我来说挺实际，我会把它放在心上。');
+  if (/等(?:了|得)?(?:有点|比较|很|太)?久|等待时间(?:长|久)|速度太慢|服务太慢/.test(experience)) parts.push('等的时间比我预想长，后面的节奏就有点被打乱。其他方面先不多说，单是这一点让我比较在意。时间拖长以后，心里多少会有点在意。');
   return parts.join('');
 }
 
 function xiaohongshuFeelingSentence(tag: string): string {
   const copy: Record<string, string> = {
-    '肩颈松了': '做完后最明显的是肩颈没那么紧了，身体跟着轻松了一些。原本绷着的感觉缓下来以后，人也舒服多了。',
-    '终于慢下来': '难得把节奏放慢一点，整个人也慢慢松了下来。不用一直赶着做下一件事，这种状态对我来说刚刚好。',
-    '没有推销': '过程中没有推销，待着会更自在，不用分心应付别的事情。能安静做完自己选的项目，这一点挺加分。',
-    '值得再来': '这次留下的感受不错，以后有需要时我还会再考虑。不是很夸张的惊喜，但整体符合我这次的期待。',
+    '肩颈松了': '做完以后肩颈确实松了一点，离开时身体没那么绷着。说不上多夸张，但这个变化自己能感觉到。',
+    '终于慢下来': '难得不用赶时间，坐下来以后节奏就慢了。那种终于能缓一口气的感觉，我还挺喜欢。',
+    '没有推销': '全程没有被推销，整个人会轻松很多。能顺顺当当做完自己选的项目，这一点挺加分。',
+    '值得再来': '这次感受不错，下次有需要我会再考虑。不是那种很夸张的惊喜，但整体符合这次的期待。',
     '放松舒服': '整个感受比较放松，身体和心情都没有那么绷着。',
     '细心专业': '让我印象比较深的是细致和专业，体验起来很踏实。',
     '环境整洁': '环境收拾得很整洁，看着清爽，待着也舒服。',
@@ -296,12 +296,12 @@ ${editorialPrinciples}
 ${editorialPrinciples}
 1. 语言：中文。
 2. 标题：第1行必须是简短、自然的标题，长度严格控制在 20 字以内（可带合适 Emoji）。
-3. 正文：严格 60–160 个中文字符，写 3–7 句，分 1–3 个短段落，空行隔开。信息少就短一点，不为了凑字数重复同一个感受。使用中国人日常分享会说的短句和自然语序，不写说明文，不写翻译腔。英文顾客原话只提炼事实和感受后自然转述，绝不逐句翻译。地点如需出现，把 “Baltimore, MD” 写成“巴尔的摩”，禁止出现“这次在Baltimore, MD的MS BEAUTY”一类中英夹杂句式。
+3. 正文：严格 60–160 个中文字符，写 3–7 句，分 1–3 个短段落，空行隔开。像顾客在手机里随手记下来的体验，不像商家文案或测评模板：可用“我”“这次”“做完后”等日常说法，句子长短不必整齐。不要写“体验随记”“真实感受”“整体感受”“做完以后再回想”“不硬夸”等模板句。信息少就短一点，不为了凑字数重复同一个感受。英文顾客原话只提炼事实和感受后自然转述，绝不逐句翻译。地点如需出现，把 “Baltimore, MD” 写成“巴尔的摩”，禁止出现“这次在Baltimore, MD的MS BEAUTY”一类中英夹杂句式。
 4. 账号提及：${xhsAccountRule}
 5. 门店名：正文必须原样出现“${input.merchantName}”，不得翻译、省略或只写“这家店”。
 6. 话题标签：文末附带 3–8 个话题标签；标签只能使用门店名、地点、已选项目和已选感受。
 7. 内容边界：只可使用输入中明确提供的项目、标签与顾客原话；不可补充环境、员工、流程、效果或任何未提供细节。尤其不得自行写“躺下/椅子/睡着/手法/一小时/赶时间/看手机”等场景；这些词除非顾客原话中出现，否则一律不用。顾客写“一般、不好、失望、贵、慢”等评价时必须如实保留，不能改成好评；像“店家一般，服务员不错”这样的混合评价，要把优点和不足都自然写出来。
-8. 合规红线：严禁极限词（如“最好”、“第一”），严禁提及“好评返现/送折扣”等违规诱导。不要写“我不想把它写成推荐”“我勾选的是”“发布前再核对”“按真实体验修改”“这条笔记记录的是”等模型说明或创作过程。
+8. 合规红线：严禁极限词（如“最好”、“第一”），严禁提及“好评返现/送折扣”等违规诱导。不要说“可以试试”“值得去”“建议去”“预算宽裕”等推荐或导购话术。不要写“我不想把它写成推荐”“我勾选的是”“发布前再核对”“按真实体验修改”“这条笔记记录的是”等模型说明或创作过程。
 9. 本次写作角度：${variationDirection}
 10. 不得使用“宝藏店”“体验感拉满”“闭眼冲”“姐妹们冲”“种草”“治愈”“绝绝子”等模板化表达。
 11. 只输出纯文本笔记。`;
@@ -502,6 +502,12 @@ function extendShortXiaohongshuBody(body: string, input: ReviewDraftInput, limit
     if (isXiaohongshuFeelingCovered(extended, tag)) continue;
     if (!extended.includes(text)) extended = `${extended}${text}`;
   }
+  // A customer may only leave a short, mixed note. Keep it usable instead of
+  // failing the platform's minimum length check, without adding new facts.
+  const chineseCharacters = extended.match(/[\u4e00-\u9fff]/g)?.length ?? 0;
+  if (chineseCharacters < 60) {
+    extended = `${extended}我的感受大概就这些。`;
+  }
   return Array.from(extended).slice(0, limit).join('').trim();
 }
 
@@ -540,7 +546,7 @@ function isGroundedRemoteDraft(content: string, input: ReviewDraftInput): boolea
   const alwaysBlocked = [
     /\$\s*\d{3,}/, /\bguarantee[ds]?\b/i, /\bcure[ds]?\b/i, /\bcancer\b/i,
     /\b(best|perfect|number\s*one|#1)\b/i, /\b(great experience|highly recommend|look forward to coming back|from start to finish|my new sanctuary|much needed reset|this is your sign)\b/i,
-    /最好|第一|顶级|完美|拉满|彻底|宝藏店|闭眼冲|姐妹们冲|种草|治愈|绝绝子/,
+    /最好|第一|顶级|完美|拉满|彻底|宝藏店|闭眼冲|姐妹们冲|种草|治愈|绝绝子|可以试试|值得去|建议去|预算宽裕|体验随记|真实感受|整体感受|体验记录|不硬夸/,
     /包治/, /彻底根除/, /神医/, /百病/, /保修/, /好评返现|好评.*折扣/,
     /I am keeping|this review is based on|selected (?:service|details)|basis for (?:this|my) review|personal perspective/i,
     /我不想把.*写成|只想把.*记下来|我勾选的是|发布前.*核对|按.*真实.*修改|这条笔记记录的是|没有打算延伸成/,

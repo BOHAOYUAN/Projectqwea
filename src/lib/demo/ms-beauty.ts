@@ -61,7 +61,7 @@ export const MS_BEAUTY_PLATFORM_LINKS: PublicPlatformLink[] = [
   {
     platform: 'instagram',
     destinationUrl: 'instagram://camera',
-    fallbackUrl: 'https://www.instagram.com/msbeauty_baltimore/',
+    fallbackUrl: 'https://www.instagram.com/create/style/',
     ctaLabel: 'Post on Instagram',
     publishHint: 'Caption copied! Opening Instagram to share your post.',
   },

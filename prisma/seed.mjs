@@ -109,7 +109,7 @@ async function main() {
     where: { locationId_platform: { locationId: location.id, platform: Platform.GOOGLE } },
     update: {
       destinationUrl:
-        'https://www.google.com/search?q=MS+BEAUTY+1006+Eastern+Ave+Baltimore#lrd=0x89c8035d1afafeff:0x47a57effa39720a7,3',
+        'https://www.google.com/maps/place//data=!4m3!3m2!1s0x89c8035d1afafeff:0x47a57effa39720a7!12e1',
       fallbackUrl: 'https://maps.google.com/?cid=5162608466650407079',
       ctaLabel: 'Write a Google review',
       publishHint: 'Draft copied! Opening Google Maps to write your review.',
@@ -119,7 +119,7 @@ async function main() {
       locationId: location.id,
       platform: Platform.GOOGLE,
       destinationUrl:
-        'https://www.google.com/search?q=MS+BEAUTY+1006+Eastern+Ave+Baltimore#lrd=0x89c8035d1afafeff:0x47a57effa39720a7,3',
+        'https://www.google.com/maps/place//data=!4m3!3m2!1s0x89c8035d1afafeff:0x47a57effa39720a7!12e1',
       fallbackUrl: 'https://maps.google.com/?cid=5162608466650407079',
       ctaLabel: 'Write a Google review',
       publishHint: 'Draft copied! Opening Google Maps to write your review.',
@@ -130,7 +130,7 @@ async function main() {
   await prisma.platformLink.upsert({
     where: { locationId_platform: { locationId: location.id, platform: Platform.YELP } },
     update: {
-      destinationUrl: 'https://www.yelp.com/writeareview/search?q=MS+BEAUTY+Baltimore',
+      destinationUrl: 'https://www.yelp.com/writeareview/biz/h-mlAQkvdUuVZruJxErjNA',
       fallbackUrl: 'https://www.yelp.com/search?find_desc=MS+BEAUTY&find_loc=Baltimore%2C+MD',
       ctaLabel: 'Write a Yelp review',
       publishHint: 'Draft copied! Opening Yelp to write your review.',
@@ -139,7 +139,7 @@ async function main() {
     create: {
       locationId: location.id,
       platform: Platform.YELP,
-      destinationUrl: 'https://www.yelp.com/writeareview/search?q=MS+BEAUTY+Baltimore',
+      destinationUrl: 'https://www.yelp.com/writeareview/biz/h-mlAQkvdUuVZruJxErjNA',
       fallbackUrl: 'https://www.yelp.com/search?find_desc=MS+BEAUTY&find_loc=Baltimore%2C+MD',
       ctaLabel: 'Write a Yelp review',
       publishHint: 'Draft copied! Opening Yelp to write your review.',
@@ -151,7 +151,7 @@ async function main() {
     where: { locationId_platform: { locationId: location.id, platform: Platform.INSTAGRAM } },
     update: {
       destinationUrl: 'instagram://camera',
-      fallbackUrl: 'https://www.instagram.com/',
+      fallbackUrl: 'https://www.instagram.com/create/style/',
       ctaLabel: 'Create an Instagram caption',
       publishHint: 'Caption copied! Opening Instagram to share your post.',
       isEnabled: true,
@@ -160,7 +160,7 @@ async function main() {
       locationId: location.id,
       platform: Platform.INSTAGRAM,
       destinationUrl: 'instagram://camera',
-      fallbackUrl: 'https://www.instagram.com/',
+      fallbackUrl: 'https://www.instagram.com/create/style/',
       ctaLabel: 'Create an Instagram caption',
       publishHint: 'Caption copied! Opening Instagram to share your post.',
       isEnabled: true,

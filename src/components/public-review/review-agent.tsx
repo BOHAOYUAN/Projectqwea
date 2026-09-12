@@ -554,6 +554,17 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
             )}
           </div>
 
+          {/* Primary action: generation must be visible without searching in the draft header. */}
+          <button
+            type="button"
+            onClick={() => void generateDraft(variation + 1)}
+            disabled={isGenerating}
+            className={`flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70 ${style.primaryButton}`}
+          >
+            {isGenerating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            <span>{isGenerating ? (isChinese ? '正在生成草稿…' : 'Creating your draft…') : labels.generate}</span>
+          </button>
+
           {/* ④ 可编辑草稿 */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between gap-2">
@@ -574,7 +585,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
                 }`}
               >
                 <RefreshCw className={`h-3 w-3 ${isGenerating ? 'animate-spin' : ''}`} />
-                <span>{isGenerating ? (isChinese ? '正在换一版' : 'Creating') : draft ? (isChinese ? '换一版' : 'Try another') : (isChinese ? '帮我润色' : 'Polish my review')}</span>
+                <span>{isGenerating ? (isChinese ? '正在换一版' : 'Creating') : draft ? (isChinese ? '换一版' : 'Try another') : labels.refresh}</span>
               </button>
             </div>
             <div className="relative">
