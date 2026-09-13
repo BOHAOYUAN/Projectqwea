@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { noteIssues } from '../src/lib/agent/xiaohongshu-writer';
 
 async function main() {
-  const base = process.argv[2] || 'http://localhost:3135';
+  const base = process.argv[2] || 'http://localhost:3138';
   for (const tags of [['状态重启'], ['情绪释放', '深度放松', '能量恢复'], ['被认真照顾专业又安心', '值得定期做', '高端却不浮夸'], ['头皮明显改善', '仪式感体验'], []]) {
     const serviceSlugs = tags.includes('头皮明显改善') ? ['scalp-spa'] : ['facial-spa'];
     const start = Date.now();

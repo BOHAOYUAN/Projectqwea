@@ -420,10 +420,10 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
         <Link href={publicReviewPath(merchant)} className="inline-flex items-center gap-1 text-sm text-stone-500"><ArrowLeft className="h-4 w-4" />返回</Link>
         <header className="py-5 text-center">
           <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-stone-800 text-white shadow-lg"><Sparkles className="h-8 w-8" /></span>
-          <h1 className="mt-5 text-xl font-bold">请写下您的评论或关键词</h1>
-          <p className="mt-2 text-xs text-stone-500">全部选填，不填写也可以生成草稿</p>
+          <h1 className="mt-5 text-xl font-bold">写下感受，生成小红书笔记</h1>
+          <p className="mt-2 text-xs text-stone-500">体验笔记正文约 200–300 字，标题 20 字以内；全部选填</p>
         </header>
-        <textarea aria-label="评论或关键词（选填）" value={experience} maxLength={500} onChange={(event) => handleExperienceChange(event.target.value)} placeholder="简单说说您的感受（选填）" rows={4} className="w-full resize-none rounded-2xl bg-white p-4 text-base outline-none focus:ring-2 focus:ring-rose-300" />
+        <textarea aria-label="笔记素材或关键词（选填）" value={experience} maxLength={500} onChange={(event) => handleExperienceChange(event.target.value)} placeholder="简单说说您的感受（选填）" rows={4} className="w-full resize-none rounded-2xl bg-white p-4 text-base outline-none focus:ring-2 focus:ring-rose-300" />
         <section className="space-y-3"><h2 className="text-sm">服务项目 <span className="text-xs text-stone-400">选填，最多2项</span></h2>
           {merchant.services.map((service) => <button key={service.id} type="button" aria-pressed={selectedServiceIds.includes(service.id)} disabled={isGenerating} onClick={() => toggleService(service.id)} className={`block w-full rounded-xl border p-3 text-left text-sm ${selectedServiceIds.includes(service.id) ? 'border-rose-400 bg-rose-100' : 'border-transparent bg-white'}`}>
             <span className="font-medium">{service.name}</span>{service.chineseDescription && <span className="ml-2 text-stone-500">{service.chineseDescription}</span>}
@@ -436,7 +436,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
         {isGenerating && <p role="status" aria-live="polite" className="flex items-center justify-center gap-2 text-sm text-rose-600"><RefreshCw className="h-5 w-5 animate-spin" />{['正在整理内容…', '正在生成笔记…', '马上就好…'][generationStage]}</p>}
       </div>
       <footer className="fixed inset-x-0 bottom-0 bg-white/95 px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-3">
-        <button type="button" disabled={isGenerating} onClick={() => void generateDraft()} className="mx-auto flex min-h-12 w-full max-w-3xl items-center justify-center gap-2 rounded-full bg-[#ef4149] px-6 py-3 font-semibold text-white disabled:opacity-60">{isGenerating && <RefreshCw className="h-4 w-4 animate-spin" />}{isGenerating ? '正在生成…' : '帮我生成'}</button>
+        <button type="button" disabled={isGenerating} onClick={() => void generateDraft()} className="mx-auto flex min-h-12 w-full max-w-3xl items-center justify-center gap-2 rounded-full bg-[#ef4149] px-6 py-3 font-semibold text-white disabled:opacity-60">{isGenerating && <RefreshCw className="h-4 w-4 animate-spin" />}{isGenerating ? '正在生成…' : '生成小红书笔记'}</button>
       </footer>
     </main>
   );

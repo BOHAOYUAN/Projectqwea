@@ -15,7 +15,7 @@ for (const item of cases) {
     body: JSON.stringify({ ...item, platform: 'xiaohongshu', merchantSlug: 'ms-beauty', locationSlug: 'baltimore', voice: 'natural' }),
   });
   const data = await response.json();
-  // Paraphrase coverage and short-body lengths are checked by check-xhs-short.ts.
+  // Paraphrase coverage and note lengths are checked by check-xhs-notes.ts.
   console.log(JSON.stringify({ name: item.name, status: response.status, elapsedMs: Date.now() - start, provider: data.draft?.mode, requestedModel: data.draft?.requestedModel, content: data.draft?.content, error: data.error }));
   if (!response.ok || !data.draft?.content) process.exitCode = 1;
 }

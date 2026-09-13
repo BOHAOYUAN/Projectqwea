@@ -1,7 +1,7 @@
 import { xhsPublishDestination, XHS_APP_PUBLISH_URL, XHS_WEB_PUBLISH_URL } from '../src/lib/xiaohongshu-publishing';
 import { XHS_EXPERIENCE_TAGS, XHS_SYSTEM_PROMPT } from '../src/lib/agent/xiaohongshu-prompt';
 import assert from 'node:assert/strict';
-import { writingRange, parseNote, noteIssues, writeXiaohongshu, missingTags, shortTagFallback, XHS_MODEL, XHS_FALLBACK_MODEL } from '../src/lib/agent/xiaohongshu-writer';
+import { writingRange, parseNote, noteIssues, writeXiaohongshu, missingTags, XHS_MODEL, XHS_FALLBACK_MODEL } from '../src/lib/agent/xiaohongshu-writer';
 
 async function main() {
   assert.equal(XHS_EXPERIENCE_TAGS.length, 9);
@@ -12,25 +12,10 @@ async function main() {
   assert.deepEqual(missingTags('深度放松\n\n正文\n\n#深度放松', ['深度放松']), ['深度放松']);
   const translations = ['像重新充了电', '心情轻松了', '整个人放松下来', '头皮舒服多了', '被细心照顾，专业让人放心', '很有仪式感', '想定期来', '有质感但不张扬', '精力回来了'];
   XHS_EXPERIENCE_TAGS.forEach((tag, index) => assert.deepEqual(missingTags('标题\n\n' + translations[index], [tag]), [], tag));
-  assert.deepEqual(writingRange('  '), [50, 80]);
-
-  assert.deepEqual(writingRange('好'.repeat(29)), [80, 150]);
-  assert.deepEqual(writingRange('好'.repeat(30)), [120, 180]);
-  assert.deepEqual(writingRange('好'.repeat(50)), [200, 300]);
-  assert.deepEqual(writingRange('好'.repeat(51)), [200, 300]);
+  assert.deepEqual(writingRange(), [200, 300]);
   const content = '标题\n\n第一段。\n\n第二段。\n\n#标签';
   assert.equal(parseNote(content), content);
   const input = { platform: 'xiaohongshu' as const, merchantName: 'MS BEAUTY', location: 'Baltimore', serviceNames: ['面部SPA'], tags: [], experience: '很喜欢' };
-  for (let mask = 1; mask < 1 << XHS_EXPERIENCE_TAGS.length; mask++) {
-    const tags = XHS_EXPERIENCE_TAGS.filter((_, index) => mask & (1 << index));
-    if (tags.length > 3) continue;
-    const fallback = shortTagFallback({ ...input, tags, experience: '' });
-    assert(fallback, tags.join(','));
-    assert.equal(fallback.mode, 'local');
-  }
-  const short = shortTagFallback({ ...input, tags: ['状态重启'], experience: '' })!;
-  assert.deepEqual(noteIssues(short.content + ' #状态重启', { ...input, tags: ['状态重启'], experience: '' }), []);
-  assert(noteIssues(short.content.replace('巴尔的摩', '巴尔摩'), { ...input, experience: '' }).some(issue => issue.includes('地名')));
   assert(noteIssues('标题\n\nMS BEAUTY环境安静，香氛好闻。\n\n后来回想起来。', input).some(x => x.includes('抒情')));
   const original = globalThis.fetch;
   const previousKey = process.env.DEEPSEEK_API_KEY;
@@ -43,7 +28,8 @@ async function main() {
     assert.equal(empty.fallbackValidated, true);
     assert(!empty.content.includes('做完'));
     const models: string[] = [];
-    const good = '巴尔的摩体验分享\n\n在MS BEAUTY体验后，最想说的是彻底放松。这是我这次很在意的感受，用这几个字形容就很合适，不用再加别的形容。\n\n对我来说，这次体验留下的印象很直接：彻底放松。有这样的感受，才想写下来分享给大家，也留作自己的一次记录。\n\n#巴尔的摩 #MSBEAUTY #体验分享';
+    const paragraph = '在MS BEAUTY体验后，感受是彻底放松。这里使用测试文字检验正文长度和分段规则，并不作为实际生成的笔记。这段测试文字只用于程序校验。';
+    const good = '巴尔的摩体验分享\n\n' + [paragraph, paragraph, paragraph, paragraph].join('\n\n') + '\n\n#巴尔的摩 #MSBEAUTY #体验分享';
     const tagged = { ...input, tags: ['深度放松'] };
     assert.deepEqual(noteIssues(good, tagged), []);
     for (const first of ['network', 'missing-tag', 'truncated']) {
