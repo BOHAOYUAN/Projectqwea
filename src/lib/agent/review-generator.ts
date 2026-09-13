@@ -225,35 +225,9 @@ function buildSystemPrompt(input: ReviewDraftInput): string {
     : input.voice === 'warm'
       ? 'Use a warm, appreciative, relaxing and heartfelt tone.'
       : 'Use an authentic, conversational, everyday customer tone.';
-  const xhsVoiceGuide = input.voice === 'concise'
-    ? '短句直说：像聊天时顺手发的一条记录，正文 2–5 句，不强行加 emoji。'
-    : input.voice === 'warm'
-      ? '松弛日记：多一点当下的主观感受，句子可以有长有短，最多用 2 个贴合语气的 emoji。'
-      : '随手记录：像发给朋友看的日常分享，口语自然，最多用 1 个贴合语气的 emoji。';
-  const xhsVariationDirection = pick([
-    '从一个最具体的感受开头，门店和项目放进后面的句子。',
-    '开头先写项目，第二句只写一个最有感的变化。',
-    '用两段不等长的文字，第一段有情绪，第二段收在一个简单反应上。',
-    '像聊天一样直接写，开头不要使用“今天”“最近”“这次体验”。',
-    '标题短一点，正文不要总结全部标签，只挑一两个最有感觉的点。',
-  ], input.seed ?? Date.now());
-  const xhsPriorPhraseRule = input.avoidPhrases?.length
-    ? `上一版已经用过这些开头或结尾片段：${input.avoidPhrases.map((value) => `“${value}”`).join('、')}。这版换一个切入和收尾，不要复用或近似改写它们。`
-    : '没有上一版可避开。';
-  const xhsStyleReference = pick([
-    '素材：面部 SPA；肩颈松了一点。示例节奏：“脖子总算没那么顶着了。做完面部 SPA 才发现肩颈也跟着松了一点，细小但能感觉到。”',
-    '素材：没有推销；节奏不赶。示例节奏：“不用一边做一边想着怎么拒绝套餐，这点对我很重要。人一放松，整段时间都顺下来了。”',
-    '素材：整体一般；服务员不错。示例节奏：“没有到让我惊艳的程度，但服务员沟通得挺舒服。优点和感受都记一下。”',
-    '素材：头疗；终于慢下来。示例节奏：“脑子终于没有那么吵了。头疗做完不是什么大变化，就是人没那么赶。”',
-  ], input.seed ?? Date.now());
-
   const igMentionRule = input.socialHandles?.instagram
     ? `Naturally mention @${input.socialHandles.instagram.replace(/^@/, '')} in the caption.`
     : 'Do not invent any social media handles.';
-
-  const xhsAccountRule = input.socialHandles?.xiaohongshu
-    ? `正文只写门店名“${input.merchantName}”，不要输出 @ 账号。发布页会另行提示顾客手动选择官方账号“${input.socialHandles.xiaohongshu}”。`
-    : `正文只写门店名“${input.merchantName}”，不要输出或虚构 @ 账号。`;
 
   if (input.platform === 'google') {
     return `You are a genuine customer writing a Google review for "${input.merchantName}" in ${input.location}.
@@ -300,26 +274,7 @@ ${editorialPrinciples}
 9. Output ONLY the caption.`;
   }
 
-  return `你是一位普通顾客，正在为「${input.merchantName}」写一篇中文小红书体验笔记。
-
-把它写得像一个人刚刚记下的感受，不要像商家介绍、测评报告或 AI 总结。
-
-写作规则：
-1. 场所、项目、具体症状和具体经历必须来自顾客原话或已选项。感受、情绪和心理活动可以做合理的口语化扩写；例如“肩颈松了”可以写成“脖子终于稍微松了口气”。但不要把未提供的身份、时间、到店原因、环境、技师、流程、价格或效果写成事实；“周末”“打工人”“长期低头”等词只有顾客原话提到时才能写。
-2. 顾客原话优先。原话里有“一般”“不满意”或褒贬并存时，如实保留，用个人感受来表达，不要改成夸赞或推荐。
-3. 每篇只抓 1–2 个最有感觉的点，不要把项目和标签逐项复述，也不要把同一个感受换词说三遍。短句直说不等于冷漠陈述：句子要有情绪起伏和个人语气。
-4. 口吻要求：${xhsVoiceGuide} 正面或中性内容可自然使用一个轻量语气词（如“居然”“有点被治愈到”“松口气”）或一个贴合情绪的 emoji，不要机械堆叠；含负面体验时不要硬塞夸张网络语。
-5. 本篇写法方向：${xhsVariationDirection}
-6. 第一行仍要写标题，但标题会由系统按“地点＋项目＋真实感受”统一处理。正文控制在 150–300 个汉字，分成 1–3 段；文末放 3–5 个和输入有关的话题。正文自然出现门店名「${input.merchantName}」。${xhsAccountRule}
-7. 不要写极限词、返现折扣、疗效承诺、评分或引导他人消费的话术；避免“整体而言”“不仅如此”“值得一提”“体验感拉满”“不是那种很夸张的变化”等模板句。
-8. ${xhsPriorPhraseRule}
-
-参考这种表达节奏，不要照抄措辞：
-不要写：“做了面部 SPA，肩颈松了。”
-可以写：“面部 SPA 做完，肩颈居然松了一点。那种一直绷着的感觉缓下来一些。”
-${xhsStyleReference}
-
-只输出最终成稿，不解释规则或过程。`;
+  throw new Error('Xiaohongshu uses its dedicated writer.');
 }
 
 type CompatibleChatProvider = {

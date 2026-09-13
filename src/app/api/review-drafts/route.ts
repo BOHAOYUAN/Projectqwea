@@ -1,3 +1,4 @@
+import { XHS_EXPERIENCE_TAGS } from '@/lib/agent/xiaohongshu-prompt';
 import { NextRequest, NextResponse } from 'next/server';
 import { CONTENT_VOICES, generateReviewDraft, type ContentVoice, type ReviewPlatform } from '@/lib/agent/review-generator';
 import { getPublicReviewPage, recordAnonymousGenerationMetric } from '@/lib/server/merchant-repository';
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
         return platform === 'xiaohongshu' ? service?.nameZh : service?.nameEn;
       })
       .filter((name): name is string => Boolean(name));
-    const safeTags = resolvePublicTags(tags, publicPage.suggestedTags);
+    const safeTags = resolvePublicTags(tags, platform === 'xiaohongshu' ? XHS_EXPERIENCE_TAGS : publicPage.suggestedTags);
 
     if (platform !== 'xiaohongshu' && !experience && safeServiceNames.length === 0 && safeTags.length === 0) {
       return NextResponse.json(

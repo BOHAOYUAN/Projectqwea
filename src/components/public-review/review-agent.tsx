@@ -1,5 +1,7 @@
 'use client';
 
+import { XHS_EXPERIENCE_TAGS } from '@/lib/agent/xiaohongshu-prompt';
+import { xhsPublishDestination, XHS_WEB_PUBLISH_URL } from '@/lib/xiaohongshu-publishing';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -27,6 +29,8 @@ import {
   type PublicReviewService,
   type PublicReviewVoice,
 } from './public-review-model';
+
+const xhsTags = XHS_EXPERIENCE_TAGS.map((label, index) => ({ id: `xhs-feeling-${index}`, label, googleLabel: label }));
 
 type ReviewAgentProps = {
   merchant: PublicReviewMerchant;
@@ -113,6 +117,7 @@ const PLATFORM_STYLES: Record<PublicReviewPlatform, {
 export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgentProps) {
   const router = useRouter();
   const isChinese = platform === 'xiaohongshu';
+  const experienceTags = isChinese ? xhsTags : merchant.experienceTags;
   const labels = getReviewLabels(platform);
   const style = PLATFORM_STYLES[platform];
   const voiceOptions = isChinese ? CHINESE_VOICES : ENGLISH_VOICES;
@@ -147,8 +152,8 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
     [merchant.services, selectedServiceIds],
   );
   const selectedTags = useMemo(
-    () => merchant.experienceTags.filter((tag) => selectedTagIds.includes(tag.id)),
-    [merchant.experienceTags, selectedTagIds],
+    () => experienceTags.filter((tag) => selectedTagIds.includes(tag.id)),
+    [experienceTags, selectedTagIds],
   );
 
   useEffect(() => {
@@ -158,7 +163,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
         if (!raw) return;
         const saved = JSON.parse(raw) as PersistedReviewState;
         const validServiceIds = (saved.serviceIds || []).filter((id) => merchant.services.some((service) => service.id === id)).slice(0, 2);
-        const validTagIds = (saved.tagIds || []).filter((id) => merchant.experienceTags.some((tag) => tag.id === id));
+        const validTagIds = (saved.tagIds || []).filter((id) => experienceTags.some((tag) => tag.id === id));
         if (validServiceIds.length > 0) setSelectedServiceIds(validServiceIds);
         if (validTagIds.length > 0) setSelectedTagIds(validTagIds);
         if (typeof saved.experience === 'string') setExperience(saved.experience.slice(0, 500));
@@ -172,7 +177,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
       }
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [merchant.experienceTags, merchant.services, storageKey]);
+  }, [experienceTags, merchant.services, storageKey]);
 
   useEffect(() => {
     if (!hasRestoredState) return;
@@ -425,7 +430,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
           </button>)}
         </section>
         <section className="space-y-3"><h2 className="text-sm">猜你想说 <span className="text-xs text-stone-400">选填，最多3项</span></h2><div className="flex flex-wrap gap-2">
-          {merchant.experienceTags.map((tag) => <button key={tag.id} type="button" aria-pressed={selectedTagIds.includes(tag.id)} disabled={isGenerating} onClick={() => toggleTag(tag.id)} className={`rounded-xl border px-4 py-3 text-sm ${selectedTagIds.includes(tag.id) ? 'border-rose-400 bg-rose-100' : 'border-transparent bg-white'}`}>{tag.label}</button>)}
+          {experienceTags.map((tag) => <button key={tag.id} type="button" aria-pressed={selectedTagIds.includes(tag.id)} disabled={isGenerating} onClick={() => toggleTag(tag.id)} className={`rounded-xl border px-4 py-3 text-sm ${selectedTagIds.includes(tag.id) ? 'border-rose-400 bg-rose-100' : 'border-transparent bg-white'}`}>{tag.label}</button>)}
         </div></section>
         {error && <p role="alert" className="rounded-xl bg-white p-3 text-sm text-red-600">{error}</p>}
         {isGenerating && <p role="status" aria-live="polite" className="flex items-center justify-center gap-2 text-sm text-rose-600"><RefreshCw className="h-5 w-5 animate-spin" />{['正在整理内容…', '正在生成笔记…', '马上就好…'][generationStage]}</p>}
@@ -512,7 +517,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
                 </span>
               </div>
               <div className="flex flex-wrap gap-1.5">
-              {merchant.experienceTags.map((tag) => {
+              {experienceTags.map((tag) => {
                 const isSelected = selectedTagIds.includes(tag.id);
                 return (
                   <button
@@ -733,6 +738,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
  */
 export function ReviewPublish({ merchant, platform }: ReviewAgentProps) {
   const isChinese = platform === 'xiaohongshu';
+  const experienceTags = isChinese ? xhsTags : merchant.experienceTags;
   const isGoogle = platform === 'google';
   const isInstagram = platform === 'instagram';
   const supportsPhotoPreview = platform === 'xiaohongshu' || isInstagram;
@@ -754,7 +760,7 @@ export function ReviewPublish({ merchant, platform }: ReviewAgentProps) {
       const response = await fetch('/api/review-drafts', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ platform, merchantSlug: merchant.merchantSlug, locationSlug: merchant.locationSlug,
-          serviceSlugs: saved.serviceIds || [], tags: merchant.experienceTags.filter(tag => saved.tagIds?.includes(tag.id)).map(tag => tag.label),
+          serviceSlugs: saved.serviceIds || [], tags: experienceTags.filter(tag => saved.tagIds?.includes(tag.id)).map(tag => tag.label),
           experience: saved.experience || '', voice: saved.voice || 'natural', seed: Date.now(), avoidPhrases: draftEdgeFragments(draft) }),
       });
       const data = await response.json();
@@ -813,6 +819,20 @@ export function ReviewPublish({ merchant, platform }: ReviewAgentProps) {
     const target = getPlatformDestination(merchant, platform);
     if (!target) {
       setError(getMissingDestinationCopy(platform));
+      return;
+    }
+
+    if (isChinese) {
+      void copyText(draft).then(() => setIsCopied(true)).catch(() => {
+        setError('未能自动复制，请长按草稿手动复制。');
+      });
+      if (target.startsWith('http')) {
+        window.open(target, '_blank', 'noopener,noreferrer');
+      } else {
+        // Stay on the draft if the app cannot open; show a manual web fallback.
+        // Never redirect a customer returning from the app to another page.
+        window.location.assign(target);
+      }
       return;
     }
 
@@ -950,6 +970,7 @@ export function ReviewPublish({ merchant, platform }: ReviewAgentProps) {
           </div>
 
           <div className="border-t border-[#eee5dc] bg-[#fffdfa] p-4 sm:p-5">
+            {isChinese && <p className="mb-3 text-xs leading-5 text-[#8c7465]">打开后选择图片、粘贴文案，再自行确认发布。若 App 未打开，可使用 <a href={XHS_WEB_PUBLISH_URL} target="_blank" rel="noopener noreferrer" className="underline">网页发布入口</a>（需登录）。</p>}
             <button type="button" onClick={() => void copyAndOpen()} disabled={!isReady || !draft.trim()} className={`flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 ${style.copyButton}`}>
               {isCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
               <span>{getPublishActionLabel(platform)}</span>
@@ -1285,7 +1306,7 @@ function getPlatformName(platform: PublicReviewPlatform) {
 
 function getPublishActionLabel(platform: PublicReviewPlatform) {
   if (platform === 'google') return 'Copy & open Google Maps App';
-  if (platform === 'xiaohongshu') return '复制并发布到小红书';
+  if (platform === 'xiaohongshu') return '复制文案并打开发布页';
   if (platform === 'instagram') return 'Copy & open Instagram App';
   return `Copy & open ${getPlatformName(platform)}`;
 }
@@ -1333,6 +1354,7 @@ function getUnavailableCopy(platform: PublicReviewPlatform) {
 }
 
 function getPlatformDestination(merchant: PublicReviewMerchant, platform: PublicReviewPlatform) {
+  if (platform === 'xiaohongshu') return xhsPublishDestination(typeof navigator === 'undefined' ? '' : navigator.userAgent);
   const configured = merchant.platforms[platform];
   // Google Maps URLs are Universal Links: on Android and iOS they open the
   // Maps app when available, and otherwise keep the customer in the browser.
