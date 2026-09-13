@@ -139,25 +139,16 @@ function localInstagramDraft(input: ReviewDraftInput): string {
 function localXiaohongshuDraft(input: ReviewDraftInput): string {
   const service = formatList(input.serviceNames, '和');
   const note = sentenceCase(input.experience).replace(/[。！？!?]+$/, '');
-  const seed = input.seed ?? Date.now();
   const location = input.location.replace(/Baltimore(?:,\s*MD)?/i, '巴尔的摩');
-  const title = Array.from(pick([
-    service ? `${service}之后` : `${input.merchantName}的一点感受`,
-    service ? `${service}的小发现` : '留给自己的一点感受',
-    service ? `做完${service}之后` : `${input.merchantName}随手记`,
-    service ? `${service}的一点感受` : '刚好想写两句',
-  ], seed)).slice(0, 24).join('');
+  const title = buildXiaohongshuTitle(input);
+  const hasMixedFeeling = /一般|普通|还行|不满意|失望|不好/.test(note);
+  const reflection = hasMixedFeeling
+    ? '好的部分和保留的部分我都会一起记住，不会因为其中一项就把另一项盖过去。对我来说，这样写下来才更接近当时真实的感受。没有什么需要夸大或者包装的，把自己的感觉说清楚就够了，也更方便自己以后回看。'
+    : '对我来说，不需要把一次体验写得很满。能感觉到身体和情绪稍微缓下来一点，这种小变化就已经很值得被记住了。回头想想，留下来的就是这份不急不赶的轻松感。没有什么需要夸大或者包装的，把自己的感觉说清楚就够了，也更方便自己以后回看。';
   const parts = [
-    service ? `在${location}的 ${input.merchantName} 做了${service}，简单记一下这次感受。` : `记一下${input.merchantName}这次体验。`,
+    service ? `在${location}的 ${input.merchantName} 做了${service}，把这次真实感受写下来。` : `把${input.merchantName}这次真实感受写下来。`,
     note ? `${note}。` : '',
-    ...input.tags
-      .map(localXiaohongshuFeeling)
-      .filter(Boolean)
-      .filter((sentence) => {
-        const signature = xiaohongshuFeelingSignature(sentence);
-        return !signature || xiaohongshuFeelingSignature(note) !== signature;
-      })
-      .slice(0, 2),
+    reflection,
   ].filter(Boolean);
   const tagList = Array.from(new Set([
     hashtag(input.merchantName),
@@ -169,18 +160,22 @@ function localXiaohongshuDraft(input: ReviewDraftInput): string {
   return `${title}\n\n${parts.join('')}\n\n${tagList}`;
 }
 
-function localXiaohongshuFeeling(tag: string): string {
-  const copy: Record<string, string> = {
-    '肩颈松了': '肩颈确实松了一点。',
-    '终于慢下来': '整个人也慢下来一些。',
-    '没有推销': '没有被推销，这点很舒服。',
-    '值得再来': '这次的感受让我愿意记住。',
-    '放松舒服': '整体是放松舒服的。',
-    '细心专业': '细致和专业这点有被感受到。',
-    '环境整洁': '环境看着很整洁。',
-    '节奏不赶': '节奏不赶，人会轻松些。',
-  };
-  return copy[tag] ?? '';
+function buildXiaohongshuTitle(input: ReviewDraftInput): string {
+  const location = input.location.replace(/Baltimore(?:,\s*MD)?/i, '巴尔的摩');
+  const service = input.serviceNames[0] || '体验';
+  const source = `${input.experience} ${input.tags.join(' ')}`;
+  const feeling = /肩颈|脖子|肩膀/.test(source) && /松|轻|缓|舒服|紧/.test(source)
+    ? '肩颈松一点'
+    : /推销|套餐|办卡/.test(source)
+      ? '没有推销这点加分'
+      : /慢下来|没那么赶|放松/.test(source)
+        ? '终于慢下来'
+        : /一般|普通|还行|不满意|失望/.test(source)
+          ? '真实感受记录'
+          : /舒服|细心|专业|值得/.test(source)
+            ? '真实感受分享'
+            : '初体验记录';
+  return Array.from(`${location}探店｜${service}${feeling}`).slice(0, 20).join('');
 }
 
 function buildSystemPrompt(input: ReviewDraftInput): string {
@@ -295,16 +290,18 @@ ${editorialPrinciples}
 把它写得像一个人刚刚记下的感受，不要像商家介绍、测评报告或 AI 总结。
 
 写作规则：
-1. 顾客原话、已选项目和已选感受是事实来源。可以把已有感受写得更有情绪、更口语，但不要虚构到店原因、时间、环境、技师、流程、价格或效果等具体经历。信息少就写短一点。
+1. 场所、项目、具体症状和具体经历必须来自顾客原话或已选项。感受、情绪和心理活动可以做合理的口语化扩写；例如“肩颈松了”可以写成“脖子终于稍微松了口气”。但不要把未提供的身份、时间、到店原因、环境、技师、流程、价格或效果写成事实；“周末”“打工人”“长期低头”等词只有顾客原话提到时才能写。
 2. 顾客原话优先。原话里有“一般”“不满意”或褒贬并存时，如实保留，用个人感受来表达，不要改成夸赞或推荐。
-3. 每篇只抓 1–2 个最有感觉的点，不要把项目和标签逐项复述，也不要把同一个感受换词说三遍。
-4. 口吻要求：${xhsVoiceGuide}
+3. 每篇只抓 1–2 个最有感觉的点，不要把项目和标签逐项复述，也不要把同一个感受换词说三遍。短句直说不等于冷漠陈述：句子要有情绪起伏和个人语气。
+4. 口吻要求：${xhsVoiceGuide} 正面或中性内容可自然使用一个轻量语气词（如“居然”“有点被治愈到”“松口气”）或一个贴合情绪的 emoji，不要机械堆叠；含负面体验时不要硬塞夸张网络语。
 5. 本篇写法方向：${xhsVariationDirection}
-6. 第一行写简短标题，正文 1–3 段，文末放 2–6 个和输入有关的话题。正文自然出现门店名「${input.merchantName}」。${xhsAccountRule}
+6. 第一行仍要写标题，但标题会由系统按“地点＋项目＋真实感受”统一处理。正文控制在 150–300 个汉字，分成 1–3 段；文末放 3–5 个和输入有关的话题。正文自然出现门店名「${input.merchantName}」。${xhsAccountRule}
 7. 不要写极限词、返现折扣、疗效承诺、评分或引导他人消费的话术；避免“整体而言”“不仅如此”“值得一提”“体验感拉满”“不是那种很夸张的变化”等模板句。
 8. ${xhsPriorPhraseRule}
 
 参考这种表达节奏，不要照抄措辞：
+不要写：“做了面部 SPA，肩颈松了。”
+可以写：“面部 SPA 做完，肩颈居然松了一点。那种一直绷着的感觉缓下来一些。”
 ${xhsStyleReference}
 
 只输出最终成稿，不解释规则或过程。`;
@@ -421,17 +418,15 @@ function getXiaohongshuFormatFeedback(content: string, input: ReviewDraftInput):
   const chineseCharacters = body.match(/[\u4e00-\u9fff]/g)?.length ?? 0;
   const hashtags = content.match(/#[^\s#]+/g)?.length ?? 0;
   const issues: string[] = [];
-  if (Array.from(title).length > 30) issues.push('标题过长');
+  if (Array.from(title).length > 20) issues.push('标题过长');
   if (chineseCharacters < xiaohongshuMinimumBodyLength(input)) issues.push('正文偏短');
-  if (chineseCharacters > 360) issues.push('正文过长');
+  if (chineseCharacters > 300) issues.push('正文过长');
   if (hashtags < 2 || hashtags > 8) issues.push('话题数量不合适');
   return `刚才的成稿${issues.length ? `存在这些问题：${issues.join('；')}` : '格式不完整'}。保持原有的自然表达，只调整这些问题后输出成稿，不要解释。`;
 }
 
 function xiaohongshuMinimumBodyLength(input: ReviewDraftInput): number {
-  if (input.experience.trim()) return 30;
-  const suppliedFacts = input.serviceNames.length + input.tags.length;
-  return suppliedFacts <= 1 ? 16 : 26;
+  return input.experience.trim() ? 150 : 120;
 }
 
 function normalizeRemoteDraft(content: string, input: ReviewDraftInput): string {
@@ -470,11 +465,11 @@ function normalizeRemoteDraft(content: string, input: ReviewDraftInput): string 
 
   const lines = normalized.split('\n').map((line) => line.trim()).filter(Boolean);
   const firstLine = lines[0] ?? '';
-  // Preserve the model's rhythm. Only add a compact title when it clearly
-  // omitted one, rather than recasting the whole draft into a fixed template.
+  // The body can vary freely, while the title stays predictable and useful
+  // in the feed: location + service + one source-backed feeling.
   const hasStandaloneTitle = Array.from(firstLine).length <= 30 && !/[。！？]/.test(firstLine);
-  const rawTitle = hasStandaloneTitle ? (lines.shift() ?? '') : '这次想记一下';
-  const title = Array.from(rawTitle).slice(0, 30).join('');
+  if (hasStandaloneTitle) lines.shift();
+  const title = buildXiaohongshuTitle(input);
   const rawBody = lines
     .filter((line) => !line.startsWith('#'))
     .join('\n')
@@ -484,7 +479,7 @@ function normalizeRemoteDraft(content: string, input: ReviewDraftInput): string 
     .trim();
   // Do not pad with fixed feeling sentences. A short, natural customer note
   // is preferable to a mechanically extended one.
-  const bodyLimit = 360;
+  const bodyLimit = 300;
   const bodyBase = Array.from(rawBody).slice(0, bodyLimit).join('').trim();
   const body = collapseXiaohongshuRepeats(bodyBase);
   const modelTags = uniqueXiaohongshuTags(normalized.match(/#[^\s#]+/g) ?? []);
@@ -646,7 +641,7 @@ function hasPlatformAppropriateLength(content: string, input: ReviewDraftInput):
     const hashtags = content.match(/#[^\s#]+/g) ?? [];
     const body = lines.slice(1).filter((line) => !line.startsWith('#')).join('');
     const chineseCharacters = body.match(/[\u4e00-\u9fff]/g)?.length ?? 0;
-    return Array.from(title).length <= 30 && chineseCharacters >= xiaohongshuMinimumBodyLength(input) && chineseCharacters <= 360 && hashtags.length >= 2 && hashtags.length <= 8;
+    return Array.from(title).length <= 20 && chineseCharacters >= xiaohongshuMinimumBodyLength(input) && chineseCharacters <= 300 && hashtags.length >= 3 && hashtags.length <= 5;
   }
 
   if (input.platform === 'google' || input.platform === 'yelp') {

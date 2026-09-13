@@ -18,6 +18,7 @@ const PUBLIC_GENERATION_WINDOW_MS = 10 * 60 * 1000;
 // A shop floor commonly has several customers sharing one mobile network.
 // Keep a guardrail, but leave enough room for normal QA and real visitors.
 const PUBLIC_GENERATION_LIMIT = 30;
+const XIAOHONGSHU_MIN_EXPERIENCE_LENGTH = 20;
 const publicGenerationAttempts = new Map<string, { startedAt: number; count: number }>();
 
 const PUBLIC_TAG_ALIASES: Record<string, string[]> = {
@@ -66,6 +67,13 @@ export async function POST(request: NextRequest) {
 
     if (!platform || !merchantSlug || !locationSlug) {
       return NextResponse.json({ error: 'A valid public page and platform are required.' }, { status: 400 });
+    }
+
+    if (platform === 'xiaohongshu' && Array.from(experience).length < XIAOHONGSHU_MIN_EXPERIENCE_LENGTH) {
+      return NextResponse.json(
+        { error: 'Please add at least 20 characters of your real experience before creating a Xiaohongshu draft.' },
+        { status: 400 },
+      );
     }
 
     // Resolve anonymous requests against the published route again. This

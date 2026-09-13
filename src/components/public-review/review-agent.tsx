@@ -81,6 +81,8 @@ const CHINESE_VOICES: VoiceOption[] = [
   { value: 'warm', label: '松弛日记', detail: '多一点个人感受和情绪' },
 ];
 
+const XIAOHONGSHU_MIN_EXPERIENCE_LENGTH = 20;
+
 const PLATFORM_STYLES: Record<PublicReviewPlatform, {
   badge: string;
   primaryButton: string;
@@ -115,7 +117,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
   const style = PLATFORM_STYLES[platform];
   const voiceOptions = isChinese ? CHINESE_VOICES : ENGLISH_VOICES;
   const [experience, setExperience] = useState('');
-  const [isExperienceOpen, setIsExperienceOpen] = useState(false);
+  const [isExperienceOpen, setIsExperienceOpen] = useState(isChinese);
 
   const parsedInitialIds = useMemo(() => {
     if (!initialServiceId) return merchant.services.slice(0, 1).map((s) => s.id);
@@ -130,7 +132,6 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
   const [draft, setDraft] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
-  const [hasManualDraftEdit, setHasManualDraftEdit] = useState(false);
   const [generationStage, setGenerationStage] = useState(0);
   const [error, setError] = useState('');
   const [variation, setVariation] = useState(0);
@@ -247,10 +248,13 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
   };
 
   const generateDraft = async (nextVariation = variation + 1) => {
+    const customerNote = experience.trim();
+    if (isChinese && Array.from(customerNote).length < XIAOHONGSHU_MIN_EXPERIENCE_LENGTH) {
+      setIsExperienceOpen(true);
+      setError('再写一点真实细节吧（至少 20 个字），例如做完哪里舒服了一点、沟通是否自然，或还有什么感受想记下来。');
+      return;
+    }
     const generationStartedAt = Date.now();
-    const customerNote = hasManualDraftEdit && draft.trim()
-      ? draft.trim()
-      : experience.trim();
     setGenerationStage(0);
     setIsGenerating(true);
     setError('');
@@ -301,7 +305,6 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
         draftHistoryRef.current.add(fingerprint);
         draftEdgesRef.current = [...draftEdgesRef.current, ...draftEdgeFragments(candidate)].slice(-6);
         setDraft(candidate);
-        setHasManualDraftEdit(false);
         setMetricId(data.metricId || null);
         try {
           window.sessionStorage.setItem(storageKey, JSON.stringify({
@@ -557,7 +560,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
                 <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#8c674e] text-[10px] text-white font-bold">
                   3
                 </span>
-                <span className="min-w-0">{isChinese ? '写一句真实细节（选填，建议填写）' : 'What would you like to say? (optional, recommended)'}</span>
+                <span className="min-w-0">{isChinese ? '写下真实细节（至少 20 字）' : 'What would you like to say? (optional, recommended)'}</span>
               </span>
               <span className="text-[11px] font-semibold text-[#8b6147]">
                 {isExperienceOpen ? (isChinese ? '收起 ▲' : 'Collapse ▲') : (isChinese ? '展开输入 ▼' : 'Expand ▼')}
@@ -572,14 +575,14 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
                   onChange={(e) => handleExperienceChange(e.target.value)}
                   placeholder={
                     isChinese
-                      ? '例如：肩颈按完松了些 / 没被推销 / 做完人没那么赶'
+                      ? '例如：肩颈按完松了些，沟通很自然，也没有被推销；做完后整个人没那么赶了。'
                       : 'Optional: add your real experience and we will polish it into an editable draft.'
                   }
                   rows={3}
                   className="w-full resize-none rounded-xl border border-[#dec9b5] bg-white p-3 text-xs sm:text-sm text-[#46352a] placeholder:text-[#b49f8f] outline-none transition focus:border-[#986a4c] focus:ring-2 focus:ring-[#986a4c]/15 shadow-inner"
                 />
                 <div className="flex justify-between items-center text-[10.5px] text-[#9c8475] px-1">
-                  <span>{isChinese ? '不填写也能一键生成；一句真实细节会让每一版更像你本人' : 'You can generate with one tap; a concrete detail makes it sound more like you'}</span>
+                  <span>{isChinese ? '至少 20 字真实体验，才能生成更像你本人的笔记' : 'You can generate with one tap; a concrete detail makes it sound more like you'}</span>
                   <span className="font-mono">{experience.length}/500</span>
                 </div>
               </div>
@@ -626,7 +629,6 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
                 value={draft}
                 onChange={(e) => {
                   setDraft(e.target.value);
-                  setHasManualDraftEdit(true);
                 }}
                 aria-busy={isGenerating}
                 placeholder={getDraftPlaceholder(platform)}
@@ -1159,9 +1161,9 @@ function getReviewLabels(platform: PublicReviewPlatform): ReviewLabels {
   if (platform === 'xiaohongshu') {
     return {
       heading: '把这次体验好好说出来吧。',
-      subheading: '勾选项目和感受即可一键生成；补充细节会让笔记更像你本人。',
-      experienceLabel: '这次最想分享什么？',
-      experienceHint: '例如：哪一个细节让你觉得舒服、放松或被照顾到？',
+      subheading: '先写至少 20 个字的真实细节，再生成更有情绪和个人感受的笔记。',
+      experienceLabel: '这次最想分享什么？（至少 20 字）',
+      experienceHint: '例如：做完哪里舒服了一点、沟通是否自然，或有什么感受想记下来？',
       serviceLabel: '这次体验了什么项目？',
       tagLabel: '可多选，挑选贴近你的感受',
       voiceLabel: '想用什么口吻？',
