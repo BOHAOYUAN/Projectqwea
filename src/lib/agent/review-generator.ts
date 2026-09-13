@@ -25,6 +25,7 @@ export interface GeneratedDraft {
   mode: 'local' | 'groq' | 'deepseek';
   platform: ReviewPlatform;
   fallbackValidated?: boolean;
+  requestedModel?: string;
 }
 
 function pick<T>(items: readonly T[], seed: number): T {

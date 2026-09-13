@@ -9,6 +9,13 @@ export function writingRange(note: string): [number, number] {
 }
 
 export const XHS_MODEL = 'deepseek-flash';
+export const XHS_FALLBACK_MODEL = 'deepseek-v4-pro';
+
+export function missingTags(content: string, tags: string[]): string[] {
+  // Title and hashtags do not count as coverage of the customer's experience.
+  const prose = content.split('\n').slice(1).join('\n').replace(/#[^\s#]+/g, '').replace(/[\s，、。！？：；]/g, '');
+  return tags.filter(tag => !prose.includes(tag.replace(/[\s，、。！？：；]/g, '')));
+}
 export function emptyExperience(input: ReviewDraftInput): boolean {
   return !input.experience.trim() && input.tags.length === 0;
 }
@@ -35,6 +42,7 @@ export function noteIssues(content: string, input: ReviewDraftInput): string[] {
   const [min, max] = writingRange(input.experience);
   const length = Array.from(prose.replace(/\s/g, '')).length;
   const issues: string[] = [];
+  for (const tag of missingTags(content, input.tags)) issues.push(`正文遗漏已选感受“${tag}”：自然写入这几个原词，并围绕它展开一句，不要只放在话题中`);
   if (Array.from(title).length > 20 || !title) issues.push('标题须为完整的20字以内短句');
   if (length < (emptyExperience(input) ? 15 : min) || length > max) issues.push(`正文当前${length}字，请调整为${min}–${max}字，不加空洞总结`);
   if (!prose.includes(input.merchantName)) issues.push('正文缺少准确店名');
@@ -68,17 +76,22 @@ async function requestNote(input: ReviewDraftInput): Promise<GeneratedDraft> {
       '- 体验标签：' + (input.tags.join('、') || '未选择'),
       '- 平台/口吻：小红书/' + (input.voice || 'natural'),
       '- 用户真实细节：' + (input.experience || '未填写'),
+      '写作重点：每一个已选体验标签都必须在正文中自然出现原词，不能漏掉，也不能只列在话题里。可以加标点使语句通顺，例如“被认真照顾，专业又安心”。围绕它们串成一篇小故事，不写成标签清单。',
+      '叙事节奏：开头点出最有感的体验；中间把项目、已选感受串起来；结尾写体验后的想法。两到四段，有前后衔接和情绪变化。有用户提供的工作压力、近期状态就用作开场，未提供则从体验本身开场，不编造背景、朋友推荐或具体过程。',
       '事实底线补充：上面的写作示例不是本次顾客事实。未选标签不代表体验过；不要从示例搬入没推销、皮肤变化、睡着、具体手法或环境。只对本次提供的感受换一种表达。',
       '输出格式：第一行标题（20字以内），随后正文及话题。直接输出成稿，不输出@账号。',
       emptyExperience(input) ? '没有体验素材时，生成可编辑的门店信息分享草稿，只介绍已知店名和地点，不声称刷到、到访、收藏或尚未到访，不描述表单状态，不写体验好坏。' : '本次正文目标' + min + '–' + max + '字。',
       input.avoidPhrases?.length ? '换一篇，不重复旧稿片段：' + JSON.stringify(input.avoidPhrases) : '',
     ].filter(Boolean).join('\n') },
   ];
+  let lastError: unknown = new Error('Xiaohongshu draft needs another attempt.');
   for (let attempt = 0; attempt < 3; attempt++) {
+    const model = attempt === 0 ? XHS_MODEL : XHS_FALLBACK_MODEL;
+    try {
     const response = await fetch('https://api.deepseek.com/chat/completions', {
       method: 'POST', signal: AbortSignal.timeout(25000),
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-      body: JSON.stringify({ model: XHS_MODEL, thinking: { type: 'disabled' }, temperature: 0.8, max_tokens: 1800, messages }),
+      body: JSON.stringify({ model, thinking: { type: 'disabled' }, temperature: 0.8, max_tokens: 1800, messages }),
     });
     if (!response.ok) throw new Error(`Xiaohongshu provider returned ${response.status}`);
     const result = await response.json() as { choices?: Array<{ finish_reason?: string; message?: { content?: string } }> };
@@ -91,9 +104,13 @@ async function requestNote(input: ReviewDraftInput): Promise<GeneratedDraft> {
     }
     const issues = noteIssues(content, input);
     if (choice?.finish_reason === 'length') issues.push('输出未完成');
-    if (!issues.length) return { content, mode: 'deepseek', platform: 'xiaohongshu' };
+    if (!issues.length) return { content, mode: 'deepseek', platform: 'xiaohongshu', requestedModel: model };
     messages.push({ role: 'assistant', content }, { role: 'user', content: '请按原提示词修改这一稿：' + issues.join('；') + '。直接输出完整成稿。' });
+    } catch (error) {
+      lastError = error;
+      // Network failures and invalid provider responses also use the backup.
+    }
   }
   // Do not disguise hard-coded filler as a model result.
-  throw new Error('Xiaohongshu draft needs another attempt.');
+  throw lastError;
 }
