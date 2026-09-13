@@ -56,7 +56,9 @@ export async function POST(request: NextRequest) {
     // The customer flow permits at most two services. Enforce that rule again
     // on the server so a crafted request cannot expand the prompt scope.
     const serviceSlugs = asStringArray(body.serviceSlugs, 2);
-    const tags = asStringArray(body.tags, 8);
+    // A short XHS note reads better when it has one clear point instead of a
+    // long checklist of impressions. Other platforms keep their wider limit.
+    const tags = asStringArray(body.tags, platform === 'xiaohongshu' ? 3 : 8);
     const avoidPhrases = asStringArray(body.avoidPhrases, 6).map((value) => value.slice(0, 160));
     const seed = typeof body.seed === 'number' && Number.isFinite(body.seed) ? body.seed : Date.now();
     const merchantSlug = typeof body.merchantSlug === 'string' ? body.merchantSlug.trim() : '';

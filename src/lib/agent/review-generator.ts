@@ -138,67 +138,40 @@ function localInstagramDraft(input: ReviewDraftInput): string {
 
 function localXiaohongshuDraft(input: ReviewDraftInput): string {
   const service = formatList(input.serviceNames, '和');
-  const experience = sentenceCase(input.experience);
+  const note = sentenceCase(input.experience).replace(/[。！？!?]+$/, '');
   const seed = input.seed ?? Date.now();
-  const hasCriticalNote = /一般|普通|还行|不好|差|失望|不满意|没惊喜|没有惊喜|贵|等(?:了|得)?(?:有点|比较|很|太)?久|速度太慢|服务太慢/.test(experience);
-  const effectiveTags = hasCriticalNote
-    ? input.tags.filter((tag) => tag !== '值得再来')
-    : input.tags;
-
-  const titleOptions = hasCriticalNote
-    ? ['这次体验记两句', `${service}做完之后`, '巴尔的摩护理小记', '这次没有惊喜', '普通的一次体验', '今天的感受', '说说这次体验']
-    : ['今天的护理记录', `${service}做完之后`, '给自己留点空白', '巴尔的摩护理小记', '今天的放松安排', '这次护理记一下', '慢下来的一次体验'];
-  const title = Array.from(pick(titleOptions, seed)).slice(0, 20).join('');
   const location = input.location.replace(/Baltimore(?:,\s*MD)?/i, '巴尔的摩');
-  const tagSentences = effectiveTags.map(xiaohongshuFeelingSentence).filter(Boolean).join('');
-  const experienceExpansion = xiaohongshuExperienceExpansion(experience);
-  const ownWords = experience && /[\u4e00-\u9fff]/.test(experience) && !experienceExpansion
-    ? `${experience.replace(/[。！？!?]+$/, '')}。`
-    : '';
-  const opening = experience
-    ? `这次去的是${location}的 ${input.merchantName}，做了${service}。${ownWords}`
-    : `在${location}的 ${input.merchantName} 做了${service}。`;
-  const body = extendShortXiaohongshuBody(
-    `${opening}${experienceExpansion}${tagSentences}`,
-    { ...input, tags: effectiveTags },
-    180,
-  );
-  const tagList = [
+  const title = Array.from(pick([
+    service ? `${service}随手记` : '今天的小记录',
+    '这次想记一下',
+    '留给自己的一点感受',
+    service ? `${service}之后` : '刚好想写两句',
+  ], seed)).slice(0, 24).join('');
+  const parts = [
+    service ? `在${location}的 ${input.merchantName} 做了${service}，简单记一下这次感受。` : `记一下${input.merchantName}这次体验。`,
+    note ? `${note}。` : '',
+    ...input.tags.map(localXiaohongshuFeeling).filter(Boolean).filter((sentence) => !note.includes(sentence.replace(/[。！？!?]+$/, ''))).slice(0, 2),
+  ].filter(Boolean);
+  const tagList = Array.from(new Set([
     hashtag(input.merchantName),
-    hashtag(input.location),
+    hashtag(location),
     hashtag(service),
-    ...effectiveTags.map(hashtag),
-  ].filter(Boolean).slice(0, 8).join(' ');
+    ...input.tags.map(hashtag),
+  ].filter(Boolean))).slice(0, 5).join(' ');
 
-  return `${title}\n\n${body}\n\n${tagList}`;
+  return `${title}\n\n${parts.join('')}\n\n${tagList}`;
 }
 
-function xiaohongshuExperienceExpansion(experience: string): string {
-  if (!experience) return '';
-  const parts: string[] = [];
-  if (/一般|普通|还行|没惊喜|没有惊喜/.test(experience)) {
-    parts.push('整体给我的感觉比较普通，没留下太多印象。不是特别差，就是没有到让我惊喜的程度。总之就是一次普通的体验，没有别的地方让我记住。');
-  } else if (/不好|差|失望|不满意/.test(experience)) {
-    parts.push('这次确实有不太满意的地方，整体没有达到我的预期。优点和不足放在一起看，感受还是偏失望。');
-  }
-  if (/(?:服务员|员工|工作人员|店员)[^。！？]{0,10}(?:不错|很好|挺好|友好|耐心|专业)/.test(experience)) {
-    parts.push('服务员态度倒是不错，沟通起来挺舒服。');
-  }
-  if (/贵|价格高|有点贵/.test(experience)) parts.push('价格比我预期高一些，所以会犹豫下次还要不要选。这个点对我来说挺实际，我会把它放在心上。');
-  if (/等(?:了|得)?(?:有点|比较|很|太)?久|等待时间(?:长|久)|速度太慢|服务太慢/.test(experience)) parts.push('等的时间比我预想长，后面的节奏就有点被打乱。其他方面先不多说，单是这一点让我比较在意。时间拖长以后，心里多少会有点在意。');
-  return parts.join('');
-}
-
-function xiaohongshuFeelingSentence(tag: string): string {
+function localXiaohongshuFeeling(tag: string): string {
   const copy: Record<string, string> = {
-    '肩颈松了': '做完以后肩颈确实松了一点，原本绷着的感觉缓下来一些。不是特别夸张的变化，但自己当下能感觉到，后来想起来也会记得这个小变化。',
-    '终于慢下来': '这次的节奏让我慢下来一点，整个人没那么着急。能缓一口气的感觉，我还挺喜欢。不是一下子就完全放空，但那种慢一点的状态自己能感觉到。',
-    '没有推销': '没有被推销，整个人会轻松很多。能顺顺当当做完自己选的项目，这一点挺加分。不用一直考虑要不要回应，对我来说这种轻松感很重要。',
-    '值得再来': '这次感受不错，下次有需要我会再考虑。不是那种很夸张的惊喜，但整体符合这次的期待。回想起来没有什么让我纠结的地方，所以愿意把它留在下次的选择里。',
-    '放松舒服': '整个感受比较放松，身体和心情都没有那么绷着。不是很夸张的改变，但能有一段不需要紧着的时间，对我来说已经挺舒服了。',
-    '细心专业': '让我印象比较深的是细致和专业，体验起来很踏实。很多感受不需要说得太满，能感觉到对方做事认真，就会让人比较安心。',
-    '环境整洁': '环境收拾得很整洁，看着清爽，待着也舒服。对我来说，整洁不是额外的惊喜，但它会让整个体验更容易放松下来，也会更愿意把注意力留在当下。',
-    '节奏不赶': '节奏安排得不赶，可以按自己的状态慢慢来。没有被催着往下走的时候，人会更容易放松一点，这种不着急的感觉让我印象很深。',
+    '肩颈松了': '肩颈确实松了一点。',
+    '终于慢下来': '整个人也慢下来一些。',
+    '没有推销': '没有被推销，这点很舒服。',
+    '值得再来': '这次的感受让我愿意记住。',
+    '放松舒服': '整体是放松舒服的。',
+    '细心专业': '细致和专业这点有被感受到。',
+    '环境整洁': '环境看着很整洁。',
+    '节奏不赶': '节奏不赶，人会轻松些。',
   };
   return copy[tag] ?? '';
 }
@@ -235,6 +208,27 @@ function buildSystemPrompt(input: ReviewDraftInput): string {
     : input.voice === 'warm'
       ? 'Use a warm, appreciative, relaxing and heartfelt tone.'
       : 'Use an authentic, conversational, everyday customer tone.';
+  const xhsVoiceGuide = input.voice === 'concise'
+    ? '短句直说：像聊天时顺手发的一条记录，正文 2–5 句，不强行加 emoji。'
+    : input.voice === 'warm'
+      ? '松弛日记：多一点当下的主观感受，句子可以有长有短，最多用 2 个贴合语气的 emoji。'
+      : '随手记录：像发给朋友看的日常分享，口语自然，最多用 1 个贴合语气的 emoji。';
+  const xhsVariationDirection = pick([
+    '从一个最具体的感受开头，门店和项目放进后面的句子。',
+    '开头先写项目，第二句只写一个最有感的变化。',
+    '用两段不等长的文字，第一段有情绪，第二段收在一个简单反应上。',
+    '像聊天一样直接写，开头不要使用“今天”“最近”“这次体验”。',
+    '标题短一点，正文不要总结全部标签，只挑一两个最有感觉的点。',
+  ], input.seed ?? Date.now());
+  const xhsPriorPhraseRule = input.avoidPhrases?.length
+    ? `上一版已经用过这些开头或结尾片段：${input.avoidPhrases.map((value) => `“${value}”`).join('、')}。这版换一个切入和收尾，不要复用或近似改写它们。`
+    : '没有上一版可避开。';
+  const xhsStyleReference = pick([
+    '素材：面部 SPA；肩颈松了一点。示例节奏：“脖子总算没那么顶着了。做完面部 SPA 才发现肩颈也跟着松了一点，细小但能感觉到。”',
+    '素材：没有推销；节奏不赶。示例节奏：“不用一边做一边想着怎么拒绝套餐，这点对我很重要。人一放松，整段时间都顺下来了。”',
+    '素材：整体一般；服务员不错。示例节奏：“没有到让我惊艳的程度，但服务员沟通得挺舒服。优点和感受都记一下。”',
+    '素材：头疗；终于慢下来。示例节奏：“脑子终于没有那么吵了。头疗做完不是什么大变化，就是人没那么赶。”',
+  ], input.seed ?? Date.now());
 
   const igMentionRule = input.socialHandles?.instagram
     ? `Naturally mention @${input.socialHandles.instagram.replace(/^@/, '')} in the caption.`
@@ -294,18 +288,17 @@ ${editorialPrinciples}
 把它写得像一个人刚刚记下的感受，不要像商家介绍、测评报告或 AI 总结。
 
 写作规则：
-1. 顾客原话、已选项目和已选感受是事实来源。可以把已有感受写得更有情绪、更口语，但不能新增到店原因、时间、环境、技师、流程、价格或效果等具体经历。信息少就写短一点。
+1. 顾客原话、已选项目和已选感受是事实来源。可以把已有感受写得更有情绪、更口语，但不要虚构到店原因、时间、环境、技师、流程、价格或效果等具体经历。信息少就写短一点。
 2. 顾客原话优先。原话里有“一般”“不满意”或褒贬并存时，如实保留，用个人感受来表达，不要改成夸赞或推荐。
-3. 中文要自然、碎片化、有个人口吻；可以用短句、语气词和 0–3 个恰当 emoji。避免“整体而言”“不仅如此”“值得一提”“体验感拉满”这类书面或模板化表达。
-4. 第一行写简短标题，正文 1–3 段，文末放 2–6 个和输入有关的话题。正文自然出现门店名「${input.merchantName}」。${xhsAccountRule}
-5. 不要写极限词、返现折扣、疗效承诺、评分或引导他人消费的话术。
+3. 每篇只抓 1–2 个最有感觉的点，不要把项目和标签逐项复述，也不要把同一个感受换词说三遍。
+4. 口吻要求：${xhsVoiceGuide}
+5. 本篇写法方向：${xhsVariationDirection}
+6. 第一行写简短标题，正文 1–3 段，文末放 2–6 个和输入有关的话题。正文自然出现门店名「${input.merchantName}」。${xhsAccountRule}
+7. 不要写极限词、返现折扣、疗效承诺、评分或引导他人消费的话术；避免“整体而言”“不仅如此”“值得一提”“体验感拉满”“不是那种很夸张的变化”等模板句。
+8. ${xhsPriorPhraseRule}
 
-参考这种表达节奏，不要照抄内容：
-素材：面部 SPA；肩颈松了一点；没有推销。
-示例："今天做了个面部 SPA，肩颈居然松了一点点。不是那种夸张的变化，但当下真的有被救到。没有人一直聊套餐，这点对我还挺重要。"
-
-素材：整体一般；服务员不错。
-示例："这次就中规中矩吧，没到惊艳的程度。不过服务员沟通挺舒服，这个必须说一句。可能每个人在意的点不一样，我记下自己的感受。"
+参考这种表达节奏，不要照抄措辞：
+${xhsStyleReference}
 
 只输出最终成稿，不解释规则或过程。`;
 }
@@ -404,13 +397,13 @@ async function generateWithRemoteProvider(input: ReviewDraftInput, provider: Com
     if (!isChinesePlatform(input.platform) && /[\u4e00-\u9fff]/.test(content)) continue;
     if (isChinesePlatform(input.platform) && !/[\u4e00-\u9fff]/.test(content)) continue;
     if (isGroundedRemoteDraft(content, input)) return content;
-    if (input.platform === 'xiaohongshu') formatFeedback = getXiaohongshuFormatFeedback(content);
+    if (input.platform === 'xiaohongshu') formatFeedback = getXiaohongshuFormatFeedback(content, input);
   }
 
   return null;
 }
 
-function getXiaohongshuFormatFeedback(content: string): string {
+function getXiaohongshuFormatFeedback(content: string, input: ReviewDraftInput): string {
   const lines = content.split('\n').map((line) => line.trim()).filter(Boolean);
   const title = lines[0] ?? '';
   const body = lines.slice(1).filter((line) => !line.startsWith('#')).join('');
@@ -418,10 +411,16 @@ function getXiaohongshuFormatFeedback(content: string): string {
   const hashtags = content.match(/#[^\s#]+/g)?.length ?? 0;
   const issues: string[] = [];
   if (Array.from(title).length > 30) issues.push('标题过长');
-  if (chineseCharacters < 40) issues.push('正文偏短');
+  if (chineseCharacters < xiaohongshuMinimumBodyLength(input)) issues.push('正文偏短');
   if (chineseCharacters > 360) issues.push('正文过长');
-  if (hashtags < 2 || hashtags > 10) issues.push('话题数量不合适');
+  if (hashtags < 2 || hashtags > 8) issues.push('话题数量不合适');
   return `刚才的成稿${issues.length ? `存在这些问题：${issues.join('；')}` : '格式不完整'}。保持原有的自然表达，只调整这些问题后输出成稿，不要解释。`;
+}
+
+function xiaohongshuMinimumBodyLength(input: ReviewDraftInput): number {
+  if (input.experience.trim()) return 30;
+  const suppliedFacts = input.serviceNames.length + input.tags.length;
+  return suppliedFacts <= 1 ? 16 : 26;
 }
 
 function normalizeRemoteDraft(content: string, input: ReviewDraftInput): string {
@@ -477,45 +476,23 @@ function normalizeRemoteDraft(content: string, input: ReviewDraftInput): string 
   const bodyLimit = 360;
   const bodyBase = Array.from(rawBody).slice(0, bodyLimit).join('').trim();
   const body = bodyBase;
-  const modelTags = normalized.match(/#[^\s#]+/g) ?? [];
+  const modelTags = uniqueXiaohongshuTags(normalized.match(/#[^\s#]+/g) ?? []);
 
   if (title && body && modelTags.length >= 2) {
-    normalized = `${title}\n\n${body}\n\n${modelTags.slice(0, 10).join(' ')}`;
+    normalized = `${title}\n\n${body}\n\n${modelTags.slice(0, 5).join(' ')}`;
   }
   return normalized;
 }
 
-function extendShortXiaohongshuBody(body: string, input: ReviewDraftInput, limit: number): string {
-  let extended = body;
-  const additions = input.tags
-    .map((tag) => ({ tag, text: xiaohongshuFeelingSentence(tag) }))
-    .filter((item) => Boolean(item.text));
-
-  for (const { tag, text } of additions) {
-    const chineseCharacters = extended.match(/[\u4e00-\u9fff]/g)?.length ?? 0;
-    if (chineseCharacters >= 100) break;
-    if (isXiaohongshuFeelingCovered(extended, tag)) continue;
-    if (!extended.includes(text)) extended = `${extended}${text}`;
-  }
-  // A customer may only leave a short, mixed note. Keep it usable instead of
-  // failing the platform's minimum length check, without adding new facts.
-  const chineseCharacters = extended.match(/[\u4e00-\u9fff]/g)?.length ?? 0;
-  if (chineseCharacters < 60) {
-    extended = `${extended}我的感受大概就这些。`;
-  }
-  return Array.from(extended).slice(0, limit).join('').trim();
-}
-
-function isXiaohongshuFeelingCovered(body: string, tag: string): boolean {
-  if (tag === '肩颈松了') return /肩颈[^。！？]{0,12}(?:松|轻)/.test(body);
-  if (tag === '终于慢下来') return /慢下来|节奏[^。！？]{0,10}(?:慢|不赶)/.test(body);
-  if (tag === '没有推销') return /没有推销|不推销/.test(body);
-  if (tag === '值得再来') return /值得再来|还会再来|愿意再来/.test(body);
-  if (tag === '放松舒服') return /放松|舒服/.test(body);
-  if (tag === '细心专业') return /细心|细致|专业/.test(body);
-  if (tag === '环境整洁') return /环境[^。！？]{0,10}(?:整洁|干净|清爽)/.test(body);
-  if (tag === '节奏不赶') return /不赶|节奏[^。！？]{0,10}(?:慢|松)/.test(body);
-  return false;
+function uniqueXiaohongshuTags(tags: string[]): string[] {
+  const seen = new Set<string>();
+  return tags.filter((tag) => {
+    const compact = tag.replace(/^#/, '').replace(/[\s\p{P}]/gu, '');
+    const similarityKey = compact.replace(/生活|探店|日常|体验|记录/gu, '') || compact;
+    if (!similarityKey || seen.has(similarityKey)) return false;
+    seen.add(similarityKey);
+    return true;
+  });
 }
 
 function groqProvider(apiKey: string): CompatibleChatProvider {
@@ -559,7 +536,7 @@ function isGroundedRemoteDraft(content: string, input: ReviewDraftInput): boolea
   }
   if (!content.toLowerCase().includes(input.merchantName.toLowerCase())) return false;
 
-  return hasPlatformAppropriateLength(content, input.platform);
+  return hasPlatformAppropriateLength(content, input);
 }
 
 function preservesCustomerSentiment(content: string, input: ReviewDraftInput): boolean {
@@ -569,7 +546,7 @@ function preservesCustomerSentiment(content: string, input: ReviewDraftInput): b
   const sourceHasChineseCriticism = /一般|普通|还行|不好|不太好|差|失望|不满意|没惊喜|没有惊喜|贵|太慢|等(?:了|得)?(?:有点|比较|很|太)?久/.test(source);
   if (sourceHasChineseCriticism) {
     if (input.platform === 'xiaohongshu') {
-      if (!/一般|普通|不好|差|失望|不满意|没惊喜|没有惊喜|贵|慢|等/.test(content)) return false;
+      if (!/一般|普通|中规中矩|平平无奇|还行|不好|不太适合|差|失望|不满意|没(?:有)?(?:太|很)?惊艳|没留下.*印象|贵|慢|等/.test(content)) return false;
     } else if (!/average|ordinary|not\s+(?:good|great|impressed|satisfied)|disappoint|underwhelm|expensive|pricey|slow|wait|mixed/i.test(content)) {
       return false;
     }
@@ -578,7 +555,7 @@ function preservesCustomerSentiment(content: string, input: ReviewDraftInput): b
   const sourcePraisesStaff = /(?:服务员|员工|工作人员|店员)[^。！？]{0,10}(?:不错|很好|挺好|友好|耐心|专业)/.test(source);
   if (sourcePraisesStaff) {
     if (input.platform === 'xiaohongshu') {
-      if (!/(?:服务员|员工|工作人员|店员)[^。！？]{0,16}(?:不错|好|友好|耐心|专业|加分)/.test(content)) return false;
+      if (!/(?:服务员|员工|工作人员|店员)[^。！？]{0,16}(?:不错|好|友好|耐心|专业|加分)|沟通[^。！？]{0,12}(?:舒服|顺|好)|态度[^。！？]{0,12}(?:好|不错|舒服)|说话[^。！？]{0,12}(?:舒服|自然)/.test(content)) return false;
     } else if (!/(?:staff|employee|team|server)[^.?!]{0,30}(?:nice|good|friendly|patient|professional|helpful)/i.test(content)) {
       return false;
     }
@@ -592,20 +569,20 @@ function preservesCustomerSentiment(content: string, input: ReviewDraftInput): b
   return true;
 }
 
-function hasPlatformAppropriateLength(content: string, platform: ReviewPlatform): boolean {
-  if (platform === 'xiaohongshu') {
+function hasPlatformAppropriateLength(content: string, input: ReviewDraftInput): boolean {
+  if (input.platform === 'xiaohongshu') {
     const lines = content.split('\n').map((line) => line.trim()).filter(Boolean);
     const title = lines[0] ?? '';
     const hashtags = content.match(/#[^\s#]+/g) ?? [];
     const body = lines.slice(1).filter((line) => !line.startsWith('#')).join('');
     const chineseCharacters = body.match(/[\u4e00-\u9fff]/g)?.length ?? 0;
-    return Array.from(title).length <= 30 && chineseCharacters >= 40 && chineseCharacters <= 360 && hashtags.length >= 2 && hashtags.length <= 10;
+    return Array.from(title).length <= 30 && chineseCharacters >= xiaohongshuMinimumBodyLength(input) && chineseCharacters <= 360 && hashtags.length >= 2 && hashtags.length <= 8;
   }
 
-  if (platform === 'google' || platform === 'yelp') {
+  if (input.platform === 'google' || input.platform === 'yelp') {
     if (/#|[✨💆🤍]/u.test(content)) return false;
     const words = englishWordCount(content);
-    return platform === 'google' ? words >= 60 && words <= 120 : words >= 80 && words <= 150;
+    return input.platform === 'google' ? words >= 60 && words <= 120 : words >= 80 && words <= 150;
   }
 
   const hashtags = content.match(/#[^\s#]+/g) ?? [];

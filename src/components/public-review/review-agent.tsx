@@ -76,9 +76,9 @@ const ENGLISH_VOICES: VoiceOption[] = [
 ];
 
 const CHINESE_VOICES: VoiceOption[] = [
-  { value: 'natural', label: '自然口吻', detail: '像日常分享' },
-  { value: 'concise', label: '简洁一点', detail: '短句直说' },
-  { value: 'warm', label: '温暖叙事', detail: '更有个人感受' },
+  { value: 'natural', label: '随手记录', detail: '像发给朋友看的日常分享' },
+  { value: 'concise', label: '短句直说', detail: '更短、更利落的表达' },
+  { value: 'warm', label: '松弛日记', detail: '多一点个人感受和情绪' },
 ];
 
 const PLATFORM_STYLES: Record<PublicReviewPlatform, {
@@ -125,9 +125,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
   }, [initialServiceId, merchant.services]);
 
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>(parsedInitialIds);
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([
-    merchant.experienceTags[0]?.id || 'calm',
-  ]);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [voice, setVoice] = useState<PublicReviewVoice>('natural');
   const [draft, setDraft] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -202,6 +200,8 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
 
   const toggleService = (serviceId: string) => {
     setError('');
+    draftHistoryRef.current.clear();
+    draftEdgesRef.current = [];
     setSelectedServiceIds((current) => {
       if (!current.includes(serviceId) && current.length >= 2) {
         setError(isChinese ? '最多选择 2 个服务项目。' : 'You can select up to 2 services.');
@@ -218,7 +218,13 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
 
   const toggleTag = (tagId: string) => {
     setError('');
+    draftHistoryRef.current.clear();
+    draftEdgesRef.current = [];
     setSelectedTagIds((current) => {
+      if (!current.includes(tagId) && isChinese && current.length >= 3) {
+        setError('小红书最多选择 3 个真实感受。');
+        return current;
+      }
       const updated = current.includes(tagId) ? current.filter((id) => id !== tagId) : [...current, tagId];
       setDraft('');
       return updated;
@@ -226,11 +232,15 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
   };
 
   const handleVoiceChange = (newVoice: PublicReviewVoice) => {
+    draftHistoryRef.current.clear();
+    draftEdgesRef.current = [];
     setVoice(newVoice);
     setDraft('');
   };
 
   const handleExperienceChange = (value: string) => {
+    draftHistoryRef.current.clear();
+    draftEdgesRef.current = [];
     setExperience(value);
     setError('');
     setDraft('');
@@ -473,7 +483,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
                   {isChinese ? '体验标签（可多选）' : 'Highlights (multi-select)'}
                 </p>
                 <span className="text-[10.5px] text-[#9c8475]">
-                  {isChinese ? `已选 ${selectedTagIds.length}` : `${selectedTagIds.length} selected`}
+                  {isChinese ? `已选 ${selectedTagIds.length}/3` : `${selectedTagIds.length} selected`}
                 </span>
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -531,6 +541,9 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
                 })}
               </div>
             </div>
+            <p className="px-1 text-[10.5px] text-[#9c8475]">
+              {voiceOptions.find((option) => option.value === voice)?.detail}
+            </p>
           </div>
 
           {/* ③ 自定义输入（默认折叠在下方，展开可填，500 字上限有计数，验收 #18） */}
@@ -544,7 +557,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
                 <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#8c674e] text-[10px] text-white font-bold">
                   3
                 </span>
-                <span className="min-w-0">{isChinese ? '你想说点什么（选填，建议填写）' : 'What would you like to say? (optional, recommended)'}</span>
+                <span className="min-w-0">{isChinese ? '写一句真实细节（选填，建议填写）' : 'What would you like to say? (optional, recommended)'}</span>
               </span>
               <span className="text-[11px] font-semibold text-[#8b6147]">
                 {isExperienceOpen ? (isChinese ? '收起 ▲' : 'Collapse ▲') : (isChinese ? '展开输入 ▼' : 'Expand ▼')}
@@ -559,14 +572,14 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
                   onChange={(e) => handleExperienceChange(e.target.value)}
                   placeholder={
                     isChinese
-                      ? '选填：写下你的真实体验，我们会帮你整理成可编辑草稿。'
+                      ? '例如：肩颈按完松了些 / 没被推销 / 做完人没那么赶'
                       : 'Optional: add your real experience and we will polish it into an editable draft.'
                   }
                   rows={3}
                   className="w-full resize-none rounded-xl border border-[#dec9b5] bg-white p-3 text-xs sm:text-sm text-[#46352a] placeholder:text-[#b49f8f] outline-none transition focus:border-[#986a4c] focus:ring-2 focus:ring-[#986a4c]/15 shadow-inner"
                 />
                 <div className="flex justify-between items-center text-[10.5px] text-[#9c8475] px-1">
-                  <span>{isChinese ? '不填写也能一键生成；具体细节会让每一版更像你本人' : 'You can generate with one tap; a concrete detail makes it sound more like you'}</span>
+                  <span>{isChinese ? '不填写也能一键生成；一句真实细节会让每一版更像你本人' : 'You can generate with one tap; a concrete detail makes it sound more like you'}</span>
                   <span className="font-mono">{experience.length}/500</span>
                 </div>
               </div>
