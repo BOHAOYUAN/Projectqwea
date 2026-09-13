@@ -289,14 +289,23 @@ ${editorialPrinciples}
 9. Output ONLY the caption.`;
   }
 
-  return `你是一位真实顾客，正在为「${input.merchantName}」写一篇中文小红书评价。
+  return `你是一位普通顾客，正在为「${input.merchantName}」写一篇中文小红书体验笔记。
+
+把它写得像一个人刚刚记下的感受，不要像商家介绍、测评报告或 AI 总结。
 
 写作规则：
-1. 只使用用户提供的顾客原话、已选项目和已选感受。材料没有说的事就不要补；信息少可以写短，不要虚构到店原因、时间、场景、流程、员工行为、效果或个人经历。
-2. 顾客原话优先。原话里有“一般”“不满意”或褒贬并存时，如实保留，不要改写成夸赞或推荐。
-3. 语气像普通人在记录一次真实体验：自然、具体、克制，不写商家宣传文案、AI 腔或导购话术。
+1. 顾客原话、已选项目和已选感受是事实来源。可以把已有感受写得更有情绪、更口语，但不能新增到店原因、时间、环境、技师、流程、价格或效果等具体经历。信息少就写短一点。
+2. 顾客原话优先。原话里有“一般”“不满意”或褒贬并存时，如实保留，用个人感受来表达，不要改成夸赞或推荐。
+3. 中文要自然、碎片化、有个人口吻；可以用短句、语气词和 0–3 个恰当 emoji。避免“整体而言”“不仅如此”“值得一提”“体验感拉满”这类书面或模板化表达。
 4. 第一行写简短标题，正文 1–3 段，文末放 2–6 个和输入有关的话题。正文自然出现门店名「${input.merchantName}」。${xhsAccountRule}
-5. 不要写极限词、返现折扣、疗效承诺、评分或“推荐大家去”之类的内容。
+5. 不要写极限词、返现折扣、疗效承诺、评分或引导他人消费的话术。
+
+参考这种表达节奏，不要照抄内容：
+素材：面部 SPA；肩颈松了一点；没有推销。
+示例："今天做了个面部 SPA，肩颈居然松了一点点。不是那种夸张的变化，但当下真的有被救到。没有人一直聊套餐，这点对我还挺重要。"
+
+素材：整体一般；服务员不错。
+示例："这次就中规中矩吧，没到惊艳的程度。不过服务员沟通挺舒服，这个必须说一句。可能每个人在意的点不一样，我记下自己的感受。"
 
 只输出最终成稿，不解释规则或过程。`;
 }
@@ -361,10 +370,10 @@ async function generateWithRemoteProvider(input: ReviewDraftInput, provider: Com
     ? `门店：${input.merchantName}（${input.location}）\n已选项目：${services}\n已选感受：${tags}${input.experience ? `\n顾客原话：${input.experience}` : ''}\n\n请围绕这些内容写一篇自然的小红书笔记。顾客原话优先，没有原话时就根据已选项目和感受写，不要硬凑场景。`
     : `Store: ${input.merchantName} in ${input.location}\nSelected services: ${services}\nSelected feelings: ${tags}${input.experience ? `\nCustomer note: ${input.experience}` : ''}\n\nUse only the facts above. Do not mention any service, staff, cleanliness, timing, ambiance, outcome, or detail that does not literally appear above. Please write the review:`;
 
-  // A lower setting on XHS keeps the model anchored to the supplied customer
-  // facts; its prompt already provides enough room for natural phrasing.
+  // The XHS prompt anchors factual details itself; a moderate temperature
+  // leaves enough room for an informal, non-formulaic Chinese voice.
   const temperature = input.platform === 'xiaohongshu'
-    ? (input.voice === 'concise' ? 0.55 : 0.7)
+    ? (input.voice === 'concise' ? 0.65 : 0.82)
     : (input.voice === 'concise' ? 0.8 : 0.95);
 
   // Keep response time predictable on a phone. One initial attempt plus one
@@ -395,7 +404,7 @@ async function generateWithRemoteProvider(input: ReviewDraftInput, provider: Com
     if (!isChinesePlatform(input.platform) && /[\u4e00-\u9fff]/.test(content)) continue;
     if (isChinesePlatform(input.platform) && !/[\u4e00-\u9fff]/.test(content)) continue;
     if (isGroundedRemoteDraft(content, input)) return content;
-    if (input.platform === 'xiaohongshu') formatFeedback = getXiaohongshuRetryFeedback(content, input);
+    if (input.platform === 'xiaohongshu') formatFeedback = getXiaohongshuFormatFeedback(content);
   }
 
   return null;
@@ -413,13 +422,6 @@ function getXiaohongshuFormatFeedback(content: string): string {
   if (chineseCharacters > 360) issues.push('正文过长');
   if (hashtags < 2 || hashtags > 10) issues.push('话题数量不合适');
   return `刚才的成稿${issues.length ? `存在这些问题：${issues.join('；')}` : '格式不完整'}。保持原有的自然表达，只调整这些问题后输出成稿，不要解释。`;
-}
-
-function getXiaohongshuRetryFeedback(content: string, input: ReviewDraftInput): string {
-  if (hasUnsupportedXiaohongshuDetail(content, input)) {
-    return '上一稿补充了输入中没有的到店经过或服务细节。请删掉这些内容，只围绕顾客原话、已选项目和已选感受重写；信息不够可以写短，不要补故事。只输出成稿。';
-  }
-  return getXiaohongshuFormatFeedback(content);
 }
 
 function normalizeRemoteDraft(content: string, input: ReviewDraftInput): string {
@@ -546,7 +548,6 @@ function isGroundedRemoteDraft(content: string, input: ReviewDraftInput): boolea
   ];
   if (alwaysBlocked.some((pattern) => pattern.test(content))) return false;
   if (input.platform === 'xiaohongshu' && /@|MSBEAUTY_BALTIMORE/i.test(content)) return false;
-  if (input.platform === 'xiaohongshu' && hasUnsupportedXiaohongshuDetail(content, input)) return false;
   if (!preservesCustomerSentiment(content, input)) return false;
   if (input.platform === 'instagram') {
     const expectedMention = input.socialHandles?.instagram
@@ -559,16 +560,6 @@ function isGroundedRemoteDraft(content: string, input: ReviewDraftInput): boolea
   if (!content.toLowerCase().includes(input.merchantName.toLowerCase())) return false;
 
   return hasPlatformAppropriateLength(content, input.platform);
-}
-
-function hasUnsupportedXiaohongshuDetail(content: string, input: ReviewDraftInput): boolean {
-  const supplied = [input.experience, ...input.serviceNames, ...input.tags].join('');
-  const detailTerms = [
-    '路过', '预约', '约了', '最近', '周末', '下班', '上班',
-    '过程', '全程', '中间', '加项目', '套餐', '躺着', '躺下',
-    '手法', '力度', '环境', '房间', '进门', '出门', '等了', '等待',
-  ];
-  return detailTerms.some((term) => content.includes(term) && !supplied.includes(term));
 }
 
 function preservesCustomerSentiment(content: string, input: ReviewDraftInput): boolean {
