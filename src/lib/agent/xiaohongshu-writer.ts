@@ -3,6 +3,7 @@ import type { GeneratedDraft, ReviewDraftInput } from './review-generator';
 
 export function writingRange(note: string): [number, number] {
   const length = Array.from(note.replace(/\s/g, '')).length;
+  if (length === 0) return [50, 80];
   if (length < 30) return [80, 150];
   if (length < 50) return [120, 180];
   return [200, 300];
@@ -11,10 +12,41 @@ export function writingRange(note: string): [number, number] {
 export const XHS_MODEL = 'deepseek-flash';
 export const XHS_FALLBACK_MODEL = 'deepseek-v4-pro';
 
+const tagMeanings: Record<string, RegExp[]> = {
+  '状态重启': [/满血复活|重新充电|重新有了精神|精神回来|恢复状态|整个人.*焕然一新|像.*充.*电/],
+  '情绪释放': [/情绪.*(放|散|舒)|心情.*(轻|舒|好|松)|烦.*(散|放|抛)|心里.*(轻|舒|散|放)/],
+  '深度放松': [/彻底放松|很放松|放松.*(下来|透|到)|人.*(松下来|松快|舒坦)|全身.*(松|舒)|彻底.*松/],
+  '头皮明显改善': [/头皮.*(改善|舒服|清爽|好转|好.*多|舒坦)/],
+  '被认真照顾专业又安心': [/(认真|细心|用心).*(照顾|对待)|被.*照顾/, /专业|靠谱|放心|安心|踏实/],
+  '仪式感体验': [/仪式感|郑重.*(对待|安排)|认真.*(对待自己|安排.*自己)/],
+  '值得定期做': [/定期|隔.*(来|做)|固定.*(安排|清单)|经常.*(来|做)/],
+  '高端却不浮夸': [/质感|高级|讲究|高端/, /不浮夸|不张扬|不花哨|不夸张|低调/],
+  '能量恢复': [/精力.*(回来|恢复)|有.*劲|充.*电|满血复活|能量.*(回来|恢复)/],
+};
+
+const shortFeelings: Record<string, string> = {
+  '状态重启': '像给自己重新充了电', '情绪释放': '心情轻松了不少', '深度放松': '整个人彻底放松下来',
+  '头皮明显改善': '头皮舒服多了', '被认真照顾专业又安心': '被细心照顾，专业又让人放心',
+  '仪式感体验': '很有仪式感', '值得定期做': '想定期来做', '高端却不浮夸': '有质感但不张扬', '能量恢复': '精力回来了',
+};
+
+export function shortTagFallback(input: ReviewDraftInput): GeneratedDraft | null {
+  if (input.experience.trim() || !input.tags.length || input.tags.some(tag => !shortFeelings[tag])) return null;
+  const service = input.serviceNames.join('、');
+  let body = `在${input.merchantName}${service ? `体验了${service}` : '的这次体验'}，${input.tags.map(tag => shortFeelings[tag]).join('，')}。`;
+  if (Array.from(body.replace(/\s/g, '')).length < 50) body += '这次最想分享的就是这个感受，不用写一大篇，简单直接说就好。';
+  const content = `一次体验，几句分享\n\n${body}\n\n#巴尔的摩 #${input.merchantName.replace(/\s/g, '')} #体验分享`;
+  if (noteIssues(content, input).length) return null;
+  return { content, mode: 'local', platform: 'xiaohongshu', fallbackValidated: true };
+}
+
 export function missingTags(content: string, tags: string[]): string[] {
   // Title and hashtags do not count as coverage of the customer's experience.
   const prose = content.split('\n').slice(1).join('\n').replace(/#[^\s#]+/g, '').replace(/[\s，、。！？：；]/g, '');
-  return tags.filter(tag => !prose.includes(tag.replace(/[\s，、。！？：；]/g, '')));
+  return tags.filter(tag => {
+    const checks = tagMeanings[tag];
+    return checks ? !checks.every(check => check.test(prose)) : !prose.includes(tag);
+  });
 }
 export function emptyExperience(input: ReviewDraftInput): boolean {
   return !input.experience.trim() && input.tags.length === 0;
@@ -26,7 +58,7 @@ export function starterNote(input: ReviewDraftInput): GeneratedDraft {
   return { platform: 'xiaohongshu', mode: 'local', fallbackValidated: true,
     content: `${place}｜${subject}\n\n📍 ${input.merchantName}，${place}。\n\n${input.serviceNames.length ? `这篇围绕${subject}展开，` : ''}可以补充这次体验中印象最深的一点：环境、沟通，或自己的感受。\n\n#${place.replace(/\s/g, '')} #${input.merchantName.replace(/\s/g, '')} #门店分享` };
 }
-const filler = /慢下来|绷紧的心弦|不需要把体验写成很大的变化|后来回想起来|当下最确定的感受|难得|不知不觉|浮躁|内心的平静|都市生活|一场心灵之旅|寻找自我/;
+const filler = /脸累|脸.*蔫|没精神|说不上哪里|我又可以了|状态重启|照镜子|绷紧的心弦|后来回想起来|当下最确定的感受|内心的平静|一场心灵之旅|寻找自我/;
 
 export function parseNote(raw: string): string {
   // Preserve blank lines and the author's title; never pad or splice prose.
@@ -42,16 +74,24 @@ export function noteIssues(content: string, input: ReviewDraftInput): string[] {
   const [min, max] = writingRange(input.experience);
   const length = Array.from(prose.replace(/\s/g, '')).length;
   const issues: string[] = [];
-  for (const tag of missingTags(content, input.tags)) issues.push(`正文遗漏已选感受“${tag}”：自然写入这几个原词，并围绕它展开一句，不要只放在话题中`);
+  for (const tag of missingTags(content, input.tags)) issues.push(`正文尚未表达“${tag}”的含义，请参考输入的转译方向，用口语表达，不照抄标签或只放进话题`);
   if (Array.from(title).length > 20 || !title) issues.push('标题须为完整的20字以内短句');
   if (length < (emptyExperience(input) ? 15 : min) || length > max) issues.push(`正文当前${length}字，请调整为${min}–${max}字，不加空洞总结`);
   if (!prose.includes(input.merchantName)) issues.push('正文缺少准确店名');
-  if (prose.split(/\n\s*\n/).length < 2) issues.push('正文需要空行分成至少两段');
-  if (filler.test(content)) issues.push('删除空洞抒情及自我解释');
+  if (input.experience.trim() && prose.split(/\n\s*\n/).length < 2) issues.push('正文需要空行分成至少两段');
+  if (filler.test(title + '\n' + prose)) issues.push('删除正文或标题里的空洞抒情及标签解释句；话题标签不受此项限制');
   if (emptyExperience(input) && /刷到|存个档|还没选|记下来|做完|打卡了/.test(prose)) issues.push('空输入请仅写已知门店资料，不写刷到、收藏或选择状态');
   if (/@/.test(content)) issues.push('不要输出未经选择的@账号');
   const tags = body.match(/#[^\s#]+/g) ?? [];
   if (tags.length < 3 || tags.length > 5) issues.push('末尾仅保留3–5个相关话题');
+  if (/Baltimore|巴尔的摩/i.test(input.location)) {
+    if (tags.some(tag => /巴尔|巴.*摩/.test(tag) && !tag.includes('巴尔的摩'))) issues.push('地名拼写错误，统一写巴尔的摩');
+    if (!tags.some(tag => tag.includes('巴尔的摩'))) issues.push('至少一个话题使用准确地名巴尔的摩');
+  }
+  const source = input.experience + input.tags.join(' ');
+  for (const [pattern, detail] of [[/香薰|香氛|香气/, '香气'], [/音乐/, '音乐'], [/手法|力度/, '手法力度'], [/水润|软糯|反光|皮肤[^，。！？\n]{0,12}滑|脸[^，。！？\n]{0,12}(滑|软)/, '皮肤触感'], [/熬夜|熬大夜|加班|工作压力|周末/, '生活背景']] as const) {
+    if (pattern.test(prose) && !pattern.test(source)) issues.push(`删去未提供的${detail}，不要用新细节填补字数`);
+  }
   return issues;
 }
 
@@ -59,7 +99,11 @@ export async function writeXiaohongshu(input: ReviewDraftInput): Promise<Generat
   if (emptyExperience(input)) {
     try { return await requestNote(input); } catch { return starterNote(input); }
   }
-  return requestNote(input);
+  try { return await requestNote(input); } catch (error) {
+    const fallback = shortTagFallback(input);
+    if (fallback) return fallback;
+    throw error;
+  }
 }
 
 async function requestNote(input: ReviewDraftInput): Promise<GeneratedDraft> {
@@ -76,9 +120,6 @@ async function requestNote(input: ReviewDraftInput): Promise<GeneratedDraft> {
       '- 体验标签：' + (input.tags.join('、') || '未选择'),
       '- 平台/口吻：小红书/' + (input.voice || 'natural'),
       '- 用户真实细节：' + (input.experience || '未填写'),
-      '写作重点：每一个已选体验标签都必须在正文中自然出现原词，不能漏掉，也不能只列在话题里。可以加标点使语句通顺，例如“被认真照顾，专业又安心”。围绕它们串成一篇小故事，不写成标签清单。',
-      '叙事节奏：开头点出最有感的体验；中间把项目、已选感受串起来；结尾写体验后的想法。两到四段，有前后衔接和情绪变化。有用户提供的工作压力、近期状态就用作开场，未提供则从体验本身开场，不编造背景、朋友推荐或具体过程。',
-      '事实底线补充：上面的写作示例不是本次顾客事实。未选标签不代表体验过；不要从示例搬入没推销、皮肤变化、睡着、具体手法或环境。只对本次提供的感受换一种表达。',
       '输出格式：第一行标题（20字以内），随后正文及话题。直接输出成稿，不输出@账号。',
       emptyExperience(input) ? '没有体验素材时，生成可编辑的门店信息分享草稿，只介绍已知店名和地点，不声称刷到、到访、收藏或尚未到访，不描述表单状态，不写体验好坏。' : '本次正文目标' + min + '–' + max + '字。',
       input.avoidPhrases?.length ? '换一篇，不重复旧稿片段：' + JSON.stringify(input.avoidPhrases) : '',
@@ -105,6 +146,7 @@ async function requestNote(input: ReviewDraftInput): Promise<GeneratedDraft> {
     const issues = noteIssues(content, input);
     if (choice?.finish_reason === 'length') issues.push('输出未完成');
     if (!issues.length) return { content, mode: 'deepseek', platform: 'xiaohongshu', requestedModel: model };
+    lastError = new Error('Xiaohongshu draft checks: ' + issues.join('; '));
     messages.push({ role: 'assistant', content }, { role: 'user', content: '请按原提示词修改这一稿：' + issues.join('；') + '。直接输出完整成稿。' });
     } catch (error) {
       lastError = error;
@@ -112,5 +154,6 @@ async function requestNote(input: ReviewDraftInput): Promise<GeneratedDraft> {
     }
   }
   // Do not disguise hard-coded filler as a model result.
+  console.warn('XHS generation exhausted:', lastError instanceof Error ? lastError.message : 'unknown provider error');
   throw lastError;
 }
