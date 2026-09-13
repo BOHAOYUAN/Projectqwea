@@ -142,12 +142,25 @@ function localXiaohongshuDraft(input: ReviewDraftInput): string {
   const location = input.location.replace(/Baltimore(?:,\s*MD)?/i, '巴尔的摩');
   const title = buildXiaohongshuTitle(input);
   const hasMixedFeeling = /一般|普通|还行|不满意|失望|不好/.test(note);
+  const supplied = `${note} ${input.tags.join(' ')}`;
+  const supportedDetails = [
+    /肩颈|脖子|肩膀/.test(supplied) && /松|轻|缓|紧|舒服/.test(supplied)
+      ? '肩颈容易紧的时候，能感觉到一点放松其实很明显。'
+      : '',
+    /推销|套餐|办卡/.test(supplied)
+      ? '沟通自然、没有被推销这些看上去很小的事，合在一起会让人更容易放松下来。'
+      : '',
+    /慢下来|没那么赶|节奏不赶/.test(supplied)
+      ? '人慢下来之后，才发现自己原来一直绷得有点紧。'
+      : '',
+  ].filter(Boolean).slice(0, 2).join('');
   const reflection = hasMixedFeeling
-    ? '好的部分和保留的部分我都会一起记住，不会因为其中一项就把另一项盖过去。对我来说，这样写下来才更接近当时真实的感受。没有什么需要夸大或者包装的，把自己的感觉说清楚就够了，也更方便自己以后回看。'
-    : '对我来说，不需要把一次体验写得很满。能感觉到身体和情绪稍微缓下来一点，这种小变化就已经很值得被记住了。回头想想，留下来的就是这份不急不赶的轻松感。没有什么需要夸大或者包装的，把自己的感觉说清楚就够了，也更方便自己以后回看。';
+    ? '好的部分和保留的部分我都会一起记住，不会因为其中一项就把另一项盖过去。把自己实际感受到的部分写清楚，比急着给它下结论更贴近当时的想法。'
+    : '不需要把一次体验写成很大的变化。能把当下最确定的感受留下来，过几天再回头看，也还是属于自己的体验。';
   const parts = [
-    service ? `在${location}的 ${input.merchantName} 做了${service}，把这次真实感受写下来。` : `把${input.merchantName}这次真实感受写下来。`,
+    service ? `在${location}的 ${input.merchantName} 做了${service}，这次想把真实感受写下来。` : `这次想把${input.merchantName}的真实感受写下来。`,
     note ? `${note}。` : '',
+    supportedDetails,
     reflection,
   ].filter(Boolean);
   const tagList = Array.from(new Set([
