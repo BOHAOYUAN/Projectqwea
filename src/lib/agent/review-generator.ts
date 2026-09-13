@@ -397,7 +397,11 @@ async function generateWithRemoteProvider(input: ReviewDraftInput, provider: Com
     if (!isChinesePlatform(input.platform) && /[\u4e00-\u9fff]/.test(content)) continue;
     if (isChinesePlatform(input.platform) && !/[\u4e00-\u9fff]/.test(content)) continue;
     if (isGroundedRemoteDraft(content, input)) return content;
-    if (input.platform === 'xiaohongshu') formatFeedback = getXiaohongshuFormatFeedback(content, input);
+    if (input.platform === 'xiaohongshu') {
+      formatFeedback = hasXiaohongshuTemplateResidue(content, input)
+        ? '上一稿出现了“不是那种夸张的变化”“我自己记一下”一类固定模板句。换成更像这个人会说的话，只保留一个具体感受，不要解释。'
+        : getXiaohongshuFormatFeedback(content, input);
+    }
   }
 
   return null;
@@ -525,6 +529,12 @@ function isGroundedRemoteDraft(content: string, input: ReviewDraftInput): boolea
   ];
   if (alwaysBlocked.some((pattern) => pattern.test(content))) return false;
   if (input.platform === 'xiaohongshu' && /@|MSBEAUTY_BALTIMORE/i.test(content)) return false;
+  if (
+    input.platform === 'xiaohongshu'
+    && /会优先考虑|优先选|下次还会|下次会再来|推荐大家|安利给/.test(content)
+    && !/会优先考虑|优先选|下次还会|下次会再来|推荐大家|安利给/.test(input.experience)
+  ) return false;
+  if (input.platform === 'xiaohongshu' && hasXiaohongshuTemplateResidue(content, input)) return false;
   if (!preservesCustomerSentiment(content, input)) return false;
   if (input.platform === 'instagram') {
     const expectedMention = input.socialHandles?.instagram
@@ -537,6 +547,17 @@ function isGroundedRemoteDraft(content: string, input: ReviewDraftInput): boolea
   if (!content.toLowerCase().includes(input.merchantName.toLowerCase())) return false;
 
   return hasPlatformAppropriateLength(content, input);
+}
+
+function hasXiaohongshuTemplateResidue(content: string, input: ReviewDraftInput): boolean {
+  const supplied = input.experience;
+  const templatePhrases = [
+    /不是那种(?:很)?夸张的(?:变化|感觉)/,
+    /我自己记一下(?:这个)?感受/,
+    /别的(?:就)?(?:先)?不多说/,
+    /说不上(?:具体)?哪里变了/,
+  ];
+  return templatePhrases.some((pattern) => pattern.test(content) && !pattern.test(supplied));
 }
 
 function preservesCustomerSentiment(content: string, input: ReviewDraftInput): boolean {
