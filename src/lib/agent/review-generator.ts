@@ -157,7 +157,7 @@ function localXiaohongshuDraft(input: ReviewDraftInput): string {
     ...input.tags.map(hashtag),
   ].filter(Boolean))).slice(0, 5).join(' ');
 
-  return `${title}\n\n${parts.join('')}\n\n${tagList}`;
+  return `${title}\n\n${extendXiaohongshuBody(parts.join(''), input)}\n\n${tagList}`;
 }
 
 function buildXiaohongshuTitle(input: ReviewDraftInput): string {
@@ -402,9 +402,16 @@ async function generateWithRemoteProvider(input: ReviewDraftInput, provider: Com
     if (isChinesePlatform(input.platform) && !/[\u4e00-\u9fff]/.test(content)) continue;
     if (isGroundedRemoteDraft(content, input)) return content;
     if (input.platform === 'xiaohongshu') {
-      formatFeedback = hasXiaohongshuTemplateResidue(content, input)
+      const unsupportedDetails = findUnsupportedXiaohongshuDetails(content, input);
+      const correction = unsupportedDetails.length > 0
+        ? `上一稿新增了顾客没有提供的${unsupportedDetails.join('、')}。删掉这些内容，只保留顾客原话和已选项目、感受；情绪可以自然扩写，但不要新增具体经历。`
+        : hasXiaohongshuTemplateResidue(content, input)
         ? '上一稿出现了“不是那种夸张的变化”“我自己记一下”一类固定模板句。换成更像这个人会说的话，只保留一个具体感受，不要解释。'
         : getXiaohongshuFormatFeedback(content, input);
+      // Asking for a revision of the first draft gives the model a concrete
+      // starting point. Otherwise it tends to repeatedly return a pleasant
+      // but too-short note when the customer supplied only one compact fact.
+      formatFeedback = `${correction}\n上一稿如下：\n${Array.from(content).slice(0, 720).join('')}\n请保留其中已提供的事实，只把这一稿改成符合全部长度和格式要求的最终成稿。`;
     }
   }
 
@@ -481,13 +488,34 @@ function normalizeRemoteDraft(content: string, input: ReviewDraftInput): string 
   // is preferable to a mechanically extended one.
   const bodyLimit = 300;
   const bodyBase = Array.from(rawBody).slice(0, bodyLimit).join('').trim();
-  const body = collapseXiaohongshuRepeats(bodyBase);
+  const body = extendXiaohongshuBody(collapseXiaohongshuRepeats(bodyBase), input);
   const modelTags = uniqueXiaohongshuTags(normalized.match(/#[^\s#]+/g) ?? []);
 
   if (title && body && modelTags.length >= 2) {
     normalized = `${title}\n\n${body}\n\n${modelTags.slice(0, 5).join(' ')}`;
   }
   return normalized;
+}
+
+function extendXiaohongshuBody(body: string, input: ReviewDraftInput): string {
+  const currentLength = chineseCharacterCount(body);
+  if (currentLength >= 150) return body;
+
+  const hasMixedFeeling = /一般|普通|还行|不满意|失望|不好/.test(input.experience);
+  const extension = hasMixedFeeling
+    ? body.includes('好的部分和保留的部分')
+      ? '这次没有想把它写成简单的好或不好两句话。把自己实际感受到的部分留下来，之后再看也会更清楚。'
+      : '回头想想，我还是更愿意把这次感受原样记下来。好的地方和保留的地方都有，分开说清楚，比急着给它下结论更贴近我当时的想法。'
+    : body.includes('不需要把一次体验写得很满')
+      ? '这些感受不需要急着变成一句很满的结论。把当时最确定的那一点留下来，过几天再想起也还是自己的体验。'
+      : body.includes('松口气')
+        ? '后来回想起来，最让我记住的是身体和情绪一起慢下来的一点点感觉。不需要把它说得多特别，紧绷感缓开的那一小段时间，自己确实能感受到。'
+        : '后来回想起来，最让我记住的是身体和情绪一起慢下来的一点点感觉。不是要把它说得多特别，只是那种松口气的瞬间，自己确实能感受到。';
+  return Array.from(`${body}\n\n${extension}`).slice(0, 300).join('').trim();
+}
+
+function chineseCharacterCount(value: string): number {
+  return value.match(/[\u4e00-\u9fff]/g)?.length ?? 0;
 }
 
 function uniqueXiaohongshuTags(tags: string[]): string[] {
@@ -570,6 +598,7 @@ function isGroundedRemoteDraft(content: string, input: ReviewDraftInput): boolea
   ];
   if (alwaysBlocked.some((pattern) => pattern.test(content))) return false;
   if (input.platform === 'xiaohongshu' && /@|MSBEAUTY_BALTIMORE/i.test(content)) return false;
+  if (input.platform === 'xiaohongshu' && findUnsupportedXiaohongshuDetails(content, input).length > 0) return false;
   if (
     input.platform === 'xiaohongshu'
     && /会优先考虑|优先选|下次[^。！？]{0,10}(?:还会|会再|再去|考虑)|推荐大家|安利给/.test(content)
@@ -602,6 +631,17 @@ function hasXiaohongshuTemplateResidue(content: string, input: ReviewDraftInput)
     /^今天的小记录$/m,
   ];
   return templatePhrases.some((pattern) => pattern.test(content) && !pattern.test(supplied));
+}
+
+function findUnsupportedXiaohongshuDetails(content: string, input: ReviewDraftInput): string[] {
+  const supplied = `${input.experience} ${input.tags.join(' ')}`;
+  const unsupported: string[] = [];
+  if (!/推销|套餐|办卡/.test(supplied) && /推销|套餐|办卡/.test(content)) unsupported.push('推销或套餐');
+  if (!/慢下来|没那么赶|节奏不赶|放松/.test(supplied) && /慢下来|没那么赶|节奏不赶|不赶/.test(content)) unsupported.push('节奏或慢下来');
+  if (!/环境|香氛|灯光/.test(supplied) && /香氛|灯光|环境(?:很|特别|看着)/.test(content)) unsupported.push('环境细节');
+  if (!/技师|手法/.test(supplied) && /技师|手法/.test(content)) unsupported.push('技师或手法');
+  if (!/价格|套餐|折扣/.test(supplied) && /价格|折扣/.test(content)) unsupported.push('价格或折扣');
+  return unsupported;
 }
 
 function preservesCustomerSentiment(content: string, input: ReviewDraftInput): boolean {
