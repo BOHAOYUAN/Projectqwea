@@ -289,22 +289,20 @@ ${editorialPrinciples}
 9. Output ONLY the caption.`;
   }
 
-  // Xiaohongshu
-  return `你是一位中文母语顾客，为【${input.merchantName}】写一篇自然、克制、有生活气息的小红书体验笔记。
-严格格式与合规要求：
-编辑原则：
-${editorialPrinciples}
-1. 语言：中文。
-2. 标题：第1行必须是简短、自然的标题，长度严格控制在 20 字以内（可带合适 Emoji）。
-3. 正文：严格 60–160 个中文字符，写 3–7 句，分 1–3 个短段落，空行隔开。像顾客在手机里随手记下来的体验，不像商家文案或测评模板：可用“我”“这次”“做完后”等日常说法，句子长短不必整齐。不要写“体验随记”“真实感受”“整体感受”“做完以后再回想”“不硬夸”等模板句。信息少就短一点，不为了凑字数重复同一个感受。英文顾客原话只提炼事实和感受后自然转述，绝不逐句翻译。地点如需出现，把 “Baltimore, MD” 写成“巴尔的摩”，禁止出现“这次在Baltimore, MD的MS BEAUTY”一类中英夹杂句式。
-4. 账号提及：${xhsAccountRule}
-5. 门店名：正文必须原样出现“${input.merchantName}”，不得翻译、省略或只写“这家店”。
-6. 话题标签：文末附带 3–8 个话题标签；标签只能使用门店名、地点、已选项目和已选感受。
-7. 内容边界：只可使用输入中明确提供的项目、标签与顾客原话；不可补充环境、员工、流程、效果或任何未提供细节。尤其不得自行写“躺下/椅子/睡着/手法/一小时/赶时间/看手机”等场景；这些词除非顾客原话中出现，否则一律不用。顾客写“一般、不好、失望、贵、慢”等评价时必须如实保留，不能改成好评；像“店家一般，服务员不错”这样的混合评价，要把优点和不足都自然写出来。
-8. 合规红线：严禁极限词（如“最好”、“第一”），严禁提及“好评返现/送折扣”等违规诱导。不要说“可以试试”“值得去”“建议去”“预算宽裕”等推荐或导购话术。不要写“我不想把它写成推荐”“我勾选的是”“发布前再核对”“按真实体验修改”“这条笔记记录的是”等模型说明或创作过程。
-9. 本次写作角度：${variationDirection}
-10. 不得使用“宝藏店”“体验感拉满”“闭眼冲”“姐妹们冲”“种草”“治愈”“绝绝子”等模板化表达。
-11. 只输出纯文本笔记。`;
+  // Xiaohongshu: let the model write like a person first. The prompt keeps
+  // only the facts, account and compliance boundaries that a public page needs.
+  return `你是一位中文母语顾客，写一篇会发在小红书上的体验笔记。
+
+素材来自一次在「${input.merchantName}」的体验。请用自然、口语化、有个人节奏的中文来写，不要像商家宣传文案，也不要像逐条完成任务。
+
+要求：
+- 顾客原话是最重要的依据；如果原话有不满意、一般或褒贬并存的内容，保留这个意思，不要强行写成好评。
+- 已选项目和感受可自然融入，不必逐项罗列，也不必为了凑内容重复。
+- 第 1 行给一个简短标题；正文写 1–3 段，句子长短可以自然变化；最后加 2–6 个相关话题。
+- 正文出现门店名「${input.merchantName}」。${xhsAccountRule}
+- 不要编造明确的服务细节、效果、价格或人物互动；不要出现返现、折扣、疗效承诺等内容。
+
+只输出最终笔记，不要解释写作过程。`;
 }
 
 type CompatibleChatProvider = {
@@ -364,7 +362,7 @@ async function generateWithRemoteProvider(input: ReviewDraftInput, provider: Com
   const tags = input.tags.join(', ') || 'None selected';
 
   const user = isChinesePlatform(input.platform)
-    ? `门店：${input.merchantName} (${input.location})\n已选项目：${services}\n已选感受：${tags}${input.experience ? `\n顾客原话：${input.experience}` : ''}\n\n只可使用以上事实。未选项目、未填写感受或未出现的细节必须完全不提。请写文案：`
+    ? `门店：${input.merchantName}（${input.location}）\n已选项目：${services}\n已选感受：${tags}${input.experience ? `\n顾客原话：${input.experience}` : ''}\n\n请围绕这些内容写一篇自然的小红书笔记。顾客原话优先，没有原话时就根据已选项目和感受写，不要硬凑场景。`
     : `Store: ${input.merchantName} in ${input.location}\nSelected services: ${services}\nSelected feelings: ${tags}${input.experience ? `\nCustomer note: ${input.experience}` : ''}\n\nUse only the facts above. Do not mention any service, staff, cleanliness, timing, ambiance, outcome, or detail that does not literally appear above. Please write the review:`;
 
   const temperature = input.voice === 'concise' ? 0.8 : 0.95;
@@ -378,7 +376,7 @@ async function generateWithRemoteProvider(input: ReviewDraftInput, provider: Com
     const retryRequirement = input.platform === 'instagram'
       ? 'The last caption was invalid. Return 60–85 English non-hashtag words followed by exactly 5–10 end hashtags. Include the exact supplied Instagram handle and no other @ handle. Use only supplied facts; no explanation.'
       : input.platform === 'xiaohongshu'
-        ? formatFeedback || '上一次格式不合格。请这次只输出符合全部长度、标题和标签要求的成稿，不要解释。'
+        ? formatFeedback || '请保留自然口吻，补齐简短标题、正文和文末话题后重新输出成稿，不要解释。'
         : 'The last draft was invalid. Return only a finished draft that satisfies every required length and formatting rule; no explanation.';
     const retrySystem = attempt === 0
       ? system
@@ -410,11 +408,11 @@ function getXiaohongshuFormatFeedback(content: string): string {
   const chineseCharacters = body.match(/[\u4e00-\u9fff]/g)?.length ?? 0;
   const hashtags = content.match(/#[^\s#]+/g)?.length ?? 0;
   const issues: string[] = [];
-  if (Array.from(title).length > 20) issues.push('标题超过 20 字');
-  if (chineseCharacters < 60) issues.push(`正文只有 ${chineseCharacters} 个中文字符，必须扩写到 60–160 个`);
-  if (chineseCharacters > 180) issues.push(`正文有 ${chineseCharacters} 个中文字符，必须缩到 60–160 个`);
-  if (hashtags < 3 || hashtags > 8) issues.push(`标签数量为 ${hashtags}，必须是 3–8 个`);
-  return `刚才的成稿未通过检查：${issues.join('；') || '格式或内容不合格'}。请重写一篇合格成稿。只能围绕已选项目和感受，把这些已选感受写得更完整；不得补充门店环境、员工、流程、时间、价格或其他未提供事实。只输出成稿，不要解释。`;
+  if (Array.from(title).length > 30) issues.push('标题过长');
+  if (chineseCharacters < 40) issues.push('正文偏短');
+  if (chineseCharacters > 360) issues.push('正文过长');
+  if (hashtags < 2 || hashtags > 10) issues.push('话题数量不合适');
+  return `刚才的成稿${issues.length ? `存在这些问题：${issues.join('；')}` : '格式不完整'}。保持原有的自然表达，只调整这些问题后输出成稿，不要解释。`;
 }
 
 function normalizeRemoteDraft(content: string, input: ReviewDraftInput): string {
@@ -449,22 +447,13 @@ function normalizeRemoteDraft(content: string, input: ReviewDraftInput): string 
   }
   if (!isChinesePlatform(input.platform)) return normalized;
 
-  const temporalLead = /今天|昨天|前几天|上周|周末/;
-  if (!temporalLead.test(input.experience)) {
-    normalized = normalized.replace(
-      /(^|\n)\s*(?:今天|昨天|前几天|上周|周末)(?:我)?(?:去|来|做|体验)[^，。！？\n]*[，,]?/g,
-      '$1',
-    ).trim();
-  }
-
   const lines = normalized.split('\n').map((line) => line.trim()).filter(Boolean);
   const firstLine = lines[0] ?? '';
-  // Models occasionally omit a standalone title and start directly with the
-  // body. Do not silently discard that first paragraph by treating it as a
-  // title; provide a neutral title and preserve the customer's wording.
-  const hasStandaloneTitle = Array.from(firstLine).length <= 20 && !/[。！？]/.test(firstLine);
-  const rawTitle = hasStandaloneTitle ? (lines.shift() ?? '') : `${input.merchantName}体验记录`;
-  const title = Array.from(rawTitle).slice(0, 20).join('');
+  // Preserve the model's rhythm. Only add a compact title when it clearly
+  // omitted one, rather than recasting the whole draft into a fixed template.
+  const hasStandaloneTitle = Array.from(firstLine).length <= 30 && !/[。！？]/.test(firstLine);
+  const rawTitle = hasStandaloneTitle ? (lines.shift() ?? '') : '这次想记一下';
+  const title = Array.from(rawTitle).slice(0, 30).join('');
   const rawBody = lines
     .filter((line) => !line.startsWith('#'))
     .join('\n')
@@ -472,20 +461,15 @@ function normalizeRemoteDraft(content: string, input: ReviewDraftInput): string 
     .replace(/(?:^|\s)@[\w.-]+的?/gu, ' ')
     .replace(/\s{2,}/g, ' ')
     .trim();
-  // Only shorten an overlong model response; never pad or add fictional
-  // customer details merely to meet a target length.
-  const bodyLimit = 180;
+  // Do not pad with fixed feeling sentences. A short, natural customer note
+  // is preferable to a mechanically extended one.
+  const bodyLimit = 360;
   const bodyBase = Array.from(rawBody).slice(0, bodyLimit).join('').trim();
-  const body = extendShortXiaohongshuBody(bodyBase, input, bodyLimit);
-  const safeTags = Array.from(new Set([
-    hashtag(input.merchantName),
-    hashtag(input.location),
-    ...input.serviceNames.map(hashtag),
-    ...input.tags.map(hashtag),
-  ].filter(Boolean))).slice(0, 8);
+  const body = bodyBase;
+  const modelTags = normalized.match(/#[^\s#]+/g) ?? [];
 
-  if (title && body && safeTags.length >= 3) {
-    normalized = `${title}\n\n${body}\n\n${safeTags.join(' ')}`;
+  if (title && body && modelTags.length >= 2) {
+    normalized = `${title}\n\n${body}\n\n${modelTags.slice(0, 10).join(' ')}`;
   }
   return normalized;
 }
@@ -546,13 +530,12 @@ function isGroundedRemoteDraft(content: string, input: ReviewDraftInput): boolea
   const alwaysBlocked = [
     /\$\s*\d{3,}/, /\bguarantee[ds]?\b/i, /\bcure[ds]?\b/i, /\bcancer\b/i,
     /\b(best|perfect|number\s*one|#1)\b/i, /\b(great experience|highly recommend|look forward to coming back|from start to finish|my new sanctuary|much needed reset|this is your sign)\b/i,
-    /最好|第一|顶级|完美|拉满|彻底|宝藏店|闭眼冲|姐妹们冲|种草|治愈|绝绝子|可以试试|值得去|建议去|预算宽裕|体验随记|真实感受|整体感受|体验记录|不硬夸/,
+    /最好|第一|顶级|完美/,
     /包治/, /彻底根除/, /神医/, /百病/, /保修/, /好评返现|好评.*折扣/,
     /I am keeping|this review is based on|selected (?:service|details)|basis for (?:this|my) review|personal perspective/i,
     /我不想把.*写成|只想把.*记下来|我勾选的是|发布前.*核对|按.*真实.*修改|这条笔记记录的是|没有打算延伸成/,
   ];
   if (alwaysBlocked.some((pattern) => pattern.test(content))) return false;
-  if (input.platform === 'xiaohongshu' && hasUnprovidedXiaohongshuScene(content, input)) return false;
   if (input.platform === 'xiaohongshu' && /@|MSBEAUTY_BALTIMORE/i.test(content)) return false;
   if (!preservesCustomerSentiment(content, input)) return false;
   if (input.platform === 'instagram') {
@@ -566,15 +549,6 @@ function isGroundedRemoteDraft(content: string, input: ReviewDraftInput): boolea
   if (!content.toLowerCase().includes(input.merchantName.toLowerCase())) return false;
 
   return hasPlatformAppropriateLength(content, input.platform);
-}
-
-function hasUnprovidedXiaohongshuScene(content: string, input: ReviewDraftInput): boolean {
-  const suppliedFacts = [input.experience, ...input.serviceNames, ...input.tags].join('');
-  const sceneTerms = [
-    '躺', '椅子', '睡', '手法', '流程', '环境', '房间', '一小时', '上班', '赶时间', '看手机',
-    '傍晚', '天黑', '天已经黑', '天已经暗', '天气', '有点凉', '下雨', '进门', '出门', '出来', '预约', '等待', '安静',
-  ];
-  return sceneTerms.some((term) => content.includes(term) && !suppliedFacts.includes(term));
 }
 
 function preservesCustomerSentiment(content: string, input: ReviewDraftInput): boolean {
@@ -614,7 +588,7 @@ function hasPlatformAppropriateLength(content: string, platform: ReviewPlatform)
     const hashtags = content.match(/#[^\s#]+/g) ?? [];
     const body = lines.slice(1).filter((line) => !line.startsWith('#')).join('');
     const chineseCharacters = body.match(/[\u4e00-\u9fff]/g)?.length ?? 0;
-    return Array.from(title).length <= 20 && chineseCharacters >= 60 && chineseCharacters <= 180 && hashtags.length >= 3 && hashtags.length <= 8;
+    return Array.from(title).length <= 30 && chineseCharacters >= 40 && chineseCharacters <= 360 && hashtags.length >= 2 && hashtags.length <= 10;
   }
 
   if (platform === 'google' || platform === 'yelp') {
