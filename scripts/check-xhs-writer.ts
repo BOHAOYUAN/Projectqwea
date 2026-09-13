@@ -16,6 +16,10 @@ async function main() {
   globalThis.fetch = async () => new Response('{}', { status: 503 });
   try {
     await assert.rejects(writeXiaohongshu(input), /503/);
+    const empty = await writeXiaohongshu({ ...input, experience: '', tags: [], serviceNames: [] });
+    assert(empty.content.includes('MS BEAUTY'));
+    assert.equal(empty.fallbackValidated, true);
+    assert(!empty.content.includes('做完'));
   } finally {
     globalThis.fetch = original;
     if (previousKey === undefined) delete process.env.DEEPSEEK_API_KEY;

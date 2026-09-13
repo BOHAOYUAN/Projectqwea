@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
       .filter((name): name is string => Boolean(name));
     const safeTags = resolvePublicTags(tags, publicPage.suggestedTags);
 
-    if (!experience && safeServiceNames.length === 0 && safeTags.length === 0) {
+    if (platform !== 'xiaohongshu' && !experience && safeServiceNames.length === 0 && safeTags.length === 0) {
       return NextResponse.json(
         { error: 'Share a short experience, select a service, or choose a feeling first.' },
         { status: 400 }

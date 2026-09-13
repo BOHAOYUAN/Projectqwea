@@ -8,6 +8,16 @@ export function writingRange(note: string): [number, number] {
 }
 
 export const XHS_MODEL = 'deepseek-flash';
+export function emptyExperience(input: ReviewDraftInput): boolean {
+  return !input.experience.trim() && input.tags.length === 0;
+}
+
+export function starterNote(input: ReviewDraftInput): GeneratedDraft {
+  const place = input.location.replace(/Baltimore(?:,\s*MD)?/i, '巴尔的摩');
+  const subject = input.serviceNames.length ? input.serviceNames.join('、') : '门店信息';
+  return { platform: 'xiaohongshu', mode: 'local', fallbackValidated: true,
+    content: `${place}｜${subject}\n\n📍 ${input.merchantName}，${place}。\n\n${input.serviceNames.length ? `这篇围绕${subject}展开，` : ''}可以补充这次体验中印象最深的一点：环境、沟通，或自己的感受。\n\n#${place.replace(/\s/g, '')} #${input.merchantName.replace(/\s/g, '')} #门店分享` };
+}
 const filler = /不经意间|后来回想起来|不需要把|把当下|只留下|好的部分和保留的部分|真实感受写下来|过几天再回头看/;
 
 export function parseNote(raw: string): string {
@@ -25,7 +35,7 @@ export function noteIssues(content: string, input: ReviewDraftInput): string[] {
   const length = Array.from(prose.replace(/\s/g, '')).length;
   const issues: string[] = [];
   if (Array.from(title).length > 20 || !title) issues.push('标题须为完整的20字以内短句');
-  if (length < min || length > max) issues.push(`正文当前${length}字，请调整为${min}–${max}字，不加空洞总结`);
+  if (length < (emptyExperience(input) ? 15 : min) || length > max) issues.push(`正文当前${length}字，请调整为${min}–${max}字，不加空洞总结`);
   if (!prose.includes(input.merchantName)) issues.push('正文缺少准确店名');
   if (prose.split(/\n\s*\n/).length < 2) issues.push('正文需要空行分成至少两段');
   if (filler.test(content)) issues.push('删除空洞抒情及自我解释');
@@ -45,10 +55,18 @@ export function noteIssues(content: string, input: ReviewDraftInput): string[] {
 }
 
 export async function writeXiaohongshu(input: ReviewDraftInput): Promise<GeneratedDraft> {
+  if (emptyExperience(input)) {
+    try { return await requestNote(input); } catch { return starterNote(input); }
+  }
+  return requestNote(input);
+}
+
+async function requestNote(input: ReviewDraftInput): Promise<GeneratedDraft> {
   const key = process.env.DEEPSEEK_API_KEY;
   if (!key) throw new Error('Xiaohongshu writing provider is unavailable.');
   const [min, max] = writingRange(input.experience);
   const system = `你帮助顾客把真实体验写成第一人称中文小红书笔记，口语、具体、有重点。
+${emptyExperience(input) ? '当前未提供任何体验。优先规则：写简短的门店资料分享草稿，15–120字即可，只用店名、地点及已选项目。客观介绍门店位置和已知项目；不能声称顾客来过或没来过、刷到或收藏过、做过项目或有任何好坏感受。不要解释没有选项目、说不上喜欢等系统状态。结尾留一句邀请顾客补充体验的编辑引导。不要求凑字数。' : ''}
 正文${min}–${max}字（不含标题和话题）。少于30字的输入写轻量打卡，不扩写抽象情绪；30–50字写简短分享；超过50字写详细分享。重复形容词不等于多个细节。
 第一行：地点或店名＋真实亮点，20字以内，不能假设首次到店。然后空行。正文2–4个短段，每段1–3句，段间空行：先亮点，再项目及感受，有服务或环境细节再写，无素材就省略该段。自然用1–3个emoji，最后另起一段3–5个精准话题。
 只有用户原话、主动选择的项目和感受、门店资料能作为事实。可用生动比喻和语气词，不能新增香氛、按摩步骤、职业、周末、低头习惯、明星同款。原话优先于标签，包括负面、否定和变化程度。顾客说想再来就可以写下次再来，别机械禁止推荐。

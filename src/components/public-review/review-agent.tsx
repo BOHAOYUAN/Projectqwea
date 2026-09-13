@@ -120,11 +120,11 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
   const [isExperienceOpen, setIsExperienceOpen] = useState(isChinese);
 
   const parsedInitialIds = useMemo(() => {
-    if (!initialServiceId) return merchant.services.slice(0, 1).map((s) => s.id);
+    if (!initialServiceId) return isChinese ? [] : merchant.services.slice(0, 1).map((s) => s.id);
     const ids = initialServiceId.split(',').map((id) => id.trim()).filter(Boolean);
     const validIds = ids.filter((id) => merchant.services.some((s) => s.id === id));
     return validIds.length > 0 ? validIds : merchant.services.slice(0, 1).map((s) => s.id);
-  }, [initialServiceId, merchant.services]);
+  }, [initialServiceId, merchant.services, isChinese]);
 
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>(parsedInitialIds);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
@@ -249,11 +249,6 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
 
   const generateDraft = async (nextVariation = variation + 1) => {
     const customerNote = experience.trim();
-    if (isChinese && !customerNote && selectedTags.length === 0) {
-      setIsExperienceOpen(true);
-      setError('写一句感受或选择体验标签，就可以开始生成。');
-      return;
-    }
     const generationStartedAt = Date.now();
     setGenerationStage(0);
     setIsGenerating(true);
@@ -413,6 +408,33 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
     const popup = window.open(target, '_blank', 'noopener,noreferrer');
     if (!popup) window.location.assign(target);
   }
+
+  if (isChinese) return (
+    <main className="min-h-dvh bg-gradient-to-b from-white to-[#fce5eb] px-4 pb-28 pt-5 text-[#342e32]">
+      <div className="mx-auto max-w-3xl space-y-6">
+        <Link href={publicReviewPath(merchant)} className="inline-flex items-center gap-1 text-sm text-stone-500"><ArrowLeft className="h-4 w-4" />返回</Link>
+        <header className="py-5 text-center">
+          <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-stone-800 text-white shadow-lg"><Sparkles className="h-8 w-8" /></span>
+          <h1 className="mt-5 text-xl font-bold">请写下您的评论或关键词</h1>
+          <p className="mt-2 text-xs text-stone-500">全部选填，不填写也可以生成草稿</p>
+        </header>
+        <textarea aria-label="评论或关键词（选填）" value={experience} maxLength={500} onChange={(event) => handleExperienceChange(event.target.value)} placeholder="简单说说您的感受（选填）" rows={4} className="w-full resize-none rounded-2xl bg-white p-4 text-base outline-none focus:ring-2 focus:ring-rose-300" />
+        <section className="space-y-3"><h2 className="text-sm">服务项目 <span className="text-xs text-stone-400">选填，最多2项</span></h2>
+          {merchant.services.map((service) => <button key={service.id} type="button" aria-pressed={selectedServiceIds.includes(service.id)} disabled={isGenerating} onClick={() => toggleService(service.id)} className={`block w-full rounded-xl border p-3 text-left text-sm ${selectedServiceIds.includes(service.id) ? 'border-rose-400 bg-rose-100' : 'border-transparent bg-white'}`}>
+            <span className="font-medium">{service.name}</span>{service.chineseDescription && <span className="ml-2 text-stone-500">{service.chineseDescription}</span>}
+          </button>)}
+        </section>
+        <section className="space-y-3"><h2 className="text-sm">猜你想说 <span className="text-xs text-stone-400">选填，最多3项</span></h2><div className="flex flex-wrap gap-2">
+          {merchant.experienceTags.map((tag) => <button key={tag.id} type="button" aria-pressed={selectedTagIds.includes(tag.id)} disabled={isGenerating} onClick={() => toggleTag(tag.id)} className={`rounded-xl border px-4 py-3 text-sm ${selectedTagIds.includes(tag.id) ? 'border-rose-400 bg-rose-100' : 'border-transparent bg-white'}`}>{tag.label}</button>)}
+        </div></section>
+        {error && <p role="alert" className="rounded-xl bg-white p-3 text-sm text-red-600">{error}</p>}
+        {isGenerating && <p role="status" aria-live="polite" className="flex items-center justify-center gap-2 text-sm text-rose-600"><RefreshCw className="h-5 w-5 animate-spin" />{['正在整理内容…', '正在生成笔记…', '马上就好…'][generationStage]}</p>}
+      </div>
+      <footer className="fixed inset-x-0 bottom-0 bg-white/95 px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-3">
+        <button type="button" disabled={isGenerating} onClick={() => void generateDraft()} className="mx-auto flex min-h-12 w-full max-w-3xl items-center justify-center gap-2 rounded-full bg-[#ef4149] px-6 py-3 font-semibold text-white disabled:opacity-60">{isGenerating && <RefreshCw className="h-4 w-4 animate-spin" />}{isGenerating ? '正在生成…' : '帮我生成'}</button>
+      </footer>
+    </main>
+  );
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#ece5dc] px-3 py-5 sm:px-3.5 sm:py-10 flex flex-col items-center justify-center font-sans text-[#3c342f]">
@@ -636,7 +658,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
                 }}
                 aria-busy={isGenerating}
                 placeholder={getDraftPlaceholder(platform)}
-                rows={platform === 'xiaohongshu' || platform === 'instagram' ? 7 : 5}
+                rows={platform === 'instagram' ? 7 : 5}
                 className={`w-full resize-none rounded-xl border border-[#dec9b5] bg-white p-3 text-xs sm:text-sm leading-relaxed text-[#3d2d24] outline-none transition focus:border-[#986a4c] focus:ring-2 focus:ring-[#986a4c]/15 shadow-inner ${isGenerating ? 'select-none opacity-35 blur-[1px]' : ''}`}
               />
               {isGenerating && (
@@ -717,10 +739,30 @@ export function ReviewPublish({ merchant, platform }: ReviewAgentProps) {
   const style = PLATFORM_STYLES[platform];
   const [draft, setDraft] = useState('');
   const [isReady, setIsReady] = useState(false);
+  const [isRewriting, setIsRewriting] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [error, setError] = useState('');
   const [images, setImages] = useState<Array<{ name: string; url: string }>>([]);
   const storageKey = `pointhub-review:${merchant.merchantSlug}:${merchant.locationSlug}:${platform}`;
+
+  const rewrite = async () => {
+    if (isRewriting) return;
+    setIsRewriting(true);
+    setError('');
+    try {
+      const saved = JSON.parse(window.sessionStorage.getItem(storageKey) || '{}') as PersistedReviewState;
+      const response = await fetch('/api/review-drafts', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform, merchantSlug: merchant.merchantSlug, locationSlug: merchant.locationSlug,
+          serviceSlugs: saved.serviceIds || [], tags: merchant.experienceTags.filter(tag => saved.tagIds?.includes(tag.id)).map(tag => tag.label),
+          experience: saved.experience || '', voice: saved.voice || 'natural', seed: Date.now(), avoidPhrases: draftEdgeFragments(draft) }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success || !data.draft?.content) throw new Error('retry');
+      setDraft(data.draft.content);
+    } catch { setError('这次没有生成成功，原稿已保留，请再试一次。'); }
+    finally { setIsRewriting(false); }
+  };
 
   useEffect(() => {
     const restore = window.setTimeout(() => {
@@ -802,7 +844,7 @@ export function ReviewPublish({ merchant, platform }: ReviewAgentProps) {
   };
 
   return (
-    <main className="min-h-screen bg-[#f5f1eb] px-3 py-5 font-sans text-[#3c342f] sm:px-6 sm:py-10">
+    <main className={`min-h-screen ${isChinese ? 'bg-[#f2f3f5]' : 'bg-[#f5f1eb]'} px-3 py-5 font-sans text-[#3c342f] sm:px-6 sm:py-10`}>
       <div className="mx-auto flex w-full max-w-[720px] flex-col gap-4">
         <div className="flex items-center justify-between gap-3">
           <Link href={`${publicReviewPath(merchant)}/review/${platform}`} className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-[#dfd2c4] bg-white px-3 text-xs font-bold text-[#735846] shadow-sm transition hover:bg-[#fffaf4]">
@@ -813,7 +855,7 @@ export function ReviewPublish({ merchant, platform }: ReviewAgentProps) {
         </div>
 
         <section className="overflow-hidden rounded-[28px] border border-[#ded3c7] bg-white shadow-[0_12px_35px_rgba(83,62,44,0.08)]">
-          <div className="border-b border-[#eee5dc] px-5 py-6 text-center sm:px-8 sm:py-8">
+          <div className={`${isChinese ? 'hidden' : ''} border-b border-[#eee5dc] px-5 py-6 text-center sm:px-8 sm:py-8`}>
             <span className={`mx-auto flex h-12 w-12 items-center justify-center rounded-2xl ${style.badge}`}>
               <Check className="h-6 w-6" />
             </span>
@@ -866,7 +908,8 @@ export function ReviewPublish({ merchant, platform }: ReviewAgentProps) {
 
             <div>
               <div className="mb-2 flex items-center justify-between gap-2">
-                <p className="text-xs font-bold text-[#503b2e]">{isChinese ? '可编辑草稿' : 'Editable draft'}</p>
+                <p className="text-xs font-bold text-[#503b2e]">{isChinese ? '已为你生成小红书笔记（可编辑）' : 'Editable draft'}</p>
+                {isChinese && <button type="button" onClick={() => void rewrite()} disabled={isRewriting} className="flex items-center gap-1 rounded-lg bg-stone-100 px-3 py-2 text-xs"><RefreshCw className={`h-3 w-3 ${isRewriting ? 'animate-spin' : ''}`} />{isRewriting ? '正在生成…' : '换一篇'}</button>}
                 {isCopied && <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#21845e]"><Check className="h-3.5 w-3.5" />{isChinese ? '已复制' : 'Copied'}</span>}
               </div>
               <textarea
