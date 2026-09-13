@@ -142,15 +142,22 @@ function localXiaohongshuDraft(input: ReviewDraftInput): string {
   const seed = input.seed ?? Date.now();
   const location = input.location.replace(/Baltimore(?:,\s*MD)?/i, '巴尔的摩');
   const title = Array.from(pick([
-    service ? `${service}随手记` : '今天的小记录',
-    '这次想记一下',
-    '留给自己的一点感受',
-    service ? `${service}之后` : '刚好想写两句',
+    service ? `${service}之后` : `${input.merchantName}的一点感受`,
+    service ? `${service}的小发现` : '留给自己的一点感受',
+    service ? `做完${service}之后` : `${input.merchantName}随手记`,
+    service ? `${service}的一点感受` : '刚好想写两句',
   ], seed)).slice(0, 24).join('');
   const parts = [
     service ? `在${location}的 ${input.merchantName} 做了${service}，简单记一下这次感受。` : `记一下${input.merchantName}这次体验。`,
     note ? `${note}。` : '',
-    ...input.tags.map(localXiaohongshuFeeling).filter(Boolean).filter((sentence) => !note.includes(sentence.replace(/[。！？!?]+$/, ''))).slice(0, 2),
+    ...input.tags
+      .map(localXiaohongshuFeeling)
+      .filter(Boolean)
+      .filter((sentence) => {
+        const signature = xiaohongshuFeelingSignature(sentence);
+        return !signature || xiaohongshuFeelingSignature(note) !== signature;
+      })
+      .slice(0, 2),
   ].filter(Boolean);
   const tagList = Array.from(new Set([
     hashtag(input.merchantName),
@@ -479,7 +486,7 @@ function normalizeRemoteDraft(content: string, input: ReviewDraftInput): string 
   // is preferable to a mechanically extended one.
   const bodyLimit = 360;
   const bodyBase = Array.from(rawBody).slice(0, bodyLimit).join('').trim();
-  const body = bodyBase;
+  const body = collapseXiaohongshuRepeats(bodyBase);
   const modelTags = uniqueXiaohongshuTags(normalized.match(/#[^\s#]+/g) ?? []);
 
   if (title && body && modelTags.length >= 2) {
@@ -497,6 +504,45 @@ function uniqueXiaohongshuTags(tags: string[]): string[] {
     seen.add(similarityKey);
     return true;
   });
+}
+
+function collapseXiaohongshuRepeats(body: string): string {
+  const seen = new Map<string, { lineIndex: number; sentenceIndex: number; length: number }>();
+  const lines = body.split('\n').map((line) => {
+    const sentences = line.match(/[^。！？!?]+[。！？!?]?/gu) ?? [];
+    return sentences.map((sentence) => sentence.trim()).filter(Boolean);
+  });
+
+  for (const [lineIndex, sentences] of lines.entries()) {
+    for (const [sentenceIndex, sentence] of sentences.entries()) {
+      const signature = xiaohongshuFeelingSignature(sentence);
+      if (!signature) continue;
+      const previous = seen.get(signature);
+      if (!previous) {
+        seen.set(signature, { lineIndex, sentenceIndex, length: sentence.length });
+        continue;
+      }
+      if (sentence.length > previous.length) {
+        lines[previous.lineIndex][previous.sentenceIndex] = '';
+        seen.set(signature, { lineIndex, sentenceIndex, length: sentence.length });
+      } else {
+        lines[lineIndex][sentenceIndex] = '';
+      }
+    }
+  }
+
+  return lines
+    .map((sentences) => sentences.filter(Boolean).join(''))
+    .filter(Boolean)
+    .join('\n')
+    .trim();
+}
+
+function xiaohongshuFeelingSignature(sentence: string): string | null {
+  if (/(?:肩颈|脖子|肩膀)[^。！？!?]{0,18}(?:松|轻|缓|舒服|没那么紧|不那么紧)|(?:松|轻|缓|舒服)[^。！？!?]{0,18}(?:肩颈|脖子|肩膀)/.test(sentence)) return 'shoulder-relief';
+  if (/推销|套餐|办卡/.test(sentence)) return 'no-sales-pressure';
+  if (/慢下来|没那么赶|放慢|安静下来|脑子.*安静/.test(sentence)) return 'slow-down';
+  return null;
 }
 
 function groqProvider(apiKey: string): CompatibleChatProvider {
@@ -531,8 +577,8 @@ function isGroundedRemoteDraft(content: string, input: ReviewDraftInput): boolea
   if (input.platform === 'xiaohongshu' && /@|MSBEAUTY_BALTIMORE/i.test(content)) return false;
   if (
     input.platform === 'xiaohongshu'
-    && /会优先考虑|优先选|下次还会|下次会再来|推荐大家|安利给/.test(content)
-    && !/会优先考虑|优先选|下次还会|下次会再来|推荐大家|安利给/.test(input.experience)
+    && /会优先考虑|优先选|下次[^。！？]{0,10}(?:还会|会再|再去|考虑)|推荐大家|安利给/.test(content)
+    && !/会优先考虑|优先选|下次[^。！？]{0,10}(?:还会|会再|再去|考虑)|推荐大家|安利给/.test(input.experience)
   ) return false;
   if (input.platform === 'xiaohongshu' && hasXiaohongshuTemplateResidue(content, input)) return false;
   if (!preservesCustomerSentiment(content, input)) return false;
@@ -555,7 +601,10 @@ function hasXiaohongshuTemplateResidue(content: string, input: ReviewDraftInput)
     /不是那种(?:很)?夸张的(?:变化|感觉)/,
     /我自己记一下(?:这个)?感受/,
     /别的(?:就)?(?:先)?不多说/,
+    /别的说不上(?:来)?太多/,
     /说不上(?:具体)?哪里变了/,
+    /^这次想记一下$/m,
+    /^今天的小记录$/m,
   ];
   return templatePhrases.some((pattern) => pattern.test(content) && !pattern.test(supplied));
 }
