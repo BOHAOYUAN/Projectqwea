@@ -193,7 +193,7 @@ function xiaohongshuFeelingSentence(tag: string): string {
   const copy: Record<string, string> = {
     '肩颈松了': '做完以后肩颈确实松了一点，原本绷着的感觉缓下来一些。不是特别夸张的变化，但自己当下能感觉到，后来想起来也会记得这个小变化。',
     '终于慢下来': '这次的节奏让我慢下来一点，整个人没那么着急。能缓一口气的感觉，我还挺喜欢。不是一下子就完全放空，但那种慢一点的状态自己能感觉到。',
-    '没有推销': '全程没有被推销，整个人会轻松很多。能顺顺当当做完自己选的项目，这一点挺加分。不用一直考虑要不要回应，对我来说这种轻松感很重要。',
+    '没有推销': '没有被推销，整个人会轻松很多。能顺顺当当做完自己选的项目，这一点挺加分。不用一直考虑要不要回应，对我来说这种轻松感很重要。',
     '值得再来': '这次感受不错，下次有需要我会再考虑。不是那种很夸张的惊喜，但整体符合这次的期待。回想起来没有什么让我纠结的地方，所以愿意把它留在下次的选择里。',
     '放松舒服': '整个感受比较放松，身体和心情都没有那么绷着。不是很夸张的改变，但能有一段不需要紧着的时间，对我来说已经挺舒服了。',
     '细心专业': '让我印象比较深的是细致和专业，体验起来很踏实。很多感受不需要说得太满，能感觉到对方做事认真，就会让人比较安心。',
@@ -289,20 +289,16 @@ ${editorialPrinciples}
 9. Output ONLY the caption.`;
   }
 
-  // Xiaohongshu: let the model write like a person first. The prompt keeps
-  // only the facts, account and compliance boundaries that a public page needs.
-  return `你是一位中文母语顾客，写一篇会发在小红书上的体验笔记。
+  return `你是一位真实顾客，正在为「${input.merchantName}」写一篇中文小红书评价。
 
-素材来自一次在「${input.merchantName}」的体验。请用自然、口语化、有个人节奏的中文来写，不要像商家宣传文案，也不要像逐条完成任务。
+写作规则：
+1. 只使用用户提供的顾客原话、已选项目和已选感受。材料没有说的事就不要补；信息少可以写短，不要虚构到店原因、时间、场景、流程、员工行为、效果或个人经历。
+2. 顾客原话优先。原话里有“一般”“不满意”或褒贬并存时，如实保留，不要改写成夸赞或推荐。
+3. 语气像普通人在记录一次真实体验：自然、具体、克制，不写商家宣传文案、AI 腔或导购话术。
+4. 第一行写简短标题，正文 1–3 段，文末放 2–6 个和输入有关的话题。正文自然出现门店名「${input.merchantName}」。${xhsAccountRule}
+5. 不要写极限词、返现折扣、疗效承诺、评分或“推荐大家去”之类的内容。
 
-要求：
-- 顾客原话是最重要的依据；如果原话有不满意、一般或褒贬并存的内容，保留这个意思，不要强行写成好评。
-- 已选项目和感受可自然融入，不必逐项罗列，也不必为了凑内容重复。
-- 第 1 行给一个简短标题；正文写 1–3 段，句子长短可以自然变化；最后加 2–6 个相关话题。
-- 正文出现门店名「${input.merchantName}」。${xhsAccountRule}
-- 不要编造明确的服务细节、效果、价格或人物互动；不要出现返现、折扣、疗效承诺等内容。
-
-只输出最终笔记，不要解释写作过程。`;
+只输出最终成稿，不解释规则或过程。`;
 }
 
 type CompatibleChatProvider = {
@@ -365,7 +361,11 @@ async function generateWithRemoteProvider(input: ReviewDraftInput, provider: Com
     ? `门店：${input.merchantName}（${input.location}）\n已选项目：${services}\n已选感受：${tags}${input.experience ? `\n顾客原话：${input.experience}` : ''}\n\n请围绕这些内容写一篇自然的小红书笔记。顾客原话优先，没有原话时就根据已选项目和感受写，不要硬凑场景。`
     : `Store: ${input.merchantName} in ${input.location}\nSelected services: ${services}\nSelected feelings: ${tags}${input.experience ? `\nCustomer note: ${input.experience}` : ''}\n\nUse only the facts above. Do not mention any service, staff, cleanliness, timing, ambiance, outcome, or detail that does not literally appear above. Please write the review:`;
 
-  const temperature = input.voice === 'concise' ? 0.8 : 0.95;
+  // A lower setting on XHS keeps the model anchored to the supplied customer
+  // facts; its prompt already provides enough room for natural phrasing.
+  const temperature = input.platform === 'xiaohongshu'
+    ? (input.voice === 'concise' ? 0.55 : 0.7)
+    : (input.voice === 'concise' ? 0.8 : 0.95);
 
   // Keep response time predictable on a phone. One initial attempt plus one
   // format-correction attempt is enough for social captions; deterministic,
@@ -395,7 +395,7 @@ async function generateWithRemoteProvider(input: ReviewDraftInput, provider: Com
     if (!isChinesePlatform(input.platform) && /[\u4e00-\u9fff]/.test(content)) continue;
     if (isChinesePlatform(input.platform) && !/[\u4e00-\u9fff]/.test(content)) continue;
     if (isGroundedRemoteDraft(content, input)) return content;
-    if (input.platform === 'xiaohongshu') formatFeedback = getXiaohongshuFormatFeedback(content);
+    if (input.platform === 'xiaohongshu') formatFeedback = getXiaohongshuRetryFeedback(content, input);
   }
 
   return null;
@@ -413,6 +413,13 @@ function getXiaohongshuFormatFeedback(content: string): string {
   if (chineseCharacters > 360) issues.push('正文过长');
   if (hashtags < 2 || hashtags > 10) issues.push('话题数量不合适');
   return `刚才的成稿${issues.length ? `存在这些问题：${issues.join('；')}` : '格式不完整'}。保持原有的自然表达，只调整这些问题后输出成稿，不要解释。`;
+}
+
+function getXiaohongshuRetryFeedback(content: string, input: ReviewDraftInput): string {
+  if (hasUnsupportedXiaohongshuDetail(content, input)) {
+    return '上一稿补充了输入中没有的到店经过或服务细节。请删掉这些内容，只围绕顾客原话、已选项目和已选感受重写；信息不够可以写短，不要补故事。只输出成稿。';
+  }
+  return getXiaohongshuFormatFeedback(content);
 }
 
 function normalizeRemoteDraft(content: string, input: ReviewDraftInput): string {
@@ -446,6 +453,8 @@ function normalizeRemoteDraft(content: string, input: ReviewDraftInput): string 
     return normalized;
   }
   if (!isChinesePlatform(input.platform)) return normalized;
+
+  normalized = normalized.replace(/Baltimore(?:,\s*MD)?/gi, '巴尔的摩');
 
   const lines = normalized.split('\n').map((line) => line.trim()).filter(Boolean);
   const firstLine = lines[0] ?? '';
@@ -537,6 +546,7 @@ function isGroundedRemoteDraft(content: string, input: ReviewDraftInput): boolea
   ];
   if (alwaysBlocked.some((pattern) => pattern.test(content))) return false;
   if (input.platform === 'xiaohongshu' && /@|MSBEAUTY_BALTIMORE/i.test(content)) return false;
+  if (input.platform === 'xiaohongshu' && hasUnsupportedXiaohongshuDetail(content, input)) return false;
   if (!preservesCustomerSentiment(content, input)) return false;
   if (input.platform === 'instagram') {
     const expectedMention = input.socialHandles?.instagram
@@ -549,6 +559,16 @@ function isGroundedRemoteDraft(content: string, input: ReviewDraftInput): boolea
   if (!content.toLowerCase().includes(input.merchantName.toLowerCase())) return false;
 
   return hasPlatformAppropriateLength(content, input.platform);
+}
+
+function hasUnsupportedXiaohongshuDetail(content: string, input: ReviewDraftInput): boolean {
+  const supplied = [input.experience, ...input.serviceNames, ...input.tags].join('');
+  const detailTerms = [
+    '路过', '预约', '约了', '最近', '周末', '下班', '上班',
+    '过程', '全程', '中间', '加项目', '套餐', '躺着', '躺下',
+    '手法', '力度', '环境', '房间', '进门', '出门', '等了', '等待',
+  ];
+  return detailTerms.some((term) => content.includes(term) && !supplied.includes(term));
 }
 
 function preservesCustomerSentiment(content: string, input: ReviewDraftInput): boolean {
