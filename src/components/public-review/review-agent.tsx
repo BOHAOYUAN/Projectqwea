@@ -81,7 +81,7 @@ const CHINESE_VOICES: VoiceOption[] = [
   { value: 'warm', label: '松弛日记', detail: '多一点个人感受和情绪' },
 ];
 
-const XIAOHONGSHU_MIN_EXPERIENCE_LENGTH = 20;
+const EXPERIENCE_QUESTIONS = ['环境：安静吗？气味或音乐怎么样？', '手法：力度合适吗？哪里感觉最明显？', '服务：沟通怎么样？有没有推销？'];
 
 const PLATFORM_STYLES: Record<PublicReviewPlatform, {
   badge: string;
@@ -249,9 +249,9 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
 
   const generateDraft = async (nextVariation = variation + 1) => {
     const customerNote = experience.trim();
-    if (isChinese && Array.from(customerNote).length < XIAOHONGSHU_MIN_EXPERIENCE_LENGTH) {
+    if (isChinese && !customerNote && selectedTags.length === 0) {
       setIsExperienceOpen(true);
-      setError('再写一点真实细节吧（至少 20 个字），例如做完哪里舒服了一点、沟通是否自然，或还有什么感受想记下来。');
+      setError('写一句感受或选择体验标签，就可以开始生成。');
       return;
     }
     const generationStartedAt = Date.now();
@@ -560,7 +560,7 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
                 <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#8c674e] text-[10px] text-white font-bold">
                   3
                 </span>
-                <span className="min-w-0">{isChinese ? '写下真实细节（至少 20 字）' : 'What would you like to say? (optional, recommended)'}</span>
+                <span className="min-w-0">{isChinese ? '说说这次体验（简短也可以）' : 'What would you like to say? (optional, recommended)'}</span>
               </span>
               <span className="text-[11px] font-semibold text-[#8b6147]">
                 {isExperienceOpen ? (isChinese ? '收起 ▲' : 'Collapse ▲') : (isChinese ? '展开输入 ▼' : 'Expand ▼')}
@@ -569,20 +569,24 @@ export function ReviewAgent({ merchant, platform, initialServiceId }: ReviewAgen
 
             {isExperienceOpen && (
               <div className="space-y-1 pt-1">
+                {isChinese && <div className="mb-2 space-y-1 rounded-xl bg-[#f5eadf] p-3 text-xs text-[#795d49]">
+                  <p className="font-semibold">不知道写什么？选一个问题回答：</p>
+                  {EXPERIENCE_QUESTIONS.map((question) => <p key={question}>{question}</p>)}
+                </div>}
                 <textarea
                   value={experience}
                   maxLength={500}
                   onChange={(e) => handleExperienceChange(e.target.value)}
                   placeholder={
                     isChinese
-                      ? '例如：肩颈按完松了些，沟通很自然，也没有被推销；做完后整个人没那么赶了。'
+                      ? '可以从环境、手法、服务里挑一项说说；喜欢或不满意的地方都可以写。'
                       : 'Optional: add your real experience and we will polish it into an editable draft.'
                   }
                   rows={3}
                   className="w-full resize-none rounded-xl border border-[#dec9b5] bg-white p-3 text-xs sm:text-sm text-[#46352a] placeholder:text-[#b49f8f] outline-none transition focus:border-[#986a4c] focus:ring-2 focus:ring-[#986a4c]/15 shadow-inner"
                 />
                 <div className="flex justify-between items-center text-[10.5px] text-[#9c8475] px-1">
-                  <span>{isChinese ? '至少 20 字真实体验，才能生成更像你本人的笔记' : 'You can generate with one tap; a concrete detail makes it sound more like you'}</span>
+                  <span>{isChinese ? '短输入生成轻量笔记；补充具体细节后生成更完整的分享' : 'You can generate with one tap; a concrete detail makes it sound more like you'}</span>
                   <span className="font-mono">{experience.length}/500</span>
                 </div>
               </div>
@@ -1161,8 +1165,8 @@ function getReviewLabels(platform: PublicReviewPlatform): ReviewLabels {
   if (platform === 'xiaohongshu') {
     return {
       heading: '把这次体验好好说出来吧。',
-      subheading: '先写至少 20 个字的真实细节，再生成更有情绪和个人感受的笔记。',
-      experienceLabel: '这次最想分享什么？（至少 20 字）',
+      subheading: '写一句感受，或补充环境、手法、服务细节。篇幅会随输入调整。',
+      experienceLabel: '这次最想分享什么？',
       experienceHint: '例如：做完哪里舒服了一点、沟通是否自然，或有什么感受想记下来？',
       serviceLabel: '这次体验了什么项目？',
       tagLabel: '可多选，挑选贴近你的感受',

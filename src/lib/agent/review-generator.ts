@@ -1,3 +1,5 @@
+import { writeXiaohongshu } from './xiaohongshu-writer';
+
 export type ReviewPlatform = 'google' | 'xiaohongshu' | 'yelp' | 'instagram';
 export const CONTENT_VOICES = ['natural', 'concise', 'warm'] as const;
 export type ContentVoice = (typeof CONTENT_VOICES)[number];
@@ -714,6 +716,7 @@ function englishWordCount(content: string): number {
 }
 
 export async function generateReviewDraft(input: ReviewDraftInput): Promise<GeneratedDraft> {
+  if (input.platform === 'xiaohongshu') return writeXiaohongshu(input);
   const deepSeekKey = process.env.DEEPSEEK_API_KEY;
   const groqKey = process.env.GROQ_API_KEY;
 
