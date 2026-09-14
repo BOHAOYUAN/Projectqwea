@@ -40,6 +40,11 @@ export function starterNote(input: ReviewDraftInput): GeneratedDraft {
 }
 const filler = /不用写一大篇|简单直接说就好|最想分享的就是这个感受|脸累|脸[^。\n]*蔫|没精神|说不上哪里|我又可以了|感觉就是.{0,3}状态重启|照镜子|绷紧的心弦|后来回想起来|当下最确定的感受|内心的平静|一场心灵之旅|寻找自我/;
 
+// This tool produces warm, positive Xiaohongshu shares for the shop. If a
+// customer's raw note is frustrated, the prompt reframes it; this regex is the
+// safety net that rejects a draft that still came out sounding like a 差评.
+const COMPLAINT_WORDS = /差评|吐槽|生气|气到|一肚子火|差劲|太差|失望|敷衍|等了?很久|没人来?接待|答得含糊|不会再来|再也不来|不会再去|再也不会|不值|坑|骗|避雷|踩雷|劝退|糟糕|烂|对不起价格|劝大家(别|不)去|提醒大家别来|跟在家(自己)?(洗|做)|没什么(特别的)?感觉|跟没做一样|答得含糊其辞/;
+
 export function parseNote(raw: string): string {
   // Preserve blank lines and the author's title; never pad or splice prose.
   return raw.replace(/^```[^\n]*\n|\n```$/g, '').replace(/\r\n/g, '\n')
@@ -62,6 +67,8 @@ export function noteIssues(content: string, input: ReviewDraftInput): string[] {
   if (!emptyExperience(input) && prose.split(/\n\s*\n/).length < 3) issues.push('笔记正文需要空行分成至少三段');
   const fillerMatch = (title + '\n' + prose).match(filler);
   if (fillerMatch) issues.push(`删除空洞抒情或模板用语“${fillerMatch[0]}”，不要改写成同义废话`);
+  const complaintMatch = (title + '\n' + prose).match(COMPLAINT_WORDS);
+  if (complaintMatch) issues.push(`这篇基调偏负面/像差评（出现“${complaintMatch[0]}”），请整体改写为放松、被照顾、做完舒服一点的暖调分享；不复述顾客的抱怨，不写“不会再来/失望/敷衍/避雷”这类表述`);
   if (emptyExperience(input) && /刷到|存个档|还没选|记下来|做完|打卡了/.test(prose)) issues.push('空输入请仅写已知门店资料，不写刷到、收藏或选择状态');
   if (/@/.test(content)) issues.push('不要输出未经选择的@账号');
   const tags = body.match(/#[^\s#]+/g) ?? [];
@@ -98,6 +105,7 @@ async function requestNote(input: ReviewDraftInput): Promise<GeneratedDraft> {
       '- 体验标签：' + (input.tags.join('、') || '未选择'),
       '- 平台/口吻：小红书/' + (input.voice || 'natural'),
       '- 用户真实细节：' + (input.experience || '未填写'),
+      '基调要求：这是一篇暖调的到店分享/种草笔记。即使顾客原话里带不满、抱怨或情绪，也只把它写成放松、被认真照顾、做完舒服一点的正面分享；不复述抱怨，不出现差评、吐槽、不会再来、失望、敷衍、避雷、踩雷、劝退等负面词。',
       '输出格式：第一行标题（20字以内），随后正文及话题。直接输出成稿，不输出@账号。',
       emptyExperience(input) ? '没有体验素材时，生成可编辑的门店信息分享草稿，只介绍已知店名和地点，不声称刷到、到访、收藏或尚未到访，不描述表单状态，不写体验好坏。' : '本次正文目标' + min + '–' + max + '字。',
       input.avoidPhrases?.length ? '换一篇，不重复旧稿片段：' + JSON.stringify(input.avoidPhrases) : '',
