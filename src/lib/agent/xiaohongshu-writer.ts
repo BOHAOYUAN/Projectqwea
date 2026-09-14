@@ -38,7 +38,7 @@ export function starterNote(input: ReviewDraftInput): GeneratedDraft {
   return { platform: 'xiaohongshu', mode: 'local', fallbackValidated: true,
     content: `${place}｜${subject}\n\n📍 ${input.merchantName}，${place}。\n\n${input.serviceNames.length ? `这篇围绕${subject}展开，` : ''}可以补充这次体验中印象最深的一点：环境、沟通，或自己的感受。\n\n#${place.replace(/\s/g, '')} #${input.merchantName.replace(/\s/g, '')} #门店分享` };
 }
-const filler = /不用写一大篇|简单直接说就好|最想分享的就是这个感受|脸累|脸[^。\n]*蔫|没精神|说不上哪里|我又可以了|感觉就是.{0,3}状态重启|照镜子|绷紧的心弦|后来回想起来|当下最确定的感受|内心的平静|一场心灵之旅|寻找自我/;
+const filler = /不用写一大篇|简单直接说就好|最想分享的就是这个感受|脸累|脸[^。\n]*蔫|没精神|说不上哪里|我又可以了|感觉就是.{0,3}状态重启|绷紧的心弦|后来回想起来|当下最确定的感受|内心的平静|一场心灵之旅|寻找自我/;
 
 // This tool produces warm, positive Xiaohongshu shares for the shop. If a
 // customer's raw note is frustrated, the prompt reframes it; this regex is the
@@ -78,8 +78,12 @@ export function noteIssues(content: string, input: ReviewDraftInput): string[] {
     if (!tags.some(tag => tag.includes('巴尔的摩'))) issues.push('至少一个话题使用准确地名巴尔的摩');
   }
   const source = input.experience + input.tags.join(' ');
-  for (const [pattern, detail] of [[/香薰|香氛|香气/, '香气'], [/音乐/, '音乐'], [/手法|力度/, '手法力度'], [/水润|软糯|反光|皮肤[^，。！？\n]{0,12}滑|脸[^，。！？\n]{0,12}(滑|软)/, '皮肤触感'], [/熬夜|熬大夜|加班|工作压力|周末/, '生活背景']] as const) {
-    if (pattern.test(prose) && !pattern.test(source)) issues.push(`删去未提供的${detail}，不要用新细节填补字数`);
+  // Guard against fabricated claims (discounts, guaranteed medical cures, prices)
+  for (const [pattern, detail] of [
+    [/价格|多少钱|\$\s*\d|折扣|优惠券|团购|免费送|白嫖/, '价格与优惠活动'],
+    [/包治|彻底治好|根治|神医|百病|包退|无痛/, '夸大疗效承诺'],
+  ] as const) {
+    if (pattern.test(prose) && !pattern.test(source)) issues.push(`删去未提及的${detail}，不添加违规或营销内容`);
   }
   return issues;
 }
