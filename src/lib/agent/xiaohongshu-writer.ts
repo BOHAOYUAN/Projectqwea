@@ -36,7 +36,7 @@ export function starterNote(input: ReviewDraftInput): GeneratedDraft {
   const place = input.location.replace(/Baltimore(?:,\s*MD)?/i, '巴尔的摩');
   const subject = input.serviceNames.length ? input.serviceNames.join('、') : '门店信息';
   return { platform: 'xiaohongshu', mode: 'local', fallbackValidated: true,
-    content: `${place}｜${subject}\n\n📍 ${input.merchantName}，${place}。\n\n${input.serviceNames.length ? `这篇围绕${subject}展开，` : ''}可以补充这次体验中印象最深的一点：环境、沟通，或自己的感受。\n\n#${place.replace(/\s/g, '')} #${input.merchantName.replace(/\s/g, '')} #门店分享` };
+    content: `${place}私藏美肤地标✨｜${subject}\n\n📍 ${input.merchantName}，${place}🤍\n\n${input.serviceNames.length ? `这篇围绕${subject}展开🫧\n\n` : ''}可以补充这次体验中印象最深的一点：环境、手法或护理时的舒适感受～\n\n#${place.replace(/\s/g, '')} #${input.merchantName.replace(/\s/g, '')} #宝藏店铺` };
 }
 const filler = /不用写一大篇|简单直接说就好|最想分享的就是这个感受|脸累|脸[^。\n]*蔫|没精神|说不上哪里|我又可以了|感觉就是.{0,3}状态重启|绷紧的心弦|后来回想起来|当下最确定的感受|内心的平静|一场心灵之旅|寻找自我/;
 
@@ -107,10 +107,10 @@ async function requestNote(input: ReviewDraftInput): Promise<GeneratedDraft> {
       '- 地点：' + input.location,
       '- 服务项目：' + (input.serviceNames.map(name => name.replace(/面部\s*SPA/gi, '面部护理').replace(/头疗\s*SPA/gi, '头皮护理').replace(/背部\s*SPA/gi, '背部护理')).join('、') || '未选择'),
       '- 体验标签：' + (input.tags.join('、') || '未选择'),
-      '- 平台/口吻：小红书/' + (input.voice || 'natural'),
+      '- 平台/口吻：小红书/' + (input.voice || 'natural') + '（年轻女性视角，语气俏皮轻盈，像跟好姐妹安利宝藏好店，自然融入可爱Emoji）',
       '- 用户真实细节：' + (input.experience || '未填写'),
-      '基调要求：这是一篇暖调的到店分享/种草笔记。即使顾客原话里带不满、抱怨或情绪，也只把它写成放松、被认真照顾、做完舒服一点的正面分享；不复述抱怨，不出现差评、吐槽、不会再来、失望、敷衍、避雷、踩雷、劝退等负面词。',
-      '输出格式：第一行标题（20字以内），随后正文及话题。直接输出成稿，不输出@账号。',
+      '基调要求：这是一篇暖调的女生打卡种草笔记，俏皮轻盈，治愈放松。即使顾客原话里带不满、抱怨或情绪，也只把它写成放松、被认真照顾、做完舒服一点的正面分享；不复述抱怨，不出现差评、吐槽、不会再来、失望、敷衍、避雷、踩雷、劝退等负面词。',
+      '输出格式：第一行吸睛短标题（20字以内，带1-2个Emoji），空行后3-4段正文（每段自然融入Emoji，正文目标200-300字，总长严格控制在1000字以内），文末3-5个话题标签。直接输出成稿，不输出@账号。',
       emptyExperience(input) ? '没有体验素材时，生成可编辑的门店信息分享草稿，只介绍已知店名和地点，不声称刷到、到访、收藏或尚未到访，不描述表单状态，不写体验好坏。' : '本次正文目标' + min + '–' + max + '字。',
       input.avoidPhrases?.length ? '换一篇，不重复旧稿片段：' + JSON.stringify(input.avoidPhrases) : '',
     ].filter(Boolean).join('\n') },
